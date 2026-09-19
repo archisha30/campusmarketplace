@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body { @apply bg-bg text-ink font-sans antialiased; }
+  h1, h2, h3 { @apply font-display tracking-tight; }
+  :focus-visible { @apply outline-none ring-2 ring-brand ring-offset-2 ring-offset-bg; }
+}
+
+@layer components {
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-pill px-5 py-2.5 text-sm font-semibold transition active:scale-[.97]; }
+  .btn-primary { @apply btn bg-ink text-white hover:shadow-lg; }
+  .btn-accent  { @apply btn bg-brand text-white hover:shadow-lg; }
+  .btn-ghost   { @apply btn border-[1.5px] border-line bg-transparent text-ink hover:border-ink; }
+  .btn-danger  { @apply btn bg-coral/10 text-coral; }
+  .btn-sm      { @apply px-3.5 py-1.5 text-[13px]; }
+
+  .field-label { @apply mb-1.5 block text-[13.5px] font-semibold; }
+  .field-input { @apply w-full rounded-[11px] border-[1.5px] border-line bg-[#fbfbf9] px-3.5 py-3 text-[14.5px] focus:border-brand focus:bg-white focus:outline-none; }
+
+  .badge { @apply inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-[11px] font-semibold; }
+
+  .skeleton {
+    @apply animate-shimmer rounded-card;
+    background: linear-gradient(90deg,#ECECE7 25%,#F5F5F1 37%,#ECECE7 63%);
+    background-size: 400% 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
