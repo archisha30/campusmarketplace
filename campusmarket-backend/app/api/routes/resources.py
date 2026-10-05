@@ -13,6 +13,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
+from app.api.routes.notifications import notify
 from app.core.pdf_preview import PdfError, open_pdf, read_limited, render_previews
 from app.core.security import get_current_user, get_optional_user, require_seller
 from app.core.storage import storage
@@ -494,6 +495,16 @@ def request_access(
     else:
         req = ResourceAccess(resource_id=r.id, user_id=user.id, status="pending", note=payload.note)
         db.add(req)
+    notify(
+        db,
+        recipient_id=r.owner_id,
+        actor=user,
+        type="access_request",
+        target_type="resource",
+        target_id=r.id,
+        target_title=r.title,
+        note=payload.note,
+    )
     try:
         db.commit()
     except IntegrityError:

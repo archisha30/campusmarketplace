@@ -350,6 +350,7 @@ export function requestResourceAccess(id, note) {
       }
       resourceAccess.push(req)
     }
+    pushNotification({ user_id: r.owner.id, actor: u, type: 'access_request', target_type: 'resource', target_id: r.id, target_title: r.title, note: cleanNote })
     return delay({ ...req, requester: null })
   } catch (err) {
     return Promise.reject(err)
@@ -415,6 +416,57 @@ export function getResourceFile(id) {
   } catch (err) {
     return Promise.reject(err)
   }
+}
+
+// ---------- Notifications ----------
+
+let notifications = [
+  {
+    id: 1, user_id: 1, type: 'access_request', channel: null, target_type: 'resource', target_id: 1,
+    target_title: 'DSA — Past Year Questions', note: 'Paid ₹40 on UPI, ref 4471',
+    created_at: new Date(Date.now() - 2 * 3600e3).toISOString(), read: false,
+    actor: { id: '2', name: 'Rhea M.', avatar_url: null, email: 'rhea@polaris.edu', phone: null },
+  },
+  {
+    id: 2, user_id: 1, type: 'contact', channel: 'whatsapp', target_type: 'listing', target_id: 2,
+    target_title: 'Casio fx-991CW', note: null,
+    created_at: new Date(Date.now() - 26 * 3600e3).toISOString(), read: true,
+    actor: { id: '3', name: 'Dev S.', avatar_url: null, email: 'dev@northgate.edu', phone: '919000000003' },
+  },
+]
+
+function pushNotification({ user_id, actor, ...rest }) {
+  if (sameId(user_id, actor.id)) return
+  notifications.unshift({
+    id: nextId++, user_id, channel: null, note: null, ...rest, created_at: nowIso(), read: false,
+    actor: { id: String(actor.id), name: actor.name, avatar_url: actor.avatar_url || null, email: actor.email, phone: actor.phone || null },
+  })
+}
+
+export function listNotifications() {
+  const u = mockViewer()
+  if (!u) return Promise.reject(new Error('Log in to see notifications'))
+  const items = notifications.filter((n) => sameId(n.user_id, u.id)).map(({ user_id, ...n }) => n)
+  return delay({ items, unread: items.filter((n) => !n.read).length }, 200)
+}
+
+export function markNotificationsRead() {
+  const u = mockViewer()
+  notifications = notifications.map((n) => (u && sameId(n.user_id, u.id) ? { ...n, read: true } : n))
+  return delay(null, 100)
+}
+
+export function recordContact(targetType, targetId, channel) {
+  const u = mockViewer()
+  if (!u) return Promise.resolve(null)
+  const target = targetType === 'listing'
+    ? listings.find((l) => l.id === Number(targetId))
+    : resources.find((r) => r.id === Number(targetId))
+  if (target) {
+    const ownerId = targetType === 'listing' ? target.seller.id : target.owner.id
+    pushNotification({ user_id: ownerId, actor: u, type: 'contact', channel, target_type: targetType, target_id: target.id, target_title: target.title })
+  }
+  return delay(null, 100)
 }
 
 export function createReport(payload) {

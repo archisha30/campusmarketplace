@@ -25,6 +25,7 @@ from app.models.otp import OTPCode
 from app.models.listing import Listing
 from app.models.product_request import ProductRequest
 from app.models.resource import Resource, ResourceAccess
+from app.models.notification import Notification
 
 target_metadata = Base.metadata
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)

@@ -141,6 +141,19 @@ export const requestsApi = {
   remove: (id) => pick(() => http.del(`/requests/${id}`), () => mock.deleteRequest(id))(),
 }
 
+export const notificationsApi = {
+  // GET /api/notifications -> { items, unread }  (access requests + contact taps on your items)
+  list: () => pick(() => http.get('/notifications'), () => mock.listNotifications())(),
+  // POST /api/notifications/read-all
+  markAllRead: () => pick(() => http.post('/notifications/read-all'), () => mock.markNotificationsRead())(),
+  // POST /api/notifications/contact  body: { target_type: "listing" | "resource", target_id, channel: "whatsapp" | "email" }
+  contact: (targetType, targetId, channel) =>
+    pick(
+      () => http.post('/notifications/contact', { target_type: targetType, target_id: targetId, channel }),
+      () => mock.recordContact(targetType, targetId, channel)
+    )(),
+}
+
 export const campusesApi = {
   list: () => pick(() => http.get('/campuses'), () => mock.listCampuses())(),
 }

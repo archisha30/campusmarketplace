@@ -12,9 +12,12 @@ import { recordView } from '../lib/recommendations.js'
 import { formatPrice, contactLink, titleCase } from '../lib/format.js'
 import Avatar from '../components/Avatar.jsx'
 import LinkifiedText from '../components/LinkifiedText.jsx'
+import { useAuth } from '../hooks/useAuth.jsx'
+import { recordContact } from '../hooks/useNotifications.js'
 
 export default function ListingDetail() {
   const { id } = useParams()
+  const { user } = useAuth()
   const [reporting, setReporting] = useState(false)
   const [activeImage, setActiveImage] = useState(0)
   const [viewerOpen, setViewerOpen] = useState(false)
@@ -110,8 +113,10 @@ export default function ListingDetail() {
           </p>
 
           <div className="flex flex-wrap gap-2.5">
-            <a className="btn-accent" href={links.whatsapp} target="_blank" rel="noopener noreferrer">Contact Seller</a>
-            <a className="btn-ghost" href={links.email} target="_blank" rel="noopener noreferrer">Email instead</a>
+            <a className="btn-accent" href={links.whatsapp} target="_blank" rel="noopener noreferrer"
+              onClick={() => recordContact(user, 'listing', l.id, 'whatsapp')}>Contact Seller</a>
+            <a className="btn-ghost" href={links.email} target="_blank" rel="noopener noreferrer"
+              onClick={() => recordContact(user, 'listing', l.id, 'email')}>Email instead</a>
             <button className="btn-ghost" onClick={() => setReporting(true)}>Report Listing</button>
           </div>
 

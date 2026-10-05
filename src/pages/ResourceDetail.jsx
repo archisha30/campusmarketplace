@@ -11,6 +11,7 @@ import LinkifiedText from '../components/LinkifiedText.jsx'
 import ResourcePreview from '../components/ResourcePreview.jsx'
 import Avatar from '../components/Avatar.jsx'
 import { formatPhone, formatPrice, timeAgo } from '../lib/format.js'
+import { recordContact } from '../hooks/useNotifications.js'
 import { NOTE_MAX, deliveryLabel, upiLink, yearLabel } from '../lib/resources.js'
 
 export default function ResourceDetail() {
@@ -300,6 +301,7 @@ function AccessPanel({ r, access, onChange }) {
 }
 
 function OwnerCard({ r }) {
+  const { user } = useAuth()
   const o = r.owner
   const message = `Hi! I'm interested in "${r.title}" on CampusMarket's Resource Hub.`
   return (
@@ -315,7 +317,8 @@ function OwnerCard({ r }) {
       {(o.phone || o.email) ? (
         <div className="mt-3 flex flex-wrap gap-2">
           {o.phone && (
-            <a className="btn-ghost btn-sm" href={`https://wa.me/${o.phone}?text=${encodeURIComponent(message)}`} target="_blank" rel="noopener noreferrer">
+            <a className="btn-ghost btn-sm" href={`https://wa.me/${o.phone}?text=${encodeURIComponent(message)}`} target="_blank" rel="noopener noreferrer"
+              onClick={() => recordContact(user, 'resource', r.id, 'whatsapp')}>
               WhatsApp {formatPhone(o.phone)}
             </a>
           )}
@@ -325,6 +328,7 @@ function OwnerCard({ r }) {
               href={`https://mail.google.com/mail/?${new URLSearchParams({ view: 'cm', fs: '1', to: o.email, su: `CampusMarket: ${r.title}`, body: message })}`}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => recordContact(user, 'resource', r.id, 'email')}
             >
               Email
             </a>
@@ -388,7 +392,7 @@ function OwnerPanel({ r, onChange, refetch }) {
   const rows = requests.data || []
 
   return (
-    <section className="mt-6 rounded-card border-[1.5px] border-brand/30 bg-brand-tint/40 p-5">
+    <section id="manage" className="mt-6 scroll-mt-24 rounded-card border-[1.5px] border-brand/30 bg-brand-tint/40 p-5">
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <h2 className="mr-auto text-[18px] font-bold">{isOwner ? 'Manage your resource' : 'Admin controls'}</h2>
         {isOwner && (

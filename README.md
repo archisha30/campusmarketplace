@@ -9,6 +9,7 @@ sign up, and every handover happens on campus with cash or UPI.
 | **Marketplace** | Listings for sale, rent or free, each with 1–3 photos, a condition, a pickup spot and a status (available / reserved / sold). Recommendations are based on the categories you browse. |
 | **Resource Hub** | Study material for sale or free, as a soft copy (a PDF we host, or a drive link) or a hard copy (picked up on campus). Previews are rendered on the server, and paid access is granted by the seller. |
 | **Looking For** | Students post what they need ("Casio fx-991CW for tomorrow"). Sellers see these requests in their dashboard. |
+| **Notifications** | The seller dashboard and navbar bell show access requests on your resources and students tapping WhatsApp / Email on your items, plus Looking For posts. |
 | **Accounts** | Sign-up with a one-time code sent to your college email, onboarding, interests, profile with avatar and phone, and buyer → seller upgrade. |
 | **Wishlist** | Saved listings, stored in the browser (per user). |
 
@@ -170,6 +171,9 @@ All paths are under `/api`. In this table, *seller* means `account_type = "selle
 | GET | `/resources/{id}/access` | owner or admin | List requests |
 | PATCH | `/resources/{id}/access/{request_id}` | owner or admin | `{ status: "approved" \| "denied" }` |
 | GET | `/resources/{id}/file` | full access | Streams the PDF |
+| GET | `/notifications` | user | Your notifications → `{ items, unread }`: access requests on your resources, and WhatsApp / Email taps on your items |
+| POST | `/notifications/read-all` | user | |
+| POST | `/notifications/contact` | verified user | `{ target_type, target_id, channel }`: sent when a student taps WhatsApp / Email; repeat taps within 1 hour are ignored |
 
 **Mock-only so far:** reports (`POST /reports`), the admin dashboard (reports, users,
 domains) and campuses exist in `mockApi.js` but have no backend routes yet, so they fail in

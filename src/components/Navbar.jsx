@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { useWishlist } from '../hooks/useWishlist.jsx'
 import Avatar from './Avatar.jsx'
 import { useRequestNotifications } from '../hooks/useRequestNotifications.js'
+import { useNotifications } from '../hooks/useNotifications.js'
 
 const LINKS = [
   { to: '/#how-it-works', label: 'How It Works' },
@@ -115,11 +116,13 @@ export default function Navbar() {
 }
 
 function RequestBell() {
-  const { unread } = useRequestNotifications({ poll: true })
+  const { unread: requests } = useRequestNotifications({ poll: true })
+  const { unread: personal } = useNotifications({ poll: true })
+  const unread = requests + personal
   return (
     <Link
-      to="/dashboard#requests"
-      aria-label={unread ? `${unread} new buyer requests` : 'Buyer requests'}
+      to={personal > 0 || requests === 0 ? '/dashboard#notifications' : '/dashboard#requests'}
+      aria-label={unread ? `${unread} new notifications` : 'Notifications'}
       className="relative flex h-9 w-9 items-center justify-center rounded-full text-ink-soft transition hover:bg-black/5 hover:text-ink"
     >
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
