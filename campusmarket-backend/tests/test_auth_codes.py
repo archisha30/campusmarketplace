@@ -51,3 +51,14 @@ def test_login_code_for_existing_user(client, users, no_email):
 
 def test_login_code_checks_domain(client):
     assert client.post("/api/auth/login-code", json={"email": "x@gmail.com"}).status_code == 400
+
+
+def test_owner_can_use_a_personal_email(client, db_session, monkeypatch, no_email):
+    monkeypatch.setattr(auth_routes.settings, "OWNER_EMAILS", ["Boss@Gmail.com"])
+    res = client.post("/api/auth/signup", json={"email": "boss@gmail.com", "account_type": "seller"})
+    assert res.status_code == 200
+    assert client.post("/api/auth/login-code", json={"email": "boss@gmail.com"}).status_code == 200
+    assert no_email == ["boss@gmail.com", "boss@gmail.com"]
+    # Any other personal address is still refused.
+    assert client.post("/api/auth/signup", json={"email": "someone@gmail.com"}).status_code == 400
+    assert client.post("/api/auth/login-code", json={"email": "someone@gmail.com"}).status_code == 400

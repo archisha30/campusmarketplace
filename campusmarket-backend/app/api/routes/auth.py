@@ -41,6 +41,9 @@ AVATAR_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
 
 def _check_domain(email: str) -> None:
+    # Owners (OWNER_EMAILS) may use a personal address; everyone else needs a college email.
+    if email.lower() in {e.lower() for e in settings.OWNER_EMAILS}:
+        return
     domain = email.split("@")[-1].lower()
     if domain not in settings.ALLOWED_EMAIL_DOMAINS:
         raise HTTPException(status_code=400, detail=f"{domain} is not a recognised campus email")
