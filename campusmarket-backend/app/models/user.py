@@ -19,7 +19,7 @@ class User(Base):
     role = Column(String, default="student")  # "student" or "admin"
     account_type = Column(String, nullable=False, default="buyer", server_default="buyer")  # "buyer" or "seller"
     avatar_url = Column(String, nullable=True)
-    phone = Column(String, nullable=True)  # digits with country code, e.g. "917008699207"
+    phone = Column(String, nullable=True)  # digits with country code, e.g. "919876543210"
     verified = Column(Boolean, default=False)
     profile_completed = Column(Boolean, default=False)
     interests = Column(ARRAY(String), nullable=False, default=list, server_default="{}")

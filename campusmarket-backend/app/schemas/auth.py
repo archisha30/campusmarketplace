@@ -36,7 +36,7 @@ class ProfileRequest(BaseModel):
 
 
 def normalize_phone(value: str | None) -> str | None:
-    """Accepts '7008699207', '+91 70086 99207', '091-7008699207' etc.
+    """Accepts '9876543210', '+91 98765 43210', '091-9876543210' etc.
     Returns digits with the 91 country code, or None when left blank."""
     if value is None or not value.strip():
         return None

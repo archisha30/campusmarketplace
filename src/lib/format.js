@@ -31,7 +31,7 @@ export function initial(user) {
   return (user?.name || user?.email || '?').trim().charAt(0).toUpperCase()
 }
 
-// "917008699207" -> "+91 70086 99207" for display.
+// "919876543210" -> "+91 98765 43210" for display.
 export function formatPhone(phone) {
   if (!phone) return ''
   const m = String(phone).match(/^91(\d{5})(\d{5})$/)

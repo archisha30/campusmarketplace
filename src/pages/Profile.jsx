@@ -129,7 +129,7 @@ function EditProfileModal({ open, onClose }) {
               className="field-input rounded-l-none"
               value={form.phone}
               onChange={set('phone')}
-              placeholder="70086 99207"
+              placeholder="10-digit mobile number"
             />
           </div>
           <p className="mb-4 text-[12px] text-ink-faint">Shown to buyers on your listings so they can reach you on WhatsApp.</p>
