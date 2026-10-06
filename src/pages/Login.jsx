@@ -11,17 +11,21 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [error, setError] = useState('')
+  const [noAccount, setNoAccount] = useState(false)
   const [busy, setBusy] = useState(false)
 
   async function sendCode(e) {
     e.preventDefault()
     setBusy(true)
     setError('')
+    setNoAccount(false)
     try {
-      await authApi.signup(email) // same endpoint sends the login code too
+      // Only sends a code to existing accounts; new students sign up (and pick buyer/seller) first.
+      await authApi.requestLoginCode(email)
       setStep('otp')
     } catch (err) {
       setError(err.message)
+      setNoAccount(err.status === 404)
     } finally {
       setBusy(false)
     }
@@ -57,7 +61,11 @@ export default function Login() {
             <input id="email" type="email" required className="field-input mb-4" value={email}
               onChange={(e) => setEmail(e.target.value)} placeholder="you@medhaviskillsuniversity.edu.in" />
             {error && <p className="mb-3 text-[13px] text-coral">{error}</p>}
-            <button className="btn-primary w-full" disabled={busy}>{busy ? 'Sending…' : 'Send code'}</button>
+            {noAccount ? (
+              <Link to="/signup" state={{ email }} className="btn-primary w-full">Sign up with this email</Link>
+            ) : (
+              <button className="btn-primary w-full" disabled={busy}>{busy ? 'Sending…' : 'Send code'}</button>
+            )}
           </form>
         </>
       ) : (

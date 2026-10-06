@@ -33,6 +33,7 @@ from app.db.session import get_db
 from app.main import app
 from app.models.listing import Listing
 from app.models.notification import Notification
+from app.models.otp import OTPCode
 from app.models.resource import Resource, ResourceAccess
 from app.models.user import User
 
@@ -49,7 +50,7 @@ sqlite3.register_adapter(list, json.dumps)
 @pytest.fixture
 def db_session():
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    Base.metadata.create_all(engine, tables=[User.__table__, Listing.__table__, Resource.__table__, ResourceAccess.__table__, Notification.__table__])
+    Base.metadata.create_all(engine, tables=[User.__table__, Listing.__table__, Resource.__table__, ResourceAccess.__table__, Notification.__table__, OTPCode.__table__])
     Session = sessionmaker(bind=engine, autocommit=False, autoflush=False)
     session = Session()
     yield session, Session

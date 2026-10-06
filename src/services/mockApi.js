@@ -490,6 +490,14 @@ export function signup(email, accountType = 'buyer') {
   return delay({ ok: true, message: 'Magic link sent. Check your college inbox.' })
 }
 
+export function requestLoginCode(email) {
+  const domain = email.split('@')[1]
+  if (!campuses.some((c) => c.email_domain === domain && c.is_active)) {
+    return Promise.reject(new Error('That domain is not an approved campus yet. Ask your admin to add it.'))
+  }
+  return delay({ ok: true, message: 'Code sent' })
+}
+
 export function login(email) {
   localStorage.setItem('cm_token', 'mock-token')
   return delay({ token: 'mock-token', user: seed.currentUser })

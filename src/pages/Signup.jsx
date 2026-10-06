@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { authApi } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 
@@ -10,9 +10,10 @@ const ACCOUNT_TYPES = [
 
 export default function Signup() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useAuth()
   const [step, setStep] = useState('email') // 'email' | 'otp'
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(location.state?.email || '')
   const [accountType, setAccountType] = useState('buyer')
   const [otp, setOtp] = useState('')
   const [error, setError] = useState('')

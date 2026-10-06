@@ -10,7 +10,7 @@ services:
     buildCommand: pip install uv && uv sync --frozen --no-dev
     # Migrations run on every deploy, so the live database always matches the live code.
     # --proxy-headers: Render terminates HTTPS in front of the app; trust its forwarded headers.
-    startCommand: uv run alembic upgrade head && uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    startCommand: uv run --no-dev alembic upgrade head && uv run --no-dev uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
     healthCheckPath: /health
     autoDeploy: true
     envVars:

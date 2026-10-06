@@ -22,6 +22,7 @@ from app.models.user import User
 from app.schemas.auth import (
     AccountTypeRequest,
     InterestsRequest,
+    LoginCodeRequest,
     LoginRequest,
     LoginResponse,
     ProfileRequest,
@@ -42,16 +43,19 @@ def _check_domain(email: str) -> None:
         raise HTTPException(status_code=400, detail=f"{domain} is not a recognised campus email")
 
 
+def _issue_otp(db: Session, email: str) -> str:
+    """Invalidate any earlier unused code for this email and store a new one (caller commits)."""
+    otp = generate_otp()
+    expires_at = datetime.utcnow() + timedelta(minutes=settings.OTP_EXPIRE_MINUTES)
+    db.query(OTPCode).filter(OTPCode.email == email).delete()
+    db.add(OTPCode(email=email, code_hash=hash_otp(otp), expires_at=expires_at))
+    return otp
+
+
 @router.post("/auth/signup")
 def signup(payload: SignupRequest, db: Session = Depends(get_db)):
     _check_domain(payload.email)
-
-    otp = generate_otp()
-    expires_at = datetime.utcnow() + timedelta(minutes=settings.OTP_EXPIRE_MINUTES)
-
-    # Invalidate any earlier unused code for this email, then store the new one.
-    db.query(OTPCode).filter(OTPCode.email == payload.email).delete()
-    db.add(OTPCode(email=payload.email, code_hash=hash_otp(otp), expires_at=expires_at))
+    otp = _issue_otp(db, payload.email)
 
     user = db.query(User).filter(User.email == payload.email).first()
     if not user:
@@ -60,6 +64,20 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
         # Signup was never finished, so the latest choice wins.
         user.account_type = payload.account_type
 
+    db.commit()
+    send_otp_email(payload.email, otp)
+    return {"message": "OTP sent"}
+
+
+@router.post("/auth/login-code")
+def login_code(payload: LoginCodeRequest, db: Session = Depends(get_db)):
+    """Send a login code to an EXISTING account. Never creates one or changes its buyer/seller
+    type, so new students always go through signup, where they choose."""
+    _check_domain(payload.email)
+    user = db.query(User).filter(User.email == payload.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="No account with this email yet. Sign up first.")
+    otp = _issue_otp(db, payload.email)
     db.commit()
     send_otp_email(payload.email, otp)
     return {"message": "OTP sent"}

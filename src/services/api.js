@@ -101,6 +101,9 @@ export const authApi = {
   // POST /api/auth/signup  body: { email, account_type: "buyer" | "seller" }  -> sends OTP / magic link
   signup: (email, accountType = 'buyer') =>
     pick(() => http.post('/auth/signup', { email, account_type: accountType }), () => mock.signup(email, accountType))(),
+  // POST /api/auth/login-code  body: { email }  -> code for an EXISTING account only (404 if none)
+  requestLoginCode: (email) =>
+    pick(() => http.post('/auth/login-code', { email }), () => mock.requestLoginCode(email))(),
   // POST /api/auth/login  body: { email, otp }
   login: (email, otp) => pick(() => http.post('/auth/login', { email, otp }), () => mock.login(email, otp))(),
   // POST /api/auth/profile — completes onboarding (name, college, course, year)

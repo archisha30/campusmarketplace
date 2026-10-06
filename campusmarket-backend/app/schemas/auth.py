@@ -15,6 +15,10 @@ class SignupRequest(BaseModel):
     account_type: AccountType = "buyer"
 
 
+class LoginCodeRequest(BaseModel):
+    email: EmailStr
+
+
 class AccountTypeRequest(BaseModel):
     account_type: AccountType
 

@@ -45,7 +45,7 @@ would change the live database before the code that needs it is deployed.
    Save the database password.
 2. Copy its connection string: **Connect** (top bar) → **Transaction pooler** (port 6543).
    Replace `[YOUR-PASSWORD]` in it.
-3. Copy its service key: **Project Settings → API Keys → `service_role`**.
+3. Copy its secret key: **Project Settings → API Keys → Secret keys** (starts with `sb_secret_`). Click the eye icon to reveal it, then copy.
 4. **Before changing anything**, copy the current `DATABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
    from `campusmarket-backend/.env` somewhere safe, such as a password manager. These are your
    **production** values, and you'll paste them into Render in Step 2.
@@ -75,7 +75,7 @@ automatically on your first upload.
    | Variable | Value |
    |---|---|
    | `DATABASE_URL` | production Supabase connection string |
-   | `SUPABASE_SERVICE_ROLE_KEY` | production `service_role` key |
+   | `SUPABASE_SERVICE_ROLE_KEY` | production secret key (`sb_secret_…`) |
    | `CORS_ORIGINS` | `["http://localhost:5173"]` for now; you'll change it in Step 4 |
    | `ALLOWED_EMAIL_DOMAINS` | `["medhaviskillsuniversity.edu.in"]` |
    | `SMTP_USERNAME` | your Gmail address |
