@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { resourcesApi } from '../services/api.js'
 import { useApi } from '../hooks/useApi.js'
@@ -12,12 +12,21 @@ import ResourcePreview from '../components/ResourcePreview.jsx'
 import Avatar from '../components/Avatar.jsx'
 import { formatPhone, formatPrice, timeAgo } from '../lib/format.js'
 import { recordContact } from '../hooks/useNotifications.js'
+import { recordResourceView } from '../lib/recommendations.js'
+import ResourcePicks from '../components/ResourcePicks.jsx'
 import { NOTE_MAX, deliveryLabel, upiLink, yearLabel } from '../lib/resources.js'
 
 export default function ResourceDetail() {
   const { id } = useParams()
   const [reporting, setReporting] = useState(false)
   const { data: r, loading, error, setData, refetch } = useApi(() => resourcesApi.get(id), [id])
+  const { user, loading: authLoading } = useAuth()
+
+  useEffect(() => {
+    // Feeds Resource Hub recommendations; waits for the session check so it's saved to the right account.
+    if (r && !authLoading) recordResourceView(user, r)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [r?.id, authLoading])
 
   if (loading && !r) return <div className="mx-auto max-w-[1180px] px-6 py-9"><div className="skeleton h-96" /></div>
   if (error || !r) {
@@ -75,6 +84,8 @@ export default function ResourceDetail() {
       </div>
 
       <ReportModal open={reporting} onClose={() => setReporting(false)} targetTitle={r.title} resourceId={r.id} />
+
+      <ResourcePicks excludeId={r.id} title="More like this" variant="row" />
     </div>
   )
 }

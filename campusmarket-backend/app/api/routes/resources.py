@@ -1,3 +1,4 @@
+import json
 import re
 import uuid
 from dataclasses import dataclass
@@ -31,6 +32,7 @@ from app.schemas.resource import (
     PreviewPage,
     ResourceIn,
     ResourceListOut,
+    ResourceRecommendedOut,
     ResourceOut,
     StatusUpdate,
 )
@@ -338,6 +340,43 @@ def resource_facets(db: Session = Depends(get_db)):
         if subject.lower() not in standard:
             extra.setdefault(subject.lower(), subject)
     return FacetsOut(subjects=[*SUBJECTS, *sorted(extra.values(), key=str.lower)])
+
+
+@router.get("/recommended", response_model=ResourceRecommendedOut)
+def recommended_resources(
+    request: Request,
+    subject_scores: Optional[str] = None,  # JSON like {"DSA": 2.5}, built by the frontend from views
+    year: Optional[str] = None,  # viewer's year of study, "1".."4"
+    exclude_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """Same idea as /api/listings/recommended: subject affinity from what the student opened,
+    plus a small boost for material from their year of study. Newest first on ties."""
+    scores: dict[str, float] = {}
+    if subject_scores:
+        try:
+            parsed = json.loads(subject_scores)
+            if isinstance(parsed, dict):
+                scores = {str(k).lower(): float(v) for k, v in parsed.items()}
+        except (ValueError, TypeError):
+            scores = {}  # malformed input just means "no personalization"
+
+    query = db.query(Resource).options(joinedload(Resource.owner)).filter(Resource.status == "available")
+    if exclude_id:
+        query = query.filter(Resource.id != exclude_id)
+    pool = query.order_by(Resource.created_at.desc(), Resource.id.desc()).all()
+
+    def score(r: Resource) -> float:
+        s = scores.get(r.subject.lower(), 0.0)
+        if year in ("1", "2", "3", "4") and r.year == year:
+            s += 0.5
+        return s
+
+    ranked = sorted(pool, key=score, reverse=True)[:8]  # stable: ties stay newest-first
+    return ResourceRecommendedOut(
+        items=[_resource_out(r, request) for r in ranked],
+        personalized=bool(scores),
+    )
 
 
 @router.get("/{resource_id}", response_model=ResourceOut)

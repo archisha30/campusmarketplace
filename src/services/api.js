@@ -58,6 +58,12 @@ function resourceForm(payload, file, removeFile) {
 export const resourcesApi = {
   // GET /api/resources?q=&subject=&year=&copy_type=&offer_type=&sort=&mine=
   list: (filters = {}) => pick(() => http.get('/resources', filters), () => mock.listResources(filters))(),
+  // GET /api/resources/recommended?subject_scores=&year=&exclude_id= -> { items, personalized }
+  recommended: ({ excludeId, year, subjectScores } = {}) =>
+    pick(
+      () => http.get('/resources/recommended', { exclude_id: excludeId, year, subject_scores: JSON.stringify(subjectScores || {}) }),
+      () => mock.recommendedResources({ excludeId, year, subjectScores })
+    )(),
   // GET /api/resources/facets -> { subjects: [...] }
   facets: () => pick(() => http.get('/resources/facets'), () => mock.resourceFacets())(),
   // GET /api/resources/:id  (access, drive_url, file_url and contact depend on the viewer)
@@ -125,6 +131,8 @@ export const authApi = {
   },
   // DELETE /api/users/me/avatar
   removeAvatar: () => pick(() => http.del('/users/me/avatar'), () => mock.removeAvatar())(),
+  // POST /api/users/me/views  body: { views: [{ kind: "listing" | "resource", key }] }  (recommendation history)
+  recordViews: (views) => pick(() => http.post('/users/me/views', { views }), () => mock.recordViews(views))(),
   // GET /api/users/me
   me: () => pick(() => http.get('/users/me'), () => mock.me())(),
   logout: () => {

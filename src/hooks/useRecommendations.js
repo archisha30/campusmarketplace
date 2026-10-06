@@ -1,23 +1,51 @@
 import { useMemo } from 'react'
-import { listingsApi } from '../services/api.js'
+import { listingsApi, resourcesApi } from '../services/api.js'
 import { useApi } from './useApi.js'
-import { categoryAffinity } from '../lib/recommendations.js'
+import { affinity } from '../lib/recommendations.js'
 import { useAuth } from './useAuth.jsx'
+import { studyYear } from '../lib/resources.js'
 
-// One hook, two callers (Marketplace, ListingDetail). Reads the client-side
+// Listing picks. Two callers (Marketplace, ListingDetail). Reads the client-side
 // affinity signal once per mount so both consumers score against the same snapshot.
 export function useRecommendations({ excludeId } = {}) {
   const { user } = useAuth()
-  const { hasHistory, categoryScores } = useMemo(() => categoryAffinity(user?.interests || []), [user?.interests])
+  const { hasHistory, scores: categoryScores } = useMemo(
+    () => affinity(user, 'listing', user?.interests || []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [user?.id, user?.interests]
+  )
 
   const { data, loading } = useApi(
     () => listingsApi.recommended({ excludeId, campusId: user?.campus_id, categoryScores }),
-    [excludeId, user?.campus_id, hasHistory, user?.interests]
+    [excludeId, user?.id, user?.campus_id, hasHistory, user?.interests]
   )
 
   return {
     items: data?.items || [],
     personalized: Boolean(data?.personalized),
+    loading,
+  }
+}
+
+// Resource Hub picks: subject affinity from opened resources, plus the student's year of study.
+export function useResourceRecommendations({ excludeId } = {}) {
+  const { user } = useAuth()
+  const year = studyYear(user?.year)
+  const { hasHistory, scores: subjectScores } = useMemo(
+    () => affinity(user, 'resource'),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [user?.id]
+  )
+
+  const { data, loading } = useApi(
+    () => resourcesApi.recommended({ excludeId, year, subjectScores }),
+    [excludeId, user?.id, year, hasHistory]
+  )
+
+  return {
+    items: data?.items || [],
+    personalized: Boolean(data?.personalized),
+    year,
     loading,
   }
 }

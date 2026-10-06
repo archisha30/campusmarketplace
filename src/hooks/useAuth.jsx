@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { authApi } from '../services/api.js'
+import { syncHistory } from '../lib/recommendations.js'
 
 const AuthContext = createContext(null)
 
@@ -10,6 +11,12 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     authApi.me().then(setUser).catch(() => setUser(null)).finally(() => setLoading(false))
   }, [])
+
+  // Merge this account's saved browsing history with anything viewed as a guest on this device.
+  useEffect(() => {
+    if (user) syncHistory(user)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
 
   const value = {
     user,

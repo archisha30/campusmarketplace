@@ -8,7 +8,7 @@ import ReportModal from '../components/ReportModal.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import ImageLightbox from '../components/ImageLightbox.jsx'
 import RecommendedForYou from '../components/RecommendedForYou.jsx'
-import { recordView } from '../lib/recommendations.js'
+import { recordListingView } from '../lib/recommendations.js'
 import { formatPrice, contactLink, titleCase } from '../lib/format.js'
 import Avatar from '../components/Avatar.jsx'
 import LinkifiedText from '../components/LinkifiedText.jsx'
@@ -17,15 +17,17 @@ import { recordContact } from '../hooks/useNotifications.js'
 
 export default function ListingDetail() {
   const { id } = useParams()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [reporting, setReporting] = useState(false)
   const [activeImage, setActiveImage] = useState(0)
   const [viewerOpen, setViewerOpen] = useState(false)
   const { data: l, loading, error } = useApi(() => listingsApi.get(id), [id])
 
   useEffect(() => {
-    if (l) recordView(l)
-  }, [l])
+    // Wait for the session check so the view is saved to the right account.
+    if (l && !authLoading) recordListingView(user, l)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [l?.id, authLoading])
 
   if (loading) return <div className="mx-auto max-w-[1180px] px-6 py-9"><SkeletonDetail /></div>
   if (error || !l) {

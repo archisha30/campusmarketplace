@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, String
+from sqlalchemy import JSON, Boolean, Column, DateTime, String
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 
 from app.db.base import Base  # <-- point this at your existing declarative Base
@@ -23,4 +23,7 @@ class User(Base):
     verified = Column(Boolean, default=False)
     profile_completed = Column(Boolean, default=False)
     interests = Column(ARRAY(String), nullable=False, default=list, server_default="{}")
+    # Recent things this user opened, for recommendations: [{"kind": "listing"|"resource",
+    # "key": <category or subject>, "ts": <epoch ms>}], newest last, capped at VIEW_HISTORY_MAX.
+    view_history = Column(JSON, nullable=False, default=list, server_default="[]")
     created_at = Column(DateTime, default=datetime.utcnow)

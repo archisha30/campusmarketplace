@@ -1,3 +1,4 @@
+import time
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -29,11 +30,13 @@ from app.schemas.auth import (
     ProfileUpdateRequest,
     SignupRequest,
     UserOut,
+    ViewsRequest,
 )
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
 MAX_AVATAR_BYTES = 5 * 1024 * 1024
+VIEW_HISTORY_MAX = 50
 AVATAR_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
 
@@ -206,6 +209,21 @@ def remove_avatar(
     if old:
         _delete_upload_files([old])
     return user
+
+
+@router.post("/users/me/views", status_code=204)
+def record_views(
+    payload: ViewsRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Append opened listings/resources to the user's history (used for recommendations),
+    so it follows them across devices. Keeps the most recent VIEW_HISTORY_MAX entries."""
+    now = time.time() * 1000
+    added = [{"kind": v.kind, "key": v.key, "ts": now} for v in payload.views]
+    # Assign a new list so SQLAlchemy notices the JSON column changed.
+    user.view_history = [*(user.view_history or []), *added][-VIEW_HISTORY_MAX:]
+    db.commit()
 
 
 @router.get("/users/me", response_model=UserOut)

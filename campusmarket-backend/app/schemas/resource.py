@@ -230,5 +230,10 @@ class ResourceListOut(BaseModel):
     total: int
 
 
+class ResourceRecommendedOut(BaseModel):
+    items: list[ResourceOut]
+    personalized: bool
+
+
 class FacetsOut(BaseModel):
     subjects: list[str]

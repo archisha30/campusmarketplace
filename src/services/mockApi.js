@@ -258,6 +258,16 @@ export function listResources(f = {}) {
   return delay({ items: out.map((r) => resourceOut(r)), total: out.length })
 }
 
+export function recommendedResources({ excludeId, year, subjectScores = {} } = {}) {
+  const scores = Object.fromEntries(Object.entries(subjectScores).map(([k, v]) => [k.toLowerCase(), v]))
+  const pool = resources
+    .filter((r) => r.status === 'available' && r.id !== Number(excludeId))
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+  const score = (r) => (scores[r.subject.toLowerCase()] || 0) + (year && r.year === year ? 0.5 : 0)
+  const items = [...pool].sort((a, b) => score(b) - score(a)).slice(0, 8).map((r) => resourceOut(r))
+  return delay({ items, personalized: Object.keys(scores).length > 0 }, 300)
+}
+
 export function resourceFacets() {
   const standard = new Set(SUBJECTS.map((s) => s.toLowerCase()))
   const extra = new Map()
@@ -530,6 +540,12 @@ export function uploadAvatar(file) {
 export function removeAvatar() {
   seed.currentUser.avatar_url = null
   return delay(seed.currentUser)
+}
+
+export function recordViews(views) {
+  const now = Date.now()
+  seed.currentUser.view_history = [...(seed.currentUser.view_history || []), ...views.map((v) => ({ ...v, ts: now }))].slice(-50)
+  return delay(null, 50)
 }
 
 export function me() {

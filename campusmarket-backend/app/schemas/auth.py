@@ -2,7 +2,7 @@ import re
 import uuid
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.schemas.listing import CATEGORY_ART
 
@@ -88,6 +88,16 @@ class InterestsRequest(BaseModel):
         return list(dict.fromkeys(value))  # drop duplicates, keep order
 
 
+class ViewEntry(BaseModel):
+    kind: Literal["listing", "resource"]
+    key: str = Field(min_length=1, max_length=60)  # listing category or resource subject
+    ts: float | None = None  # epoch ms; set by the server when recording
+
+
+class ViewsRequest(BaseModel):
+    views: list[ViewEntry] = Field(min_length=1, max_length=50)
+
+
 class UserOut(BaseModel):
     id: uuid.UUID
     email: str
@@ -102,6 +112,7 @@ class UserOut(BaseModel):
     verified: bool
     profile_completed: bool
     interests: list[str] = []
+    view_history: list[ViewEntry] = []
 
     class Config:
         from_attributes = True

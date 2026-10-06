@@ -39,6 +39,15 @@ export const DRIVE_HOSTS = [
   'sharepoint.com', 'dropbox.com', 'mega.nz', 'mega.io',
 ]
 
+// Profile "Year" is free text ("2nd Year", "3rd Semester"); turn it into "1".."4" or null.
+export function studyYear(text = '') {
+  const m = String(text).match(/\d/)
+  if (!m) return null
+  let n = Number(m[0])
+  if (/sem/i.test(text)) n = Math.ceil(n / 2)
+  return n >= 1 && n <= 4 ? String(n) : null
+}
+
 export function yearLabel(year) {
   return YEARS.find((y) => y.value === String(year))?.label || 'Any year'
 }
