@@ -18,7 +18,9 @@ import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import Interests from './pages/Interests.jsx'
-import Admin from './pages/Admin.jsx'
+import AdminLayout from './pages/admin/AdminLayout.jsx'
+import AdminUsers from './pages/admin/AdminUsers.jsx'
+import AdminContent from './pages/admin/AdminContent.jsx'
 import Wishlist from './pages/Wishlist.jsx'
 import Profile from './pages/Profile.jsx'
 import NotFound from './pages/NotFound.jsx'
@@ -60,7 +62,11 @@ export default function App() {
 
           {/* Admins only */}
           <Route element={<RequireAuth role="admin" />}>
-            <Route path="/admin" element={<Admin />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to="/admin/users" replace />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="content" element={<AdminContent />} />
+            </Route>
           </Route>
 
           <Route path="/404" element={<NotFound />} />

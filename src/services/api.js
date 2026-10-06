@@ -169,18 +169,17 @@ export const campusesApi = {
   list: () => pick(() => http.get('/campuses'), () => mock.listCampuses())(),
 }
 
+// Admin dashboard. Owners (OWNER_EMAILS) and the admins they approve; the backend enforces it.
 export const adminApi = {
-  reports: () => pick(() => http.get('/admin/reports'), () => mock.adminReports())(),
-  // PATCH /api/admin/reports/:id  body: { action: "hide" | "delete" | "dismiss" }
-  resolveReport: (id, action) =>
-    pick(() => http.patch(`/admin/reports/${id}`, { action }), () => mock.resolveReport(id, action))(),
-  users: () => pick(() => http.get('/admin/users'), () => mock.adminUsers())(),
-  // PATCH /api/admin/users/:id  body: { status: "active" | "suspended" | "banned" }
-  setUserStatus: (id, status) =>
-    pick(() => http.patch(`/admin/users/${id}`, { status }), () => mock.setUserStatus(id, status))(),
-  domains: () => pick(() => http.get('/admin/domains'), () => mock.adminDomains())(),
-  addDomain: (payload) => pick(() => http.post('/admin/domains', payload), () => mock.addDomain(payload))(),
-  toggleDomain: (id, is_active) =>
-    pick(() => http.patch(`/admin/domains/${id}`, { is_active }), () => mock.toggleDomain(id, is_active))(),
-  removeDomain: (id) => pick(() => http.del(`/admin/domains/${id}`), () => mock.removeDomain(id))(),
+  // GET /api/admin/users?q=  -> { items, total }  every user, with listing/resource counts
+  users: (q) => pick(() => http.get('/admin/users', { q }), () => mock.adminUsers(q))(),
+  // PATCH /api/admin/users/:id/admin  body: { is_admin }  (owners only)
+  setAdmin: (id, isAdmin) =>
+    pick(() => http.patch(`/admin/users/${id}/admin`, { is_admin: isAdmin }), () => mock.setAdmin(id, isAdmin))(),
+  // GET /api/admin/listings?q=  -> every listing, including reserved and sold
+  listings: (q) => pick(() => http.get('/admin/listings', { q }), () => mock.adminListings(q))(),
+  // DELETE /api/admin/listings/:id  (moderation; resources use resourcesApi.remove, which admins may call)
+  deleteListing: (id) => pick(() => http.del(`/admin/listings/${id}`), () => mock.deleteListing(id))(),
+  // GET /api/admin/resources?q=  -> every resource, including closed, with owner contact
+  resources: (q) => pick(() => http.get('/admin/resources', { q }), () => mock.adminResources(q))(),
 }

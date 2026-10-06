@@ -21,6 +21,7 @@ export const campuses = [
 export const currentUser = {
   id: 1, name: 'Aashi K.', email: 'aashi@polaris.edu', campus_id: 1, campus: 'Polaris Campus',
   course: 'AI/ML', year: '2nd Year', role: 'admin', account_type: 'seller', verified: true,
+  is_admin: true, is_owner: true,
 }
 
 const seller = (id, name, campus_id) => ({

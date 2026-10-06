@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 // non-admins never reach /admin; buyers never reach seller pages.
 // The backend must enforce the same rules.
 export default function RequireAuth({ role, seller = false }) {
-  const { user, loading, isVerified, isSeller } = useAuth()
+  const { user, loading, isVerified, isSeller, isAdmin } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -14,7 +14,7 @@ export default function RequireAuth({ role, seller = false }) {
   if (!user || !isVerified) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />
   }
-  if (role && user.role !== role) {
+  if (role === 'admin' ? !isAdmin : role && user.role !== role) {
     return <Navigate to="/marketplace" replace />
   }
   if (seller && !isSeller) {

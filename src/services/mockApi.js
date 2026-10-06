@@ -585,30 +585,46 @@ export function deleteRequest(id) {
 
 export function listCampuses() { return delay(campuses) }
 
-export function adminReports() { return delay(reports) }
-export function resolveReport(id, action) {
-  if (action === 'delete') {
-    const r = reports.find((x) => x.id === Number(id))
-    if (r) listings = listings.filter((l) => l.id !== r.listing_id)
+// ---------- Admin (same shapes as campusmarket-backend/app/api/routes/admin.py) ----------
+
+function adminUserOut(u) {
+  const owner = Boolean(u.is_owner)
+  return {
+    id: String(u.id), email: u.email, name: u.name || null, college: u.college || null,
+    course: u.course || null, year: u.year || null, phone: u.phone || null,
+    account_type: u.account_type || 'buyer', is_admin: owner || u.role === 'admin', is_owner: owner,
+    verified: u.status !== 'unverified', profile_completed: true, created_at: u.created_at || '2026-09-01T10:00:00',
+    listings: listings.filter((l) => sameId(l.seller.id, u.id)).length,
+    resources: resources.filter((r) => sameId(r.owner.id, u.id)).length,
   }
-  reports = reports.filter((r) => r.id !== Number(id))
-  return delay(reports)
 }
-export function adminUsers() { return delay(users) }
-export function setUserStatus(id, status) {
-  users = users.map((u) => (u.id === Number(id) ? { ...u, status } : u))
-  return delay(users)
+
+export function adminUsers(q = '') {
+  const needle = (q || '').toLowerCase()
+  // In mock mode the seeded current user is the owner.
+  const all = users.map((u) => (sameId(u.id, seed.currentUser.id) ? { ...u, is_owner: true } : u))
+  const items = all.filter((u) => `${u.name} ${u.email}`.toLowerCase().includes(needle)).map(adminUserOut)
+  return delay({ items, total: items.length })
 }
-export function adminDomains() { return delay(campuses) }
-export function addDomain(payload) {
-  campuses.push({ id: nextId++, is_active: true, ...payload })
-  return delay(campuses)
+
+export function setAdmin(id, isAdmin) {
+  const u = users.find((x) => sameId(x.id, id))
+  if (!u) return Promise.reject(new Error('User not found'))
+  if (sameId(u.id, seed.currentUser.id)) return Promise.reject(new Error('Owners are always admins'))
+  u.role = isAdmin ? 'admin' : 'student'
+  return delay(adminUserOut(u))
 }
-export function toggleDomain(id, is_active) {
-  campuses = campuses.map((c) => (c.id === Number(id) ? { ...c, is_active } : c))
-  return delay(campuses)
+
+export function adminListings(q = '') {
+  const needle = (q || '').toLowerCase()
+  const items = listings.filter((l) => l.title.toLowerCase().includes(needle)).sort((a, b) => b.id - a.id)
+  return delay({ items, total: items.length })
 }
-export function removeDomain(id) {
-  campuses = campuses.filter((c) => c.id !== Number(id))
-  return delay(campuses)
+
+export function adminResources(q = '') {
+  const needle = (q || '').toLowerCase()
+  const items = resources
+    .filter((r) => `${r.title} ${r.subject}`.toLowerCase().includes(needle))
+    .map((r) => ({ ...resourceOut(r), owner: r.owner }))
+  return delay({ items, total: items.length })
 }

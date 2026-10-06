@@ -64,6 +64,7 @@ Backend `.env`:
 | `ALLOWED_EMAIL_DOMAINS` | JSON list of college domains allowed to sign up, e.g. `["medhaviskillsuniversity.edu.in"]` |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` | Gmail SMTP for OTP emails (use an app password) |
 | `CORS_ORIGINS` | e.g. `["http://localhost:5173"]` |
+| `OWNER_EMAILS` | Your email(s), e.g. `["you@college.edu.in"]`. Owners can open `/admin` and approve other admins. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Stores uploads in Supabase Storage so every machine sees the same photos and PDFs. Without it, files stay on the machine that received them. See the [backend README](campusmarket-backend/README.md#files-and-storage). |
 
 > **After pulling new code, run `uv sync` and `uv run alembic upgrade head`.** If the
@@ -176,13 +177,16 @@ All paths are under `/api`. In this table, *seller* means `account_type = "selle
 | GET | `/resources/{id}/access` | owner or admin | List requests |
 | PATCH | `/resources/{id}/access/{request_id}` | owner or admin | `{ status: "approved" \| "denied" }` |
 | GET | `/resources/{id}/file` | full access | Streams the PDF |
+| GET | `/admin/users` | admin | Every user with listing/resource counts; `q` searches name/email |
+| PATCH | `/admin/users/{id}/admin` | owner | `{ is_admin }`: approve or remove an admin |
+| GET | `/admin/listings`, `/admin/resources` | admin | Everything, including sold/closed; `q` searches |
+| DELETE | `/admin/listings/{id}` | admin | Moderation (resources: `DELETE /resources/{id}`, which admins may call) |
 | GET | `/notifications` | user | Your notifications → `{ items, unread }`: access requests on your resources, and WhatsApp / Email taps on your items |
 | POST | `/notifications/read-all` | user | |
 | POST | `/notifications/contact` | verified user | `{ target_type, target_id, channel }`: sent when a student taps WhatsApp / Email; repeat taps within 1 hour are ignored |
 
-**Mock-only so far:** reports (`POST /reports`), the admin dashboard (reports, users,
-domains) and campuses exist in `mockApi.js` but have no backend routes yet, so they fail in
-live mode.
+**Mock-only so far:** reports (`POST /reports`) and campuses exist in `mockApi.js` but have no
+backend routes yet, so they fail in live mode.
 
 ## Notes
 

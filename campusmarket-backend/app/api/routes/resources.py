@@ -146,7 +146,7 @@ def _access(r: Resource, user: User | None, db: Session) -> AccessOut:
 
     if user and r.owner_id == user.id:
         return AccessOut(full=True, reason="owner")
-    if user and user.role == "admin":
+    if user and user.is_admin:
         return AccessOut(full=True, reason="admin")
     if not user:
         return AccessOut(full=False, reason="guest")
@@ -275,7 +275,7 @@ def _get_resource(resource_id: int, db: Session) -> Resource:
 
 def _get_owned_resource(resource_id: int, db: Session, user: User, allow_admin: bool = False) -> Resource:
     r = _get_resource(resource_id, db)
-    if r.owner_id != user.id and not (allow_admin and user.role == "admin"):
+    if r.owner_id != user.id and not (allow_admin and user.is_admin):
         raise HTTPException(status_code=403, detail="You don't own this resource")
     return r
 

@@ -78,12 +78,20 @@ def require_verified(user: User = Depends(get_current_user)) -> User:
 
 
 def require_seller(user: User = Depends(get_current_user)) -> User:
-    if user.account_type != "seller" and user.role != "admin":
+    if user.account_type != "seller" and not user.is_admin:
         raise HTTPException(status_code=403, detail="Only seller accounts can list items")
     return user
 
 
 def require_admin(user: User = Depends(get_current_user)) -> User:
-    if user.role != "admin":
+    """The owner(s) in OWNER_EMAILS and the admins they approved."""
+    if not user.is_admin or not user.verified:
         raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+
+def require_owner(user: User = Depends(get_current_user)) -> User:
+    """Only owners can approve or remove admins."""
+    if not user.is_owner or not user.verified:
+        raise HTTPException(status_code=403, detail="Only the owner can change who is an admin")
     return user

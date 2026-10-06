@@ -22,7 +22,10 @@ export function AuthProvider({ children }) {
     user,
     loading,
     isVerified: Boolean(user?.verified),
-    isAdmin: user?.role === 'admin',
+    // Owners (OWNER_EMAILS on the backend) and the admins they approved.
+    isAdmin: Boolean(user?.is_admin || user?.role === 'admin'),
+    // Only owners can approve or remove admins.
+    isOwner: Boolean(user?.is_owner),
     // Sellers can buy and sell; buyers can only buy. Admins can do everything.
     isSeller: user?.account_type === 'seller' || user?.role === 'admin',
     async login(email, otp) {

@@ -83,7 +83,7 @@ def delete_request(
     req = db.query(ProductRequest).filter(ProductRequest.id == request_id).first()
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    if req.user_id != user.id and user.role != "admin":
+    if req.user_id != user.id and not user.is_admin:
         raise HTTPException(status_code=403, detail="You can only delete your own requests")
     db.delete(req)
     db.commit()

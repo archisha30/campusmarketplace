@@ -42,3 +42,6 @@ services:
       # Render's free plan blocks outgoing SMTP, so production sends OTP emails via Brevo's HTTPS API.
       - key: BREVO_API_KEY
         sync: false
+      # Admin dashboard owner(s), e.g. ["you@college.edu.in"]
+      - key: OWNER_EMAILS
+        sync: false

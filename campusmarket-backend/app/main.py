@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
+from app.api.routes.admin import router as admin_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.listings import router as listings_router
 from app.api.routes.notifications import router as notifications_router
@@ -20,6 +21,7 @@ from app.db.session import engine
 app = FastAPI(title=settings.APP_NAME)
 
 app.include_router(auth_router)
+app.include_router(admin_router)
 app.include_router(listings_router)
 app.include_router(notifications_router)
 app.include_router(requests_router)

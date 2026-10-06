@@ -106,6 +106,8 @@ class UserOut(BaseModel):
     course: str | None = None
     year: str | None = None
     role: str
+    is_admin: bool = False  # owners + approved admins (computed, see User.is_admin)
+    is_owner: bool = False
     account_type: str = "buyer"
     avatar_url: str | None = None
     phone: str | None = None
