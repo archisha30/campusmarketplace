@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
-from app.core.security import require_seller
+from app.core.security import require_seller, require_verified
 from app.core.storage import delete_public_urls, storage
 from app.db.session import get_db
 from app.models.listing import Listing
@@ -57,6 +57,7 @@ def list_listings(
     include_sold: bool = False,
     sort: str = "newest",
     db: Session = Depends(get_db),
+    _viewer: User = Depends(require_verified),  # the marketplace is for verified students only
 ):
     query = db.query(Listing)
 
@@ -101,6 +102,7 @@ def recommended_listings(
     campus_id: Optional[int] = None,
     category_scores: Optional[str] = None,  # JSON like {"Electronics": 2.0}, built by the frontend
     db: Session = Depends(get_db),
+    _viewer: User = Depends(require_verified),
 ):
     """Content-based ranking: category affinity + mild same-campus boost + recency tiebreak."""
     scores: dict[str, float] = {}
@@ -132,7 +134,11 @@ def recommended_listings(
 
 
 @router.get("/{listing_id}", response_model=ListingOut)
-def get_listing(listing_id: int, db: Session = Depends(get_db)):
+def get_listing(
+    listing_id: int,
+    db: Session = Depends(get_db),
+    _viewer: User = Depends(require_verified),
+):
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")

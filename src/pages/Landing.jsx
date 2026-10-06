@@ -20,13 +20,25 @@ const STEPS = [
   { kicker: 'Meet & Exchange', title: 'Trade on campus', body: 'Meet at a safe campus location, inspect the item, and pay via cash or UPI.' },
 ]
 
+// Shown to logged-out visitors instead of real listings: the marketplace is for verified students only.
+const GUEST_TILES = [
+  { emoji: '📘', title: 'Textbooks', bg: '#F1EAFF' },
+  { emoji: '🔌', title: 'Electronics', bg: '#EAFBF0' },
+  { emoji: '📐', title: 'Lab Gear', bg: '#EAF0FF' },
+  { emoji: '🛏️', title: 'Dorm Essentials', bg: '#FFECEA' },
+]
+
 const TILT = ['-rotate-3 top-0 left-8', 'rotate-3 top-16 right-0 z-10', 'rotate-2 bottom-10 left-0', '-rotate-3 bottom-0 right-5']
 
 export default function Landing() {
-  const { user } = useAuth()
   const navigate = useNavigate()
   const [requesting, setRequesting] = useState(false)
-  const { data, loading } = useApi(() => listingsApi.list({ sort: 'newest' }), [])
+  const { user, isVerified, loading: authLoading } = useAuth()
+  // Real listings only for verified students; guests never fetch them (the API would refuse anyway).
+  const { data, loading } = useApi(
+    () => (isVerified ? listingsApi.list({ sort: 'newest' }) : Promise.resolve(null)),
+    [isVerified]
+  )
   const preview = (data?.items || []).slice(0, 4)
 
   return (
@@ -45,14 +57,40 @@ export default function Landing() {
               to dorm essentials — with verified students around you.
             </p>
             <div className="flex flex-wrap gap-3">
-              <Link to="/marketplace" className="btn-accent">Explore Marketplace</Link>
-              <Link to="/sell" className="btn-ghost">Sell an Item</Link>
-              <Link to="/resources/new" className="btn-ghost">Sell Resources</Link>
+              {user ? (
+                <>
+                  <Link to="/marketplace" className="btn-accent">Explore Marketplace</Link>
+                  <Link to="/sell" className="btn-ghost">Sell an Item</Link>
+                  <Link to="/resources/new" className="btn-ghost">Sell Resources</Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/signup" className="btn-accent">Sign up to explore</Link>
+                  <Link to="/login" className="btn-ghost">Log in</Link>
+                </>
+              )}
             </div>
           </div>
 
           <div className="relative mx-auto h-[340px] w-full max-w-[420px] md:h-[430px] md:max-w-none">
-            {loading
+            {authLoading
+              ? TILT.map((t, i) => <div key={i} className={`skeleton absolute w-[200px] h-[190px] ${t}`} />)
+              : !isVerified
+              ? GUEST_TILES.map((t, i) => (
+                  <Link
+                    key={t.title}
+                    to="/signup"
+                    className={`absolute w-[200px] rounded-card border border-line bg-paper p-3.5 shadow-lift transition hover:z-20 hover:scale-[1.03] ${TILT[i]}`}
+                  >
+                    <div className="mb-2.5 flex h-24 items-center justify-center rounded-[10px] text-[34px]" style={{ background: t.bg }}>
+                      {t.emoji}
+                    </div>
+                    <p className="text-[13.5px] font-semibold">{t.title}</p>
+                    <p className="mt-0.5 text-[12px] text-ink-faint">From students on your campus</p>
+                    <p className="mt-1.5 text-[12.5px] font-semibold text-brand">Sign up to browse →</p>
+                  </Link>
+                ))
+              : loading
               ? TILT.map((t, i) => <div key={i} className={`skeleton absolute w-[200px] h-[190px] ${t}`} />)
               : preview.map((l, i) => (
                   <Link

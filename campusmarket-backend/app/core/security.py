@@ -70,6 +70,13 @@ def get_optional_user(
     return db.query(User).filter(User.id == user_id).first()
 
 
+def require_verified(user: User = Depends(get_current_user)) -> User:
+    """Logged in AND verified college email. Guards everything marketplace-related."""
+    if not user.verified:
+        raise HTTPException(status_code=403, detail="Verify your college email first")
+    return user
+
+
 def require_seller(user: User = Depends(get_current_user)) -> User:
     if user.account_type != "seller" and user.role != "admin":
         raise HTTPException(status_code=403, detail="Only seller accounts can list items")
