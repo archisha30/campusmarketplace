@@ -10,9 +10,16 @@ const ITEMS = [
   { to: '/profile', label: 'Profile', d: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 20c1.5-4 5-6 8-6s6.5 2 8 6' },
 ]
 
+// Logged-out visitors get no marketplace / Resource Hub tabs, just a way in.
+const GUEST_ITEMS = [
+  ITEMS[0],
+  { to: '/login', label: 'Log in', d: 'M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3' },
+  { to: '/signup', label: 'Sign up', d: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 20c1.5-4 5-6 8-6s6.5 2 8 6M19 8v6M16 11h6' },
+]
+
 export default function BottomNav() {
-  const { isSeller } = useAuth()
-  const items = ITEMS.filter((it) => (isSeller ? !it.buyerOnly : !it.sellerOnly))
+  const { user, isSeller } = useAuth()
+  const items = user ? ITEMS.filter((it) => (isSeller ? !it.buyerOnly : !it.sellerOnly)) : GUEST_ITEMS
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-paper px-1 pb-2.5 pt-2 md:hidden">
