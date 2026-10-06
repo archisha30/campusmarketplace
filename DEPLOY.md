@@ -166,13 +166,28 @@ rollback.
 
 ---
 
+## Sending email in production
+
+Render's free plan blocks outgoing SMTP (Gmail), so the live backend sends OTP emails through
+**Brevo**, which works over HTTPS. It's free for up to 300 emails a day.
+
+1. Sign up at [brevo.com](https://www.brevo.com).
+2. **Senders, Domains & Dedicated IPs → Senders → Add a sender**: use the same address as
+   `SMTP_FROM`, then click the confirmation link Brevo emails you.
+3. **SMTP & API → API Keys → Generate a new API key**, then copy it (it starts with `xkeysib-`).
+4. Render → `campusmarket-api` → **Environment** → **Add variable** `BREVO_API_KEY` = the key →
+   **Save and deploy**.
+5. `https://<your-render-address>/health` should now include `"email":"brevo"`.
+
+Locally, leave `BREVO_API_KEY` blank and Gmail SMTP keeps working.
+
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
 | "Failed to fetch" on every request | `CORS_ORIGINS` on Render doesn't exactly match the Vercel address, or `VITE_API_BASE_URL` is wrong. Check both, then redeploy Vercel. |
 | First request after a while takes ~1 minute | Normal on Render's free plan: the backend sleeps after 15 minutes idle. The Starter plan (~$7/month) stays awake. |
-| OTP email never arrives; Render logs show an SMTP timeout | Some free hosting plans block outgoing email on ports 587/465. Upgrade the Render plan, or switch to an email API that works over HTTPS (Resend or Brevo, both have free tiers). That's a small change in `app/core/email.py`. |
+| "We couldn't send the code" / OTP email never arrives; Render logs show `SMTP send … failed` | Render's free plan blocks outgoing SMTP. Set `BREVO_API_KEY` on Render (see *Sending email in production* below). `/health` then shows `"email":"brevo"`. |
 | Uploads fail with "File storage is unavailable" | `SUPABASE_SERVICE_ROLE_KEY` on Render is wrong or missing. It must be the **production** project's key. |
 | 404 when refreshing a page | `vercel.json` is missing from `main`. |
 | A deploy failed on Render | Open the deploy's log. `uv sync --frozen` failing means `uv.lock` is out of date: run `uv lock` locally, commit, and push. |

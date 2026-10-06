@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     SMTP_USERNAME: str
     SMTP_PASSWORD: str
     SMTP_FROM: str
+    # Optional: send through Brevo's HTTPS API instead of SMTP (needed where SMTP is blocked,
+    # e.g. Render's free plan). SMTP_FROM must be a sender verified in Brevo.
+    BREVO_API_KEY: str | None = None
+    EMAIL_FROM_NAME: str = "CampusMarket"
 
     # --- File storage (listing photos, avatars, resource previews + PDFs) ---
     # "auto" uses Supabase Storage when SUPABASE_SERVICE_ROLE_KEY is set, otherwise local disk.

@@ -13,6 +13,7 @@ from app.api.routes.notifications import router as notifications_router
 from app.api.routes.requests import router as requests_router
 from app.api.routes.resources import router as resources_router
 from app.core.config import settings
+from app.core.email import EmailError
 from app.core.storage import StorageError, storage
 from app.db.session import engine
 
@@ -45,9 +46,20 @@ def storage_error(request: Request, exc: StorageError):
     return JSONResponse(status_code=502, content={"detail": "File storage is unavailable right now. Try again in a minute."})
 
 
+@app.exception_handler(EmailError)
+def email_error(request: Request, exc: EmailError):
+    logging.getLogger("campusmarket.email").error("Email error on %s %s: %s", request.method, request.url.path, exc)
+    return JSONResponse(status_code=502, content={"detail": "We couldn't send the code right now. Try again in a minute."})
+
+
 @app.get("/health")
 def health_check():
     """Confirms the API is up and can actually reach the Supabase database."""
     with engine.connect() as conn:
         conn.execute(text("SELECT 1"))
-    return {"status": "ok", "environment": settings.ENVIRONMENT, "storage": storage.name}
+    return {
+        "status": "ok",
+        "environment": settings.ENVIRONMENT,
+        "storage": storage.name,
+        "email": "brevo" if settings.BREVO_API_KEY else "smtp",
+    }
