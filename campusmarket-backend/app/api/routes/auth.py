@@ -38,6 +38,7 @@ router = APIRouter(prefix="/api", tags=["auth"])
 MAX_AVATAR_BYTES = 5 * 1024 * 1024
 VIEW_HISTORY_MAX = 50
 AVATAR_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+AVATAR_TYPES = {"image/jpeg": ".jpg", "image/jpg": ".jpg", "image/pjpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif"}
 
 
 def _check_domain(email: str) -> None:
@@ -178,7 +179,8 @@ def upload_avatar(
 ):
     if not (file.content_type or "").startswith("image/"):
         raise HTTPException(status_code=400, detail="Profile picture must be an image")
-    ext = Path(file.filename or "").suffix.lower() or ".jpg"
+    # Go by the actual type, not the file name (".jfif" or no extension is still a JPEG).
+    ext = AVATAR_TYPES.get((file.content_type or "").lower()) or Path(file.filename or "").suffix.lower()
     if ext not in AVATAR_EXTENSIONS:
         raise HTTPException(status_code=400, detail="Use a JPG, PNG, WEBP or GIF image")
 

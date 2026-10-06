@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { useWishlist } from '../hooks/useWishlist.jsx'
 import { useToast } from '../hooks/useToast.jsx'
 import Avatar from '../components/Avatar.jsx'
+import { shrinkToJpeg } from '../lib/images.js'
 import Modal from '../components/Modal.jsx'
 import PostRequestModal from '../components/PostRequestModal.jsx'
 import { formatPhone, timeAgo } from '../lib/format.js'
@@ -231,9 +232,9 @@ function AvatarEditor() {
     const file = e.target.files?.[0]
     e.target.value = '' // let the same file be picked again
     if (!file) return
-    if (!file.type.startsWith('image/')) return toast('Please choose an image file')
-    if (file.size > 5 * 1024 * 1024) return toast('Profile picture must be under 5 MB')
-    run(() => uploadAvatar(file), 'Profile picture updated')
+    if (file.type && !file.type.startsWith('image/')) return toast('Please choose an image file')
+    // Resized to a small JPEG first, so big phone photos and odd file types still work.
+    run(async () => uploadAvatar(await shrinkToJpeg(file)), 'Profile picture updated')
   }
 
   return (
@@ -255,7 +256,7 @@ function AvatarEditor() {
           </svg>
         </span>
       </button>
-      <input ref={input} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={onPick} />
+      <input ref={input} type="file" accept="image/*" className="hidden" onChange={onPick} />
       {user.avatar_url && (
         <button
           type="button"
