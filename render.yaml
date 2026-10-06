@@ -1,0 +1,41 @@
+# Render Blueprint for the CampusMarket API. In Render: New -> Blueprint -> pick this repo.
+# Secrets marked `sync: false` are asked for once in the dashboard and never stored in git.
+services:
+  - type: web
+    name: campusmarket-api
+    runtime: python
+    rootDir: campusmarket-backend
+    branch: main
+    plan: free
+    buildCommand: pip install uv && uv sync --frozen --no-dev
+    # Migrations run on every deploy, so the live database always matches the live code.
+    # --proxy-headers: Render terminates HTTPS in front of the app; trust its forwarded headers.
+    startCommand: uv run alembic upgrade head && uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.7"
+      - key: ENVIRONMENT
+        value: production
+      # Fail loudly instead of saving uploads to Render's disk, which is wiped on every deploy.
+      - key: STORAGE_BACKEND
+        value: supabase
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: OTP_PEPPER
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      - key: ALLOWED_EMAIL_DOMAINS
+        sync: false
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false

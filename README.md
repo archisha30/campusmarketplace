@@ -77,6 +77,11 @@ cd campusmarket-backend && uv run pytest   # in-memory SQLite + temp folders; ne
 npm run build                              # production build into dist/
 ```
 
+### 4. Deploying
+
+The frontend is on Vercel, the backend on Render, and both deploy from `main`; you work on `dev`.
+[DEPLOY.md](DEPLOY.md) has the step-by-step setup and the release workflow.
+
 ## Resource Hub
 
 Every resource is **for sale** (a whole-rupee price) or **free** (price 0). It has a subject
