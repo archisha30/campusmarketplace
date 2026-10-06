@@ -19,7 +19,10 @@ const GUEST_ITEMS = [
 
 export default function BottomNav() {
   const { user, isSeller } = useAuth()
-  const items = user ? ITEMS.filter((it) => (isSeller ? !it.buyerOnly : !it.sellerOnly)) : GUEST_ITEMS
+  // Once logged in there's no Home tab: students only use the Marketplace and Resource Hub.
+  const items = user
+    ? ITEMS.slice(1).filter((it) => (isSeller ? !it.buyerOnly : !it.sellerOnly))
+    : GUEST_ITEMS
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-paper px-1 pb-2.5 pt-2 md:hidden">

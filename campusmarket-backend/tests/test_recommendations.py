@@ -43,14 +43,14 @@ def test_views_validation(client, auth):
     assert client.post("/api/users/me/views", json={"views": [{"kind": "listing", "key": "x"}]}).status_code in (401, 403)
 
 
-def test_resource_recommendations_rank_by_subject_then_year(client, create):
+def test_resource_recommendations_rank_by_subject_then_year(client, auth, create):
     dsa = create({"title": "DSA PYQs", "subject": "DSA", "year": "2"}).json()["id"]
     ml_y2 = create({"title": "ML notes", "subject": "Machine Learning", "year": "2"}).json()["id"]
     ml_y3 = create({"title": "ML cheatsheet", "subject": "Machine Learning", "year": "3"}).json()["id"]
     golang = create({"title": "Go basics", "subject": "GoLang", "year": "1"}).json()["id"]
 
     def ids(**params):
-        res = client.get("/api/resources/recommended", params=params)
+        res = client.get("/api/resources/recommended", params=params, headers=auth("buyer"))
         assert res.status_code == 200, res.text
         return [i["id"] for i in res.json()["items"]], res.json()["personalized"]
 
@@ -72,4 +72,4 @@ def test_resource_recommendations_rank_by_subject_then_year(client, create):
 def test_closed_resources_not_recommended(client, auth, create):
     rid = create().json()["id"]
     client.patch(f"/api/resources/{rid}/status", json={"status": "closed"}, headers=auth("owner"))
-    assert client.get("/api/resources/recommended").json()["items"] == []
+    assert client.get("/api/resources/recommended", headers=auth("buyer")).json()["items"] == []

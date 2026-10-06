@@ -33,17 +33,17 @@ export default function App() {
         <ErrorBoundary resetKey={location.pathname}>
         <Routes>
           <Route path="/" element={<Landing />} />
-          <Route path="/resources" element={<Resources />} />
-          <Route path="/resources/:id" element={<ResourceDetail />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
 
           {/* Verified students only */}
           <Route element={<RequireAuth />}>
-            {/* The marketplace is never shown to logged-out visitors (the API enforces it too). */}
+            {/* The marketplace and Resource Hub are never shown to logged-out visitors (the API enforces it too). */}
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/listing/:id" element={<ListingDetail />} />
             <Route path="/wishlist" element={<Wishlist />} />
+            <Route path="/resources" element={<Resources />} />
+            <Route path="/resources/:id" element={<ResourceDetail />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/interests" element={<Interests />} />
             <Route path="/profile" element={<Profile />} />

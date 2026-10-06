@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.api.routes.notifications import notify
 from app.core.pdf_preview import PdfError, open_pdf, read_limited, render_previews
-from app.core.security import get_current_user, get_optional_user, require_seller
+from app.core.security import get_current_user, require_seller, require_verified
 from app.core.storage import storage
 from app.db.session import get_db
 from app.models.resource import Resource, ResourceAccess
@@ -294,13 +294,11 @@ def list_resources(
     sort: str = "newest",
     mine: bool = False,
     db: Session = Depends(get_db),
-    viewer: User | None = Depends(get_optional_user),
+    viewer: User = Depends(require_verified),  # the Resource Hub is for verified students only
 ):
     query = db.query(Resource).options(joinedload(Resource.owner))
 
     if mine:
-        if not viewer:
-            raise HTTPException(status_code=401, detail="Log in to see your resources")
         query = query.filter(Resource.owner_id == viewer.id)
     else:
         query = query.filter(Resource.status == "available")
@@ -330,7 +328,7 @@ def list_resources(
 
 
 @router.get("/facets", response_model=FacetsOut)
-def resource_facets(db: Session = Depends(get_db)):
+def resource_facets(db: Session = Depends(get_db), _viewer: User = Depends(require_verified)):
     """Subjects for the filter dropdown and the form's autocomplete: the standard list first,
     then any other subjects that available resources use."""
     rows = db.query(Resource.subject).filter(Resource.status == "available").distinct().all()
@@ -349,6 +347,7 @@ def recommended_resources(
     year: Optional[str] = None,  # viewer's year of study, "1".."4"
     exclude_id: Optional[int] = None,
     db: Session = Depends(get_db),
+    _viewer: User = Depends(require_verified),
 ):
     """Same idea as /api/listings/recommended: subject affinity from what the student opened,
     plus a small boost for material from their year of study. Newest first on ties."""
@@ -384,7 +383,7 @@ def get_resource(
     resource_id: int,
     request: Request,
     db: Session = Depends(get_db),
-    viewer: User | None = Depends(get_optional_user),
+    viewer: User = Depends(require_verified),  # the Resource Hub is for verified students only
 ):
     return _resource_out(_get_resource(resource_id, db), request, viewer, db, detail=True)
 

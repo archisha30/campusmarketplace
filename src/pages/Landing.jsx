@@ -1,9 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { listingsApi } from '../services/api.js'
-import { useApi } from '../hooks/useApi.js'
-import { formatPrice } from '../lib/format.js'
-import { VerifiedBadge } from '../components/Badge.jsx'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import PostRequestModal from '../components/PostRequestModal.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 
@@ -20,7 +16,8 @@ const STEPS = [
   { kicker: 'Meet & Exchange', title: 'Trade on campus', body: 'Meet at a safe campus location, inspect the item, and pay via cash or UPI.' },
 ]
 
-// Shown to logged-out visitors instead of real listings: the marketplace is for verified students only.
+// The landing page is only for visitors who aren't logged in (verified students go straight to the
+// marketplace), so it never shows real listings, just these category tiles.
 const GUEST_TILES = [
   { emoji: '📘', title: 'Textbooks', bg: '#F1EAFF' },
   { emoji: '🔌', title: 'Electronics', bg: '#EAFBF0' },
@@ -34,12 +31,9 @@ export default function Landing() {
   const navigate = useNavigate()
   const [requesting, setRequesting] = useState(false)
   const { user, isVerified, loading: authLoading } = useAuth()
-  // Real listings only for verified students; guests never fetch them (the API would refuse anyway).
-  const { data, loading } = useApi(
-    () => (isVerified ? listingsApi.list({ sort: 'newest' }) : Promise.resolve(null)),
-    [isVerified]
-  )
-  const preview = (data?.items || []).slice(0, 4)
+
+  // Logged-in students only use the Marketplace and Resource Hub; the landing page is for visitors.
+  if (!authLoading && isVerified) return <Navigate to="/marketplace" replace />
 
   return (
     <>
@@ -75,8 +69,7 @@ export default function Landing() {
           <div className="relative mx-auto h-[340px] w-full max-w-[420px] md:h-[430px] md:max-w-none">
             {authLoading
               ? TILT.map((t, i) => <div key={i} className={`skeleton absolute w-[200px] h-[190px] ${t}`} />)
-              : !isVerified
-              ? GUEST_TILES.map((t, i) => (
+              : GUEST_TILES.map((t, i) => (
                   <Link
                     key={t.title}
                     to="/signup"
@@ -88,27 +81,6 @@ export default function Landing() {
                     <p className="text-[13.5px] font-semibold">{t.title}</p>
                     <p className="mt-0.5 text-[12px] text-ink-faint">From students on your campus</p>
                     <p className="mt-1.5 text-[12.5px] font-semibold text-brand">Sign up to browse →</p>
-                  </Link>
-                ))
-              : loading
-              ? TILT.map((t, i) => <div key={i} className={`skeleton absolute w-[200px] h-[190px] ${t}`} />)
-              : preview.map((l, i) => (
-                  <Link
-                    key={l.id}
-                    to={`/listing/${l.id}`}
-                    className={`absolute w-[200px] rounded-card border border-line bg-paper p-3.5 shadow-lift transition hover:z-20 hover:scale-[1.03] ${TILT[i]}`}
-                  >
-                    <div className="mb-2.5 flex h-24 items-center justify-center overflow-hidden rounded-[10px] text-[34px]" style={{ background: l.art.bg }}>
-                      {l.images?.length > 0 ? (
-                        <img src={l.images[0]} alt={l.title} className="h-full w-full object-cover" />
-                      ) : (
-                        l.art.emoji
-                      )}
-                    </div>
-                    <p className="text-[13.5px] font-semibold">{l.title}</p>
-                    <p className="mt-0.5 text-[12px] text-ink-faint">{[l.condition, l.seller?.campus].filter(Boolean).join(' · ')}</p>
-                    <p className="mt-1.5 font-display text-[15px] font-bold">{formatPrice(l.price)}</p>
-                    <span className="mt-1.5 inline-block"><VerifiedBadge /></span>
                   </Link>
                 ))}
           </div>

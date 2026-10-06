@@ -33,29 +33,19 @@ def paid_drive(create):
     return res.json()["id"]
 
 
-def test_guest_sees_preview_only(client, paid_pdf):
+def test_guests_cannot_see_the_resource_hub(client, paid_pdf):
     rid, _ = paid_pdf
-    r = _detail(client, rid)
-    assert r["access"] == {"full": False, "reason": "guest", "can_request": False, "request": None}
-    assert r["file_url"] is None and r["drive_url"] is None
-    assert r["owner"]["phone"] is None and r["owner"]["email"] is None
-    assert r["upi_id"] is None
-    assert len(r["preview_pages"]) == 3
-    assert _file(client, rid).status_code in (401, 403)
+    for path in ["/api/resources", "/api/resources/facets", "/api/resources/recommended",
+                 f"/api/resources/{rid}", f"/api/resources/{rid}/file"]:
+        assert client.get(path).status_code in (401, 403), path
+        assert client.get(path, headers={"Authorization": "Bearer not-a-token"}).status_code == 401, path
 
 
-def test_unverified_user_is_treated_like_a_guest(client, auth, paid_pdf):
+def test_unverified_users_cannot_see_the_resource_hub(client, auth, paid_pdf):
     rid, _ = paid_pdf
-    r = _detail(client, rid, auth("unverified"))
-    assert r["access"]["full"] is False and r["access"]["reason"] == "unverified"
-    assert r["owner"]["phone"] is None and r["upi_id"] is None
-    assert _file(client, rid, auth("unverified")).status_code == 403
-
-
-def test_bad_token_falls_back_to_guest(client, paid_pdf):
-    rid, _ = paid_pdf
-    r = _detail(client, rid, {"Authorization": "Bearer not-a-token"})
-    assert r["access"]["reason"] == "guest"
+    for path in ["/api/resources", "/api/resources/facets", "/api/resources/recommended",
+                 f"/api/resources/{rid}", f"/api/resources/{rid}/file"]:
+        assert client.get(path, headers=auth("unverified")).status_code == 403, path
 
 
 def test_verified_buyer_is_locked_but_sees_contact(client, auth, paid_pdf):
@@ -138,7 +128,6 @@ def test_request_deny_rerequest_approve_flow(client, auth, paid_pdf):
 
 def test_drive_url_only_returned_with_full_access(client, auth, paid_drive):
     rid = paid_drive
-    assert _detail(client, rid)["drive_url"] is None
     assert _detail(client, rid, auth("buyer"))["drive_url"] is None
     assert _detail(client, rid, auth("owner"))["drive_url"] == "https://drive.google.com/file/d/abc123/view"
 
@@ -149,13 +138,12 @@ def test_drive_url_only_returned_with_full_access(client, auth, paid_drive):
     assert all(i["drive_url"] is None for i in client.get("/api/resources", headers=auth("owner")).json()["items"])
 
 
-def test_free_soft_copy_open_to_verified_students_only(client, auth, create):
+def test_free_soft_copy_open_to_verified_students(client, auth, create):
     pdf = make_pdf(2)
     rid = create({"offer_type": "free", "price": "0"}, pdf=pdf).json()["id"]
 
-    guest = _detail(client, rid)
-    assert guest["access"]["full"] is False and guest["file_url"] is None
-    assert _detail(client, rid, auth("unverified"))["access"]["full"] is False
+    assert _file(client, rid).status_code in (401, 403)
+    assert _file(client, rid, auth("unverified")).status_code == 403
 
     r = _detail(client, rid, auth("buyer"))
     assert r["access"] == {"full": True, "reason": "free", "can_request": False, "request": None}
@@ -178,7 +166,7 @@ def test_closed_resource_blocks_new_requests_but_keeps_grants(client, auth, paid
     assert client.post(f"/api/resources/{rid}/access", json={}, headers=auth("other")).status_code == 400
 
     # Closed resources drop out of browse but stay in the owner's "mine" list.
-    assert client.get("/api/resources").json()["total"] == 0
+    assert client.get("/api/resources", headers=auth("other")).json()["total"] == 0
     assert client.get("/api/resources", params={"mine": "true"}, headers=auth("owner")).json()["total"] == 1
 
 
@@ -198,4 +186,4 @@ def test_buyer_accounts_cannot_post(create):
 
 
 def test_mine_requires_login(client):
-    assert client.get("/api/resources", params={"mine": "true"}).status_code == 401
+    assert client.get("/api/resources", params={"mine": "true"}).status_code in (401, 403)

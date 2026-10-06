@@ -141,7 +141,7 @@ def test_update_with_bad_pdf_changes_nothing(client, auth, create, file_dirs):
         files={"file": ("x.pdf", b"nope", "application/pdf")}, headers=auth("owner"),
     )
     assert res.status_code == 400
-    after = client.get(f"/api/resources/{created['id']}").json()
+    after = client.get(f"/api/resources/{created['id']}", headers=auth("owner")).json()
     assert after["title"] == created["title"] and after["price"] == 50
     assert sorted(p.name for p in _files(file_dirs)) == before
 
@@ -171,13 +171,13 @@ def test_delete_removes_files(client, auth, create, db_session, file_dirs):
     assert _files(file_dirs) == []
 
 
-def test_list_filters_and_facets(client, create):
+def test_list_filters_and_facets(client, auth, create):
     create({"subject": "DBMS", "year": "2", "offer_type": "free", "price": "0"})
     create({"subject": "Operating Systems", "year": "any", "price": "120"})
     create({"subject": "operating systems", "year": "3", "copy_type": "hard", "delivery": None, "pickup_spot": "Gate"}, pdf=None)
 
     def ids(**params):
-        return [i["subject"] for i in client.get("/api/resources", params=params).json()["items"]]
+        return [i["subject"] for i in client.get("/api/resources", params=params, headers=auth("buyer")).json()["items"]]
 
     assert len(ids()) == 3
     # Subject filter ignores case for custom subjects too.
@@ -186,20 +186,20 @@ def test_list_filters_and_facets(client, create):
     assert ids(copy_type="hard") == ["operating systems"]
     assert ids(offer_type="free") == ["DBMS"]
     assert sorted(ids(q="operating")) == ["Operating Systems", "operating systems"]
-    prices = [i["price"] for i in client.get("/api/resources", params={"sort": "price_high"}).json()["items"]]
+    prices = [i["price"] for i in client.get("/api/resources", params={"sort": "price_high"}, headers=auth("buyer")).json()["items"]]
     assert prices == sorted(prices, reverse=True)
 
-    subjects = client.get("/api/resources/facets").json()["subjects"]
+    subjects = client.get("/api/resources/facets", headers=auth("buyer")).json()["subjects"]
     assert subjects[: len(SUBJECTS)] == list(SUBJECTS)
     # One entry per custom subject, whatever the casing.
     assert [s.lower() for s in subjects[len(SUBJECTS):]] == ["operating systems"]
 
 
-def test_standard_subjects_are_canonicalised(create, client):
+def test_standard_subjects_are_canonicalised(create, client, auth):
     assert create({"subject": "  dsa "}).json()["subject"] == "DSA"
     assert create({"subject": "maths for ai/ml"}).json()["subject"] == "Maths for AI/ML"
     assert create({"subject": "Compiler Design"}).json()["subject"] == "Compiler Design"
     # Standard subjects show up even with no resources; custom ones once used.
-    subjects = client.get("/api/resources/facets").json()["subjects"]
+    subjects = client.get("/api/resources/facets", headers=auth("buyer")).json()["subjects"]
     assert subjects[: len(SUBJECTS)] == list(SUBJECTS)
     assert subjects[len(SUBJECTS):] == ["Compiler Design"]
