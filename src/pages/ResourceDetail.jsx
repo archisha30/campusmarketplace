@@ -13,6 +13,7 @@ import Avatar from '../components/Avatar.jsx'
 import { formatPhone, formatPrice, timeAgo } from '../lib/format.js'
 import { recordContact } from '../hooks/useNotifications.js'
 import { recordResourceView } from '../lib/recommendations.js'
+import { trackEvent } from '../lib/analytics.js'
 import ResourcePicks from '../components/ResourcePicks.jsx'
 import { NOTE_MAX, deliveryLabel, upiLink, yearLabel } from '../lib/resources.js'
 
@@ -196,6 +197,7 @@ function AccessPanel({ r, access, onChange }) {
     setSending(true)
     try {
       await resourcesApi.requestAccess(r.id, note.trim() || null)
+      trackEvent('request_access', { subject: r.subject })
       onChange(await resourcesApi.get(r.id))
       setNote('')
       toast('Request sent to the owner')

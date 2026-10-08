@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { authApi } from '../services/api.js'
+import { trackEvent } from '../lib/analytics.js'
 
 export default function Login() {
   const { login } = useAuth()
@@ -37,6 +38,7 @@ export default function Login() {
     setError('')
     try {
       const u = await login(email, otp)
+      trackEvent('login', { method: 'email_code' })
       if (u?.profile_completed === false) {
         navigate('/onboarding', { replace: true })
       } else {

@@ -5,6 +5,7 @@ import { useToast } from '../hooks/useToast.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { CATEGORIES, CONDITIONS, FOOD_CATEGORY, FOOD_TEMPS, LISTING_TYPES } from '../data/sample.js'
 import { todayISO } from '../lib/format.js'
+import { trackEvent } from '../lib/analytics.js'
 
 const BLANK = {
   title: '', category: CATEGORIES[0], listing_type: 'sale',
@@ -112,6 +113,7 @@ export default function Sell() {
         ? await listingsApi.update(id, { ...payload, images: existingImages })
         : await listingsApi.create(payload)
       if (files.length) await listingsApi.uploadImages(saved?.id ?? id, files)
+      if (!isEdit) trackEvent('post_listing', { category: payload.category, listing_type: payload.listing_type })
       toast(isEdit ? 'Changes saved' : 'Published')
       navigate('/dashboard')
     } catch (err) {

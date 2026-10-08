@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { notificationsApi } from '../services/api.js'
 import { useAuth } from './useAuth.jsx'
+import { trackEvent } from '../lib/analytics.js'
 
 const POLL_MS = 60_000
 
@@ -63,6 +64,7 @@ export function useNotifications({ poll = false, freeze = false } = {}) {
 // Fire-and-forget: tell the owner someone tapped WhatsApp / Email on their item.
 // Only for logged-in, verified students; never blocks the link from opening.
 export function recordContact(user, targetType, targetId, channel) {
+  trackEvent('contact_seller', { item_type: targetType, channel })
   if (!user?.verified) return
   notificationsApi.contact(targetType, targetId, channel).catch(() => {})
 }

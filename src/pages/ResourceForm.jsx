@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { resourcesApi } from '../services/api.js'
 import { useToast } from '../hooks/useToast.jsx'
+import { trackEvent } from '../lib/analytics.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import {
   DESCRIPTION_MAX, MAX_PDF_MB, SUBJECTS, YEARS, canonicalSubject, checkPdfFile, isAllowedDriveUrl,
@@ -154,6 +155,7 @@ export default function ResourceForm() {
       const saved = isEdit
         ? await resourcesApi.update(id, payload, file, removeFile && !file)
         : await resourcesApi.create(payload, file)
+      if (!isEdit) trackEvent('post_resource', { subject: payload.subject, copy_type: payload.copy_type, offer_type: payload.offer_type })
       toast(isEdit ? 'Changes saved' : 'Resource posted')
       navigate(`/resources/${saved?.id ?? id}`)
     } catch (err) {

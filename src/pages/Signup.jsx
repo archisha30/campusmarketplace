@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { authApi } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.jsx'
+import { trackEvent } from '../lib/analytics.js'
 
 const ACCOUNT_TYPES = [
   { value: 'buyer', emoji: '🛍️', title: 'Buyer', body: 'Browse and buy from students on your campus.' },
@@ -39,6 +40,7 @@ export default function Signup() {
     setError('')
     try {
       await login(email, otp)
+      trackEvent('sign_up', { method: 'email_code', account_type: accountType })
       navigate('/onboarding')
     } catch (err) {
       setError(err.message)
