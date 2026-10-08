@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -11,7 +11,9 @@ CATEGORY_ART = {
     "Project Kits": {"emoji": "🧰", "bg": "#FFF3D6"},
     "Sports": {"emoji": "🏸", "bg": "#FFF0F5"},
     "Clothing & Event Wear": {"emoji": "🧥", "bg": "#FFF6E0"},
+    "F&B": {"emoji": "🍱", "bg": "#FFF1E0"},
 }
+FOOD_CATEGORY = "F&B"
 DEFAULT_ART = {"emoji": "📦", "bg": "#EFEFEC"}
 
 
@@ -42,6 +44,8 @@ class ListingCreate(BaseModel):
     condition: str
     description: Optional[str] = None
     pickup_spot: str = Field(min_length=1)
+    food_temp: Optional[Literal["hot", "cold"]] = None  # F&B only, required there
+    expiry_date: Optional[date] = None  # F&B only, optional
 
 
 class ListingUpdate(BaseModel):
@@ -52,6 +56,8 @@ class ListingUpdate(BaseModel):
     condition: Optional[str] = None
     description: Optional[str] = None
     pickup_spot: Optional[str] = None
+    food_temp: Optional[Literal["hot", "cold"]] = None
+    expiry_date: Optional[date] = None
     # URLs of photos to KEEP. Any current photo not listed here is removed.
     images: Optional[list[str]] = None
 
@@ -72,6 +78,9 @@ class ListingOut(BaseModel):
     status: str
     campus_id: int
     images: list[str] = []
+    food_temp: str | None = None
+    expiry_date: date | None = None
+    is_expired: bool = False
     created_at: datetime
     seller: SellerOut
     art: Art
@@ -94,6 +103,9 @@ class ListingOut(BaseModel):
             status=listing.status,
             campus_id=listing.campus_id,
             images=listing.images or [],
+            food_temp=listing.food_temp,
+            expiry_date=listing.expiry_date,
+            is_expired=bool(listing.expiry_date and listing.expiry_date < date.today()),
             created_at=listing.created_at,
             seller=SellerOut(
                 id=str(listing.owner.id),

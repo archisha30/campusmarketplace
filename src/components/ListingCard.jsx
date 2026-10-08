@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { TypeBadge, VerifiedBadge, StatusPill } from './Badge.jsx'
-import { formatPrice } from '../lib/format.js'
+import { foodTempLabel, formatDay, formatPrice, isExpired } from '../lib/format.js'
 import { useWishlist } from '../hooks/useWishlist.jsx'
 import { useToast } from '../hooks/useToast.jsx'
 
@@ -44,7 +44,12 @@ export default function ListingCard({ listing, compact = false }) {
       <div className={compact ? 'p-3' : 'p-3.5'}>
         <h3 className={`font-semibold leading-snug ${compact ? 'truncate text-[13.5px]' : 'text-[14.5px]'}`}>{title}</h3>
         <p className={`mt-1 font-display font-bold ${compact ? 'text-[15px]' : 'text-[17px]'}`}>{formatPrice(price)}</p>
-        <p className={`mt-1 text-ink-faint ${compact ? 'truncate text-[12px]' : 'text-[12.5px]'}`}>{[condition, seller?.campus].filter(Boolean).join(' · ')}</p>
+        <p className={`mt-1 text-ink-faint ${compact ? 'truncate text-[12px]' : 'text-[12.5px]'}`}>
+          {(listing.food_temp
+            ? [foodTempLabel(listing), listing.expiry_date && (isExpired(listing) ? 'Expired' : `Best before ${formatDay(listing.expiry_date)}`)]
+            : [condition, seller?.campus]
+          ).filter(Boolean).join(' · ')}
+        </p>
         {!compact && (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <VerifiedBadge />

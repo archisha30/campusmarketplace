@@ -42,6 +42,9 @@ export function listListings(f = {}) {
   if (f.min_price) out = out.filter((l) => l.price >= Number(f.min_price))
   if (f.seller_id) out = out.filter((l) => l.seller.id === Number(f.seller_id))
   if (f.status) out = out.filter((l) => l.status === f.status)
+  // Expired food leaves the marketplace; the seller's own view still shows it.
+  const today = new Date().toISOString().slice(0, 10)
+  if (!f.seller_id) out = out.filter((l) => !l.expiry_date || l.expiry_date >= today)
 
   if (f.sort === 'price_asc') out.sort((a, b) => a.price - b.price)
   else if (f.sort === 'price_desc') out.sort((a, b) => b.price - a.price)
@@ -61,6 +64,7 @@ export function createListing(payload) {
     Electronics: { emoji: '🔌', bg: '#EAFBF0' }, 'Dorm Essentials': { emoji: '🛏️', bg: '#FFECEA' },
     'Project Kits': { emoji: '🧰', bg: '#FFF3D6' }, Sports: { emoji: '🏸', bg: '#FFF0F5' },
     'Clothing & Event Wear': { emoji: '🧥', bg: '#FFF6E0' },
+    'F&B': { emoji: '🍱', bg: '#FFF1E0' },
   }[payload.category] || { emoji: '📦', bg: '#EFEFEC' }
 
   const item = {

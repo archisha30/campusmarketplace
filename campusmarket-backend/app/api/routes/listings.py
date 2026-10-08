@@ -1,9 +1,11 @@
 import json
 import uuid
+from datetime import date
 from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.security import require_seller, require_verified
@@ -12,6 +14,7 @@ from app.db.session import get_db
 from app.models.listing import Listing
 from app.models.user import User
 from app.schemas.listing import (
+    FOOD_CATEGORY,
     ListingCreate,
     ListingListOut,
     ListingOut,
@@ -32,6 +35,27 @@ MAX_IMAGES = 3
 def _delete_upload_files(urls: list[str]) -> None:
     """Best-effort removal of uploaded public files (Supabase or legacy local /uploads/ URLs)."""
     delete_public_urls(urls)
+
+
+def _not_expired():
+    """Listings without an expiry date, or whose expiry date hasn't passed yet."""
+    return or_(Listing.expiry_date.is_(None), Listing.expiry_date >= date.today())
+
+
+def _apply_food_rules(listing: Listing, check_expiry: bool) -> None:
+    """F&B needs hot/cold, can't be rented, and has no wear-and-tear condition.
+    Other categories never carry food fields."""
+    if listing.category == FOOD_CATEGORY:
+        if listing.food_temp not in ("hot", "cold"):
+            raise HTTPException(status_code=422, detail="Choose whether the food is hot or cold")
+        if listing.listing_type == "rent":
+            raise HTTPException(status_code=422, detail="Food can be sold or given away, not rented")
+        if check_expiry and listing.expiry_date and listing.expiry_date < date.today():
+            raise HTTPException(status_code=422, detail="That expiry date has already passed")
+        listing.condition = "Fresh"
+    else:
+        listing.food_temp = None
+        listing.expiry_date = None
 
 
 def _get_owned_listing(listing_id: int, db: Session, user: User) -> Listing:
@@ -76,11 +100,16 @@ def list_listings(
     if campus_id:
         query = query.filter(Listing.campus_id == campus_id)
     if seller_id:
-        query = query.filter(Listing.owner_id == seller_id)
+        try:
+            query = query.filter(Listing.owner_id == uuid.UUID(seller_id))
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid seller id")
     if status:
         query = query.filter(Listing.status == status)
     elif not include_sold and not seller_id:
         query = query.filter(Listing.status != "sold")
+    if not seller_id:
+        query = query.filter(_not_expired())  # expired food leaves the marketplace; sellers still see it
 
     if sort == "price_low":
         query = query.order_by(Listing.price.asc())
@@ -114,7 +143,7 @@ def recommended_listings(
         except (ValueError, TypeError):
             scores = {}  # malformed input just means "no personalization"
 
-    query = db.query(Listing).filter(Listing.status == "available")
+    query = db.query(Listing).filter(Listing.status == "available", _not_expired())
     if exclude_id:
         query = query.filter(Listing.id != exclude_id)
     pool = query.order_by(Listing.created_at.desc()).all()
@@ -154,6 +183,7 @@ def create_listing(
     if not user.profile_completed:
         raise HTTPException(status_code=403, detail="Complete your profile before listing an item")
     listing = Listing(**payload.model_dump(), owner_id=user.id)
+    _apply_food_rules(listing, check_expiry=True)
     db.add(listing)
     db.commit()
     db.refresh(listing)
@@ -180,6 +210,8 @@ def update_listing(
 
     for key, value in data.items():
         setattr(listing, key, value)
+    # Only re-check the expiry date when it's being changed, so an expired item can still be edited.
+    _apply_food_rules(listing, check_expiry="expiry_date" in data)
     db.commit()
     _delete_upload_files(removed)
     db.refresh(listing)

@@ -3,11 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { listingsApi } from '../services/api.js'
 import { useToast } from '../hooks/useToast.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
-import { CATEGORIES, CONDITIONS, LISTING_TYPES } from '../data/sample.js'
+import { CATEGORIES, CONDITIONS, FOOD_CATEGORY, FOOD_TEMPS, LISTING_TYPES } from '../data/sample.js'
+import { todayISO } from '../lib/format.js'
 
 const BLANK = {
   title: '', category: CATEGORIES[0], listing_type: 'sale',
   price: '', condition: 'Good', description: '', pickup_spot: '',
+  food_temp: '', expiry_date: '', // F&B only
 }
 
 export default function Sell() {
@@ -45,6 +47,8 @@ export default function Sell() {
           condition: l.condition || 'Good',
           description: l.description || '',
           pickup_spot: l.pickup_spot || '',
+          food_temp: l.food_temp || '',
+          expiry_date: l.expiry_date || '',
         })
         setExistingImages(l.images || [])
         setLoadingListing(false)
@@ -65,6 +69,19 @@ export default function Sell() {
   }, [files])
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const isFood = form.category === FOOD_CATEGORY
+  // Food can be sold or given away, not rented.
+  const listingTypes = isFood ? LISTING_TYPES.filter((t) => t.value !== 'rent') : LISTING_TYPES
+
+  function setCategory(e) {
+    const category = e.target.value
+    setForm((f) => ({
+      ...f,
+      category,
+      listing_type: category === FOOD_CATEGORY && f.listing_type === 'rent' ? 'sale' : f.listing_type,
+      condition: category !== FOOD_CATEGORY && f.condition === 'Fresh' ? 'Good' : f.condition,
+    }))
+  }
 
   function validate() {
     const next = {}
@@ -73,6 +90,8 @@ export default function Sell() {
       next.price = 'Enter a price, or switch the listing type to Free.'
     }
     if (!form.pickup_spot.trim()) next.pickup_spot = 'Name a campus spot where you can hand it over.'
+    if (isFood && !form.food_temp) next.food_temp = 'Is it served hot or cold?'
+    if (isFood && form.expiry_date && form.expiry_date < todayISO()) next.expiry_date = 'That date has already passed.'
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -84,6 +103,10 @@ export default function Sell() {
       const payload = {
         ...form,
         price: form.listing_type === 'free' ? 0 : Number(form.price),
+        // F&B has no wear-and-tear condition; the server stores "Fresh".
+        condition: isFood ? 'Fresh' : form.condition,
+        food_temp: isFood ? form.food_temp : null,
+        expiry_date: isFood && form.expiry_date ? form.expiry_date : null,
       }
       const saved = isEdit
         ? await listingsApi.update(id, { ...payload, images: existingImages })
@@ -122,7 +145,7 @@ export default function Sell() {
 
         <div className="mb-4">
           <label className="field-label" htmlFor="category">Category</label>
-          <select id="category" className="field-input" value={form.category} onChange={set('category')}>
+          <select id="category" className="field-input" value={form.category} onChange={setCategory}>
             {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
           </select>
         </div>
@@ -130,7 +153,7 @@ export default function Sell() {
         <fieldset className="mb-4">
           <legend className="field-label">Listing Type</legend>
           <div className="flex gap-2">
-            {LISTING_TYPES.map((t) => (
+            {listingTypes.map((t) => (
               <button
                 key={t.value}
                 type="button"
@@ -154,17 +177,50 @@ export default function Sell() {
           </div>
         )}
 
-        <div className="mb-4">
-          <label className="field-label" htmlFor="condition">Condition</label>
-          <select id="condition" className="field-input" value={form.condition} onChange={set('condition')}>
-            {CONDITIONS.map((c) => <option key={c}>{c}</option>)}
-          </select>
-        </div>
+        {isFood ? (
+          <>
+            <fieldset className="mb-4">
+              <legend className="field-label">Served</legend>
+              <div className="flex gap-2">
+                {FOOD_TEMPS.map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    aria-pressed={form.food_temp === t.value}
+                    onClick={() => setForm((f) => ({ ...f, food_temp: t.value }))}
+                    className={`flex-1 rounded-[11px] border-[1.5px] px-2 py-3 text-[13.5px] font-semibold ${
+                      form.food_temp === t.value ? 'border-brand bg-brand-tint text-brand' : 'border-line bg-[#fbfbf9] text-ink-soft'
+                    }`}
+                  >
+                    {t.emoji} {t.label}
+                  </button>
+                ))}
+              </div>
+              {errors.food_temp && <p className="mt-1.5 text-[13px] text-coral">{errors.food_temp}</p>}
+            </fieldset>
+
+            <div className="mb-4">
+              <label className="field-label" htmlFor="expiry">
+                Expiry date <span className="font-normal text-ink-faint">(optional)</span>
+              </label>
+              <input id="expiry" type="date" min={todayISO()} className="field-input" value={form.expiry_date} onChange={set('expiry_date')} />
+              <p className="mt-1.5 text-[12.5px] text-ink-faint">After this date the listing is hidden from the marketplace automatically.</p>
+              {errors.expiry_date && <p className="mt-1.5 text-[13px] text-coral">{errors.expiry_date}</p>}
+            </div>
+          </>
+        ) : (
+          <div className="mb-4">
+            <label className="field-label" htmlFor="condition">Condition</label>
+            <select id="condition" className="field-input" value={form.condition} onChange={set('condition')}>
+              {CONDITIONS.map((c) => <option key={c}>{c}</option>)}
+            </select>
+          </div>
+        )}
 
         <div className="mb-4">
           <label className="field-label" htmlFor="description">Description</label>
           <textarea id="description" rows={4} className="field-input resize-y" value={form.description} onChange={set('description')}
-            placeholder="Describe the item, its condition, and why you're passing it on." />
+            placeholder={isFood ? 'What is it, how many portions, any allergens (nuts, dairy…)?' : "Describe the item, its condition, and why you're passing it on."} />
         </div>
 
         <div className="mb-4">

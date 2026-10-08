@@ -12,6 +12,7 @@ const ICONS = {
   'Project Kits': '🧰',
   'Sports': '🏸',
   'Clothing & Event Wear': '🧥',
+  'F&B': '🍱',
 }
 
 export default function Interests() {

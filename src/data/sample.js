@@ -3,7 +3,13 @@
 
 export const CATEGORIES = [
   'Textbooks', 'Lab Gear', 'Electronics', 'Dorm Essentials',
-  'Project Kits', 'Sports', 'Clothing & Event Wear',
+  'Project Kits', 'Sports', 'Clothing & Event Wear', 'F&B',
+]
+// Food & beverages: posted as hot or cold, with an optional expiry date. No condition, no renting.
+export const FOOD_CATEGORY = 'F&B'
+export const FOOD_TEMPS = [
+  { value: 'hot', label: 'Hot', emoji: '🔥' },
+  { value: 'cold', label: 'Cold', emoji: '❄️' },
 ]
 export const CONDITIONS = ['New', 'Like New', 'Good', 'Fair']
 export const LISTING_TYPES = [

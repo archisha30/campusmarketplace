@@ -9,7 +9,7 @@ import EmptyState from '../components/EmptyState.jsx'
 import Avatar from '../components/Avatar.jsx'
 import { useRequestNotifications } from '../hooks/useRequestNotifications.js'
 import { useNotifications } from '../hooks/useNotifications.js'
-import { formatPrice, titleCase, timeAgo } from '../lib/format.js'
+import { formatPrice, isExpired, titleCase, timeAgo } from '../lib/format.js'
 
 const TABS = [
   { label: 'Active', status: 'available' },
@@ -86,7 +86,10 @@ export default function Dashboard() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[14.5px] font-semibold">{l.title}</p>
-            <p className="text-[13px] text-ink-soft">{formatPrice(l.price)} · {titleCase(l.status)}</p>
+            <p className="text-[13px] text-ink-soft">
+              {formatPrice(l.price)} · {titleCase(l.status)}
+              {isExpired(l) && <span className="ml-1.5 font-semibold text-coral">· Expired, hidden from the marketplace</span>}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button className="btn-ghost btn-sm" onClick={() => navigate(`/sell/${l.id}/edit`)}>Edit</button>

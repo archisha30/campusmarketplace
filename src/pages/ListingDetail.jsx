@@ -9,7 +9,7 @@ import EmptyState from '../components/EmptyState.jsx'
 import ImageLightbox from '../components/ImageLightbox.jsx'
 import RecommendedForYou from '../components/RecommendedForYou.jsx'
 import { recordListingView } from '../lib/recommendations.js'
-import { formatPrice, contactLink, titleCase } from '../lib/format.js'
+import { formatPrice, contactLink, titleCase, foodTempLabel, formatDay, isExpired } from '../lib/format.js'
 import Avatar from '../components/Avatar.jsx'
 import LinkifiedText from '../components/LinkifiedText.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
@@ -87,13 +87,29 @@ export default function ListingDetail() {
         <div>
           <div className="mb-3 flex gap-2">
             <TypeBadge type={l.listing_type} />
+            {l.food_temp && (
+              <span className={`badge ${l.food_temp === 'hot' ? 'bg-coral/12 text-coral' : 'bg-brand-tint text-brand'}`}>{foodTempLabel(l)}</span>
+            )}
+            {isExpired(l) && <span className="badge bg-line/60 text-ink-faint">Expired</span>}
             <VerifiedBadge />
           </div>
           <h1 className="text-[28px] font-bold">{l.title}</h1>
           <p className="my-3 font-display text-[32px] font-bold">{formatPrice(l.price)}</p>
 
           <dl className="my-5 flex flex-wrap gap-5 border-y border-line py-4 text-[13.5px] text-ink-soft">
-            <div><dt className="inline font-semibold text-ink">Condition: </dt><dd className="inline">{l.condition}</dd></div>
+            {l.food_temp ? (
+              <>
+                <div><dt className="inline font-semibold text-ink">Served: </dt><dd className="inline">{foodTempLabel(l)}</dd></div>
+                <div>
+                  <dt className="inline font-semibold text-ink">Best before: </dt>
+                  <dd className={`inline ${isExpired(l) ? 'text-coral' : ''}`}>
+                    {l.expiry_date ? `${formatDay(l.expiry_date)}${isExpired(l) ? ' (expired)' : ''}` : 'Not given'}
+                  </dd>
+                </div>
+              </>
+            ) : (
+              <div><dt className="inline font-semibold text-ink">Condition: </dt><dd className="inline">{l.condition}</dd></div>
+            )}
             <div><dt className="inline font-semibold text-ink">Category: </dt><dd className="inline">{l.category}</dd></div>
             <div><dt className="inline font-semibold text-ink">Listing type: </dt><dd className="inline">{titleCase(l.listing_type)}</dd></div>
           </dl>

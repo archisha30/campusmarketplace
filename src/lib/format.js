@@ -51,3 +51,29 @@ export function timeAgo(iso) {
   if (days < 7) return `${days}d ago`
   return new Date(t).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
+
+// "2026-10-09" -> "9 Oct 2026". Date-only values from the API (no time zone).
+export function formatDay(isoDate) {
+  if (!isoDate) return ''
+  const [y, m, d] = String(isoDate).slice(0, 10).split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+// Today as "YYYY-MM-DD" in the student's own time zone (for <input type="date" min>).
+export function todayISO() {
+  const t = new Date()
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
+}
+
+// F&B listings past their expiry date. The API also sends is_expired; this covers mock data.
+export function isExpired(listing) {
+  if (listing?.is_expired != null) return listing.is_expired
+  return Boolean(listing?.expiry_date && String(listing.expiry_date).slice(0, 10) < todayISO())
+}
+
+// "🔥 Hot" / "❄️ Cold" for F&B listings, else ''.
+export function foodTempLabel(listing) {
+  if (listing?.food_temp === 'hot') return '🔥 Hot'
+  if (listing?.food_temp === 'cold') return '❄️ Cold'
+  return ''
+}
