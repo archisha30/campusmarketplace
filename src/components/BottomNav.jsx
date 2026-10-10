@@ -6,7 +6,6 @@ const ITEMS = [
   { to: '/marketplace', label: 'Market', d: 'M4 8h16l-1.5 11.5a2 2 0 0 1-2 1.5H7.5a2 2 0 0 1-2-1.5L4 8ZM8 8V6a4 4 0 0 1 8 0v2' },
   { to: '/resources', label: 'Resources', d: 'M4 5h10a2 2 0 0 1 2 2v13H6a2 2 0 0 1-2-2V5ZM20 20V6a2 2 0 0 0-2-2h-2' },
   { to: '/sell', label: 'Sell', d: 'M12 5v14M5 12h14', sellerOnly: true },
-  { to: '/dashboard', label: 'Dashboard', d: 'M4 4h7v7H4V4Zm9 0h7v4h-7V4Zm0 6h7v10h-7V10ZM4 13h7v7H4v-7Z', sellerOnly: true },
   { to: '/wishlist', label: 'Wishlist', d: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10Z', buyerOnly: true },
   { to: '/profile', label: 'Profile', d: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 20c1.5-4 5-6 8-6s6.5 2 8 6' },
 ]

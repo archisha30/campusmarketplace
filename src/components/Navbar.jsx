@@ -19,14 +19,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false)
   const { user, isSeller, isAdmin } = useAuth()
   const { count } = useWishlist()
-  const links = user
-    ? [
-        ...MEMBER_LINKS,
-        // Sellers get their own dashboard (listings, notifications, buyer requests) right in the nav.
-        ...(isSeller ? [{ to: '/dashboard', label: 'Dashboard' }] : []),
-        ...(isAdmin ? [{ to: '/admin', label: 'Admin' }] : []),
-      ]
-    : GUEST_LINKS
+  const links = user ? [...MEMBER_LINKS, ...(isAdmin ? [{ to: '/admin', label: 'Admin' }] : [])] : GUEST_LINKS
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-bg/90 backdrop-blur">
