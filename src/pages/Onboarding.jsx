@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { COLLEGES } from '../data/sample.js'
+import { cleanIndianMobile } from '../lib/format.js'
 
 export default function Onboarding() {
   const { completeProfile } = useAuth()
@@ -16,8 +17,8 @@ export default function Onboarding() {
     e.preventDefault()
     setError('')
     // Same rule as the server: a 10-digit Indian mobile number (spaces, +91 or a leading 0 are fine).
-    const digits = form.phone.replace(/\D/g, '').replace(/^(91|0)(?=\d{10}$)/, '')
-    if (!/^[6-9]\d{9}$/.test(digits)) {
+    const digits = cleanIndianMobile(form.phone)
+    if (!digits) {
       setError('Enter a valid 10-digit WhatsApp number')
       return
     }

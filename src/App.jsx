@@ -6,6 +6,7 @@ import RequireAuth from './components/RequireAuth.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import ScrollToHash from './components/ScrollToHash.jsx'
 import AnalyticsTracker from './components/AnalyticsTracker.jsx'
+import PhonePrompt from './components/PhonePrompt.jsx'
 
 import Landing from './pages/Landing.jsx'
 import Marketplace from './pages/Marketplace.jsx'
@@ -33,6 +34,7 @@ export default function App() {
     <div className="flex min-h-screen flex-col pb-[74px] md:pb-0">
       <ScrollToHash />
       <AnalyticsTracker />
+      <PhonePrompt />
       <Navbar />
       <main className="flex-1">
         <ErrorBoundary resetKey={location.pathname}>

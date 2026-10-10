@@ -76,3 +76,10 @@ export function foodTempLabel(listing) {
   if (listing?.food_temp === 'cold') return '❄️ Cold'
   return ''
 }
+
+// "+91 98765 43210" / "098765-43210" / "9876543210" -> "9876543210"; null if it isn't a
+// valid Indian mobile number. Same rule as normalize_phone on the backend.
+export function cleanIndianMobile(value = '') {
+  const digits = String(value).replace(/\D/g, '').replace(/^(91|0)(?=\d{10}$)/, '')
+  return /^[6-9]\d{9}$/.test(digits) ? digits : null
+}
