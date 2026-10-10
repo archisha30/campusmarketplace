@@ -628,7 +628,7 @@ export function listCampuses() { return delay(campuses) }
 function adminUserOut(u) {
   const owner = Boolean(u.is_owner)
   return {
-    id: String(u.id), email: u.email, name: u.name || null, college: u.college || null,
+    id: String(u.id), email: u.email, name: u.name || null, avatar_url: u.avatar_url || null, college: u.college || null,
     course: u.course || null, year: u.year || null, phone: u.phone || null,
     account_type: u.account_type || 'buyer', is_admin: owner || u.role === 'admin', is_owner: owner,
     verified: u.status !== 'unverified', profile_completed: true, created_at: u.created_at || '2026-09-01T10:00:00',

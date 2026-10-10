@@ -39,7 +39,10 @@ def test_owner_and_approved_admin_can_view(client, auth, who):
         assert client.get(path, headers=auth(who)).status_code == 200, path
 
 
-def test_users_page_lists_everyone_with_counts(client, auth, create, sold_listing):
+def test_users_page_lists_everyone_with_counts(client, auth, create, sold_listing, db_session, users):
+    db, _ = db_session
+    users["buyer"].avatar_url = "https://example.supabase.co/storage/v1/object/public/campusmarket-public/avatars/b.jpg"
+    db.commit()
     create()
     create({"subject": "DSA"})
     data = client.get("/api/admin/users", headers=auth("admin")).json()
@@ -48,6 +51,8 @@ def test_users_page_lists_everyone_with_counts(client, auth, create, sold_listin
     assert by_email["owner@campus.edu"]["resources"] == 2
     assert by_email["owner@campus.edu"]["is_owner"] is True and by_email["owner@campus.edu"]["is_admin"] is True
     assert by_email["buyer@campus.edu"]["listings"] == 1
+    assert by_email["buyer@campus.edu"]["avatar_url"].endswith("/avatars/b.jpg")  # profile pictures shown to admins
+    assert by_email["other@campus.edu"]["avatar_url"] is None
     assert by_email["admin@campus.edu"]["is_admin"] is True and by_email["admin@campus.edu"]["is_owner"] is False
     assert by_email["new@campus.edu"]["verified"] is False
 

@@ -27,6 +27,7 @@ class AdminUserOut(BaseModel):
     id: str
     email: str
     name: str | None = None
+    avatar_url: str | None = None
     college: str | None = None
     course: str | None = None
     year: str | None = None
@@ -69,6 +70,7 @@ def _user_out(u: User, listings: dict, resources: dict) -> AdminUserOut:
         id=str(u.id),
         email=u.email,
         name=u.name,
+        avatar_url=u.avatar_url,
         college=u.college,
         course=u.course,
         year=u.year,
