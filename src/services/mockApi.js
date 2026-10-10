@@ -460,7 +460,10 @@ function pushNotification({ user_id, actor, ...rest }) {
 export function listNotifications() {
   const u = mockViewer()
   if (!u) return Promise.reject(new Error('Log in to see notifications'))
-  const items = notifications.filter((n) => sameId(n.user_id, u.id)).map(({ user_id, ...n }) => n)
+  const items = notifications
+    .filter((n) => sameId(n.user_id, u.id))
+    // Reports are anonymous to the seller, like the real API.
+    .map(({ user_id, ...n }) => (n.type === 'report' ? { ...n, actor: { id: '', name: 'A student', avatar_url: null, email: '', phone: null } } : n))
   return delay({ items, unread: items.filter((n) => !n.read).length }, 200)
 }
 
@@ -483,15 +486,43 @@ export function recordContact(targetType, targetId, channel) {
   return delay(null, 100)
 }
 
-export function createReport(payload) {
+// Mirrors POST /api/reports: one report per person per item, seller notified anonymously.
+export function createReport({ listing_id, resource_id, reason, details }) {
+  const u = mockViewer()
+  if (!u) return Promise.reject(new Error('Log in to report'))
+  const isListing = listing_id != null
+  const target = isListing
+    ? listings.find((l) => l.id === Number(listing_id))
+    : resources.find((r) => r.id === Number(resource_id))
+  if (!target) return Promise.reject(new Error('That item no longer exists'))
+  const owner = isListing ? target.seller : target.owner
+  if (sameId(owner.id, u.id)) return Promise.reject(new Error("You can't report your own item"))
+  const targetType = isListing ? 'listing' : 'resource'
+  if (reports.some((r) => r.target_type === targetType && r.target_id === target.id && sameId(r.reporter.id, u.id))) {
+    return Promise.reject(new Error("You've already reported this. Our team will review it."))
+  }
   reports.unshift({
-    id: nextId++,
-    ...payload,
-    reporter: seed.currentUser.name,
-    created_at: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
-    status: 'open',
+    id: nextId++, target_type: targetType, target_id: target.id, target_title: target.title, target_exists: true,
+    reason, details: details || null, status: 'open', created_at: nowIso(), resolved_at: null, reports_on_item: 1,
+    reporter: { id: String(u.id), name: u.name, email: u.email },
+    owner: { id: String(owner.id), name: owner.name, email: owner.email || '' },
   })
+  pushNotification({ user_id: owner.id, actor: u, type: 'report', target_type: targetType, target_id: target.id, target_title: target.title, note: reason })
   return delay({ ok: true })
+}
+
+export function adminReports(status) {
+  const counts = {}
+  reports.forEach((r) => { counts[`${r.target_type}:${r.target_id}`] = (counts[`${r.target_type}:${r.target_id}`] || 0) + 1 })
+  const items = reports
+    .filter((r) => !status || r.status === status)
+    .map((r) => ({ ...r, reports_on_item: counts[`${r.target_type}:${r.target_id}`] }))
+  return delay({ items, open: reports.filter((r) => r.status === 'open').length })
+}
+
+export function setReportStatus(id, status) {
+  reports = reports.map((r) => (r.id === Number(id) ? { ...r, status, resolved_at: status === 'resolved' ? nowIso() : null } : r))
+  return delay(null)
 }
 
 export function signup(email, accountType = 'buyer') {

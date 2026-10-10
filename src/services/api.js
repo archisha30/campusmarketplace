@@ -99,7 +99,7 @@ export const resourcesApi = {
 }
 
 export const reportsApi = {
-  // POST /api/reports  body: { listing_id, resource_id, reason }
+  // POST /api/reports  body: { listing_id | resource_id, reason, details? }  (seller is notified anonymously)
   create: (payload) => pick(() => http.post('/reports', payload), () => mock.createReport(payload))(),
 }
 
@@ -182,4 +182,9 @@ export const adminApi = {
   deleteListing: (id) => pick(() => http.del(`/admin/listings/${id}`), () => mock.deleteListing(id))(),
   // GET /api/admin/resources?q=  -> every resource, including closed, with owner contact
   resources: (q) => pick(() => http.get('/admin/resources', { q }), () => mock.adminResources(q))(),
+  // GET /api/admin/reports?status=open|resolved  -> { items, open }  (includes who reported)
+  reports: (status) => pick(() => http.get('/admin/reports', { status }), () => mock.adminReports(status))(),
+  // PATCH /api/admin/reports/:id  body: { status: "open" | "resolved" }
+  setReportStatus: (id, status) =>
+    pick(() => http.patch(`/admin/reports/${id}`, { status }), () => mock.setReportStatus(id, status))(),
 }

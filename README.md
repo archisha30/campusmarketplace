@@ -177,6 +177,8 @@ All paths are under `/api`. In this table, *seller* means `account_type = "selle
 | GET | `/resources/{id}/access` | owner or admin | List requests |
 | PATCH | `/resources/{id}/access/{request_id}` | owner or admin | `{ status: "approved" \| "denied" }` |
 | GET | `/resources/{id}/file` | full access | Streams the PDF |
+| POST | `/reports` | verified user | `{ listing_id \| resource_id, reason, details? }`: one per person per item; the seller is notified anonymously |
+| GET / PATCH | `/admin/reports`, `/admin/reports/{id}` | admin | All reports with reporter and seller; `{ status: "open" \| "resolved" }` |
 | GET | `/admin/users` | admin | Every user with listing/resource counts; `q` searches name/email |
 | PATCH | `/admin/users/{id}/admin` | owner | `{ is_admin }`: approve or remove an admin |
 | GET | `/admin/listings`, `/admin/resources` | admin | Everything, including sold/closed; `q` searches |
@@ -185,8 +187,7 @@ All paths are under `/api`. In this table, *seller* means `account_type = "selle
 | POST | `/notifications/read-all` | user | |
 | POST | `/notifications/contact` | verified user | `{ target_type, target_id, channel }`: sent when a student taps WhatsApp / Email; repeat taps within 1 hour are ignored |
 
-**Mock-only so far:** reports (`POST /reports`) and campuses exist in `mockApi.js` but have no
-backend routes yet, so they fail in live mode.
+**Mock-only so far:** campuses exist in `mockApi.js` but have no backend routes yet.
 
 ## Notes
 

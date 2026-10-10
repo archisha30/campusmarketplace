@@ -44,7 +44,10 @@ class NotificationOut(BaseModel):
             note=n.note,
             created_at=n.created_at,
             read=n.read_at is not None,
-            actor=ActorOut(
+            # Reports are anonymous to the seller, so people aren't afraid to flag things.
+            actor=ActorOut(id="", name="A student", email="")
+            if n.type == "report"
+            else ActorOut(
                 id=str(a.id),
                 name=a.name or a.email.split("@")[0],
                 avatar_url=a.avatar_url,

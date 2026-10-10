@@ -135,7 +135,9 @@ export default function ListingDetail() {
               onClick={() => recordContact(user, 'listing', l.id, 'whatsapp')}>Contact Seller</a>
             <a className="btn-ghost" href={links.email} target="_blank" rel="noopener noreferrer"
               onClick={() => recordContact(user, 'listing', l.id, 'email')}>Email instead</a>
-            <button className="btn-ghost" onClick={() => setReporting(true)}>Report Listing</button>
+            {String(l.seller?.id) !== String(user?.id) && (
+              <button className="btn-ghost" onClick={() => setReporting(true)}>Report Listing</button>
+            )}
           </div>
 
           <p className="mt-4 text-[12.5px] text-ink-faint">Meet on campus · Inspect before paying · Cash / UPI</p>

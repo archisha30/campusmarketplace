@@ -134,7 +134,7 @@ function Notifications() {
             <span className="rounded-pill bg-coral px-2 py-0.5 text-[11.5px] font-bold text-white">{fresh} new</span>
           )}
         </h2>
-        <p className="text-[13px] text-ink-faint">Access requests and students reaching out about your items</p>
+        <p className="text-[13px] text-ink-faint">Access requests, students reaching out, and reports on your items</p>
       </div>
 
       {loading && <div className="skeleton h-20" />}
@@ -168,9 +168,13 @@ function NotificationRow({ n }) {
         view: 'cm', fs: '1', to: actor.email, su: `CampusMarket — ${n.target_title}`, body: greeting,
       })}`
 
+  const isReport = n.type === 'report'
   let icon
   let text
-  if (n.type === 'access_request') {
+  if (isReport) {
+    icon = '⚠️'
+    text = <>reported your {n.target_type} {item}</>
+  } else if (n.type === 'access_request') {
     icon = '🔑'
     text = <>requested access to {item}</>
   } else {
@@ -181,14 +185,22 @@ function NotificationRow({ n }) {
   return (
     <div className={`mb-2.5 flex flex-wrap items-start gap-3.5 rounded-card border p-3.5 ${fresh ? 'border-brand/30 bg-brand-tint/50' : 'border-line'}`}>
       <div className="relative flex-none">
-        <Avatar user={actor} size={38} className="bg-sun font-display text-ink" />
+        {isReport ? (
+          <div className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-coral/15 text-[16px]" aria-hidden>🚩</div>
+        ) : (
+          <Avatar user={actor} size={38} className="bg-sun font-display text-ink" />
+        )}
         <span className="absolute -bottom-1 -right-1 text-[14px]" aria-hidden>{icon}</span>
       </div>
       <div className="min-w-0 flex-1">
         <p className="break-words text-[14px] text-ink-soft">
           <span className="font-semibold text-ink">{actor.name}</span> {text}
         </p>
-        {n.note && <p className="mt-1 break-words text-[13.5px]">“{n.note}”</p>}
+        {n.note && (
+          isReport
+            ? <p className="mt-1 text-[13.5px]"><span className="font-semibold">Reason:</span> {n.note}. Our team will review it; if something's wrong, edit or remove the item.</p>
+            : <p className="mt-1 break-words text-[13.5px]">“{n.note}”</p>
+        )}
         <p className="mt-1 text-[12px] text-ink-faint">
           {timeAgo(n.created_at)}
           {fresh && <span className="ml-2 rounded-pill bg-brand px-1.5 py-px text-[10.5px] font-bold text-white">New</span>}
@@ -196,7 +208,9 @@ function NotificationRow({ n }) {
         </p>
       </div>
       <div className="flex flex-none flex-wrap gap-2">
-        {n.type === 'access_request' ? (
+        {isReport ? (
+          <Link to={href} className="btn-ghost btn-sm">View item</Link>
+        ) : n.type === 'access_request' ? (
           <Link to={`${href}#manage`} className="btn-accent btn-sm">Review request</Link>
         ) : (
           <a className="btn-ghost btn-sm" href={reply} target="_blank" rel="noopener noreferrer">

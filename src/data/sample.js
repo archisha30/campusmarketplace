@@ -103,11 +103,13 @@ export const resources = [
     description: 'Drive folder with 20 recorded lectures on LLMs, prompting and RAG, plus the slide decks. The sample PDF shows the first deck.' },
 ]
 
+// Same shape as GET /api/admin/reports items.
 export const reports = [
-  { id: 1, listing_id: 6, listing_title: 'Mini Fridge (45L)', reporter: 'Anonymous student',
-    reason: 'Incorrect information', created_at: '12 Sep', status: 'open' },
-  { id: 2, listing_id: 8, listing_title: 'Farewell Blazer (M)', reporter: 'Priya N.',
-    reason: 'Spam', created_at: '10 Sep', status: 'open' },
+  { id: 1, target_type: 'listing', target_id: 6, target_title: 'Mini Fridge (45L)', target_exists: true,
+    reason: 'Incorrect information', details: 'Says 45L but the photo looks much smaller.', status: 'open',
+    created_at: '2026-09-12T10:00:00', resolved_at: null, reports_on_item: 1,
+    reporter: { id: '2', name: 'Rhea M.', email: 'rhea@polaris.edu' },
+    owner: { id: '6', name: 'Ishaan P.', email: 'ishaan@polaris.edu' } },
 ]
 
 export const users = [

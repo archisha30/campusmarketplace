@@ -12,6 +12,7 @@ class Notification(Base):
 
     type "access_request": actor asked for access to the recipient's resource.
     type "contact": actor tapped WhatsApp / Email on the recipient's listing or resource.
+    type "report": actor reported the recipient's item (shown anonymously; note = reason).
     (The app can't see whether a message was actually sent, only that they opened it.)
     """
 
@@ -21,7 +22,7 @@ class Notification(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     actor_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    type = Column(String(20), nullable=False)  # access_request | contact
+    type = Column(String(20), nullable=False)  # access_request | contact | report
     channel = Column(String(10), nullable=True)  # whatsapp | email (contact only)
     target_type = Column(String(10), nullable=False)  # listing | resource
     target_id = Column(Integer, nullable=False)

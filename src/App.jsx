@@ -22,6 +22,7 @@ import Interests from './pages/Interests.jsx'
 import AdminLayout from './pages/admin/AdminLayout.jsx'
 import AdminUsers from './pages/admin/AdminUsers.jsx'
 import AdminContent from './pages/admin/AdminContent.jsx'
+import AdminReports from './pages/admin/AdminReports.jsx'
 import Wishlist from './pages/Wishlist.jsx'
 import Profile from './pages/Profile.jsx'
 import NotFound from './pages/NotFound.jsx'
@@ -68,6 +69,7 @@ export default function App() {
               <Route index element={<Navigate to="/admin/users" replace />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="content" element={<AdminContent />} />
+              <Route path="reports" element={<AdminReports />} />
             </Route>
           </Route>
 

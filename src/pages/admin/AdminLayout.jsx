@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth.jsx'
 const TABS = [
   { to: '/admin/users', label: 'Users' },
   { to: '/admin/content', label: 'Listings & Resources' },
+  { to: '/admin/reports', label: 'Reports' },
 ]
 
 // Shell for the admin pages. Only owners (OWNER_EMAILS) and admins they approved get here;

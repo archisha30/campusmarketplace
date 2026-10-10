@@ -12,9 +12,11 @@ from app.core.security import require_admin, require_owner
 from app.core.storage import delete_public_urls
 from app.db.session import get_db
 from app.models.listing import Listing
+from app.models.report import Report
 from app.models.resource import Resource
 from app.models.user import User
 from app.schemas.listing import ListingOut
+from app.schemas.report import AdminReportOut, AdminReportsOut, ReportPersonOut, ReportStatusIn
 from app.schemas.resource import ResourceOut
 
 # Admin dashboard: the owner(s) in OWNER_EMAILS plus the admins they approve.
@@ -172,3 +174,65 @@ def list_all_resources(
         out.owner = _owner_out(r.owner, with_contact=True)
         items.append(out)
     return AdminResourcesOut(items=items, total=len(items))
+
+
+def _person(u: User) -> ReportPersonOut:
+    return ReportPersonOut(id=str(u.id), name=u.name or u.email.split("@")[0], email=u.email)
+
+
+@router.get("/reports", response_model=AdminReportsOut)
+def list_reports(
+    status: Optional[str] = None,  # "open" | "resolved"; omit for all
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
+    """Every report, newest first, with who reported what (admins only)."""
+    query = db.query(Report).options(joinedload(Report.reporter), joinedload(Report.owner))
+    if status in ("open", "resolved"):
+        query = query.filter(Report.status == status)
+    rows = query.order_by(Report.created_at.desc(), Report.id.desc()).all()
+
+    per_item = dict(
+        ((t, i), n)
+        for t, i, n in db.query(Report.target_type, Report.target_id, func.count(Report.id))
+        .group_by(Report.target_type, Report.target_id)
+        .all()
+    )
+    listing_ids = {id_ for (id_,) in db.query(Listing.id).filter(Listing.id.in_([r.target_id for r in rows if r.target_type == "listing"])).all()}
+    resource_ids = {id_ for (id_,) in db.query(Resource.id).filter(Resource.id.in_([r.target_id for r in rows if r.target_type == "resource"])).all()}
+
+    items = [
+        AdminReportOut(
+            id=r.id,
+            target_type=r.target_type,
+            target_id=r.target_id,
+            target_title=r.target_title,
+            target_exists=r.target_id in (listing_ids if r.target_type == "listing" else resource_ids),
+            reason=r.reason,
+            details=r.details,
+            status=r.status,
+            created_at=r.created_at,
+            resolved_at=r.resolved_at,
+            reporter=_person(r.reporter),
+            owner=_person(r.owner),
+            reports_on_item=per_item.get((r.target_type, r.target_id), 1),
+        )
+        for r in rows
+    ]
+    open_count = db.query(Report).filter(Report.status == "open").count()
+    return AdminReportsOut(items=items, open=open_count)
+
+
+@router.patch("/reports/{report_id}", status_code=204)
+def set_report_status(
+    report_id: int,
+    payload: ReportStatusIn,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    report.status = payload.status
+    report.resolved_at = datetime.utcnow() if payload.status == "resolved" else None
+    db.commit()
