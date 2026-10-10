@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import { Select } from '../components/FilterBar.jsx'
 import EmptyState from '../components/EmptyState.jsx'
+import PostRequestBanner from '../components/PostRequestBanner.jsx'
 import { SUBJECTS, YEARS } from '../lib/resources.js'
 import ResourceCard from '../components/ResourceCard.jsx'
 import ResourcePicks from '../components/ResourcePicks.jsx'
@@ -104,6 +105,8 @@ export default function Resources() {
           {items.map((r) => <ResourceCard key={r.id} r={r} showStatus={mine} />)}
         </div>
       )}
+
+      <PostRequestBanner className="mt-12" />
     </div>
   )
 }

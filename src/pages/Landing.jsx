@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
-import PostRequestModal from '../components/PostRequestModal.jsx'
+import { Link, Navigate } from 'react-router-dom'
+import PostRequestBanner from '../components/PostRequestBanner.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 
 const TRUST = [
@@ -28,8 +27,6 @@ const GUEST_TILES = [
 const TILT = ['-rotate-3 top-0 left-8', 'rotate-3 top-16 right-0 z-10', 'rotate-2 bottom-10 left-0', '-rotate-3 bottom-0 right-5']
 
 export default function Landing() {
-  const navigate = useNavigate()
-  const [requesting, setRequesting] = useState(false)
   const { user, isVerified, loading: authLoading } = useAuth()
 
   // Logged-in students only use the Marketplace and Resource Hub; the landing page is for visitors.
@@ -121,21 +118,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1180px] px-6 pb-16">
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-slab bg-[#141721] p-9">
-          <div>
-            <h3 className="mb-1.5 text-[20px] font-semibold text-white">Looking for something?</h3>
-            <p className="text-sm text-[#B7BAC4]">"Need a Casio fx-991CW for tomorrow." Post a request and sellers will reach out.</p>
-          </div>
-          <button
-            className="btn bg-white text-ink hover:shadow-lg"
-            onClick={() => (user ? setRequesting(true) : navigate('/login', { state: { from: '/' } }))}
-          >
-            Post a Request
-          </button>
-          <PostRequestModal open={requesting} onClose={() => setRequesting(false)} />
-        </div>
-      </section>
+      <PostRequestBanner className="mx-auto max-w-[1180px] px-6 pb-16" />
     </>
   )
 }

@@ -5,6 +5,7 @@ import { CATEGORIES, CONDITIONS } from '../data/sample.js'
 import ListingCard from '../components/ListingCard.jsx'
 import { SkeletonGrid } from '../components/SkeletonCard.jsx'
 import EmptyState from '../components/EmptyState.jsx'
+import PostRequestBanner from '../components/PostRequestBanner.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import { ChipRow, Select, Toggle } from '../components/FilterBar.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
@@ -141,6 +142,8 @@ export default function Marketplace() {
           {items.map((l) => <ListingCard key={l.id} listing={l} />)}
         </div>
       )}
+
+      <PostRequestBanner className="mt-12" />
     </div>
   )
 }
