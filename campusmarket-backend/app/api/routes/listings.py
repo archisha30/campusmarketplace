@@ -182,6 +182,8 @@ def create_listing(
 ):
     if not user.profile_completed:
         raise HTTPException(status_code=403, detail="Complete your profile before listing an item")
+    if not user.phone:
+        raise HTTPException(status_code=403, detail="Add your WhatsApp number in your profile so buyers can contact you")
     listing = Listing(**payload.model_dump(), owner_id=user.id)
     _apply_food_rules(listing, check_expiry=True)
     db.add(listing)

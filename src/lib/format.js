@@ -3,14 +3,13 @@ export function formatPrice(price) {
   return `₹${Number(price).toLocaleString('en-IN')}`
 }
 
-// Fallback WhatsApp number for "Contact Seller" when the seller hasn't added one,
-// in international format without "+" (91 = India).
-const SELLER_WHATSAPP = '917008699207'
-
-export function contactLink(listing, { phone = listing.seller?.phone || SELLER_WHATSAPP } = {}) {
+// "Contact Seller" links. WhatsApp goes to the seller's own number (collected at onboarding);
+// it's null for older accounts without one, so the page falls back to email only.
+export function contactLink(listing) {
+  const phone = listing.seller?.phone
   const text = `Hi! I'm interested in your ${listing.title} listed on CampusMarket. Is it still available?`
   return {
-    whatsapp: `https://wa.me/${phone}?text=${encodeURIComponent(text)}`,
+    whatsapp: phone ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}` : null,
     // Opens Gmail's compose window in a new tab, addressed to the seller.
     email: `https://mail.google.com/mail/?${new URLSearchParams({
       view: 'cm',

@@ -33,6 +33,16 @@ class ProfileRequest(BaseModel):
     college: str
     course: str
     year: str
+    # WhatsApp number: buyers tap "Contact Seller" and land on the seller's own chat.
+    phone: str
+
+    @field_validator("phone")
+    @classmethod
+    def required_phone(cls, value: str) -> str:
+        phone = normalize_phone(value)
+        if not phone:
+            raise ValueError("Enter your WhatsApp number")
+        return phone
 
 
 def normalize_phone(value: str | None) -> str | None:
@@ -73,7 +83,11 @@ class ProfileUpdateRequest(BaseModel):
     @field_validator("phone")
     @classmethod
     def valid_phone(cls, value: str | None) -> str | None:
-        return normalize_phone(value)
+        # Can be changed but not removed: it's how buyers reach a seller.
+        phone = normalize_phone(value)
+        if value is not None and not phone:
+            raise ValueError("Your WhatsApp number is required so buyers can contact you")
+        return phone
 
 
 class InterestsRequest(BaseModel):

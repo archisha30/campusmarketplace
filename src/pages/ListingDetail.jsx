@@ -131,10 +131,18 @@ export default function ListingDetail() {
           </p>
 
           <div className="flex flex-wrap gap-2.5">
-            <a className="btn-accent" href={links.whatsapp} target="_blank" rel="noopener noreferrer"
-              onClick={() => recordContact(user, 'listing', l.id, 'whatsapp')}>Contact Seller</a>
-            <a className="btn-ghost" href={links.email} target="_blank" rel="noopener noreferrer"
-              onClick={() => recordContact(user, 'listing', l.id, 'email')}>Email instead</a>
+            {links.whatsapp ? (
+              <>
+                <a className="btn-accent" href={links.whatsapp} target="_blank" rel="noopener noreferrer"
+                  onClick={() => recordContact(user, 'listing', l.id, 'whatsapp')}>Contact Seller</a>
+                <a className="btn-ghost" href={links.email} target="_blank" rel="noopener noreferrer"
+                  onClick={() => recordContact(user, 'listing', l.id, 'email')}>Email instead</a>
+              </>
+            ) : (
+              // Older accounts may not have a number yet; email still reaches them.
+              <a className="btn-accent" href={links.email} target="_blank" rel="noopener noreferrer"
+                onClick={() => recordContact(user, 'listing', l.id, 'email')}>Email Seller</a>
+            )}
             {String(l.seller?.id) !== String(user?.id) && (
               <button className="btn-ghost" onClick={() => setReporting(true)}>Report Listing</button>
             )}

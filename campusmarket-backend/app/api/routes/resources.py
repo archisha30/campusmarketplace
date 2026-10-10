@@ -398,6 +398,8 @@ def create_resource(
 ):
     if not user.profile_completed:
         raise HTTPException(status_code=403, detail="Complete your profile before posting a resource")
+    if not user.phone:
+        raise HTTPException(status_code=403, detail="Add your WhatsApp number in your profile so buyers can contact you")
     pdf = _read_pdf(file)
     _check_file_rules(fields, has_file=pdf is not None)
 

@@ -128,12 +128,13 @@ function EditProfileModal({ open, onClose }) {
               autoComplete="tel-national"
               maxLength={14}
               className="field-input rounded-l-none"
+              required
               value={form.phone}
               onChange={set('phone')}
               placeholder="10-digit mobile number"
             />
           </div>
-          <p className="mb-4 text-[12px] text-ink-faint">Shown to buyers on your listings so they can reach you on WhatsApp.</p>
+          <p className="mb-4 text-[12px] text-ink-faint">Required. "Contact Seller" on your listings opens a WhatsApp chat with this number.</p>
 
           <label className="field-label" htmlFor="pf-college">College</label>
           <input id="pf-college" required className="field-input mb-4" value={form.college} onChange={set('college')} />

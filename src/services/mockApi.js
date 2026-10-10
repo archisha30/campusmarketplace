@@ -549,7 +549,10 @@ export function login(email) {
 }
 
 export function completeProfile(payload) {
-  return delay({ ...seed.currentUser, ...payload })
+  const digits = String(payload.phone || '').replace(/\D/g, '').replace(/^(91|0)(?=\d{10}$)/, '')
+  if (!/^[6-9]\d{9}$/.test(digits)) return Promise.reject(new Error('Enter your WhatsApp number'))
+  Object.assign(seed.currentUser, payload, { phone: `91${digits}`, profile_completed: true })
+  return delay(seed.currentUser)
 }
 
 export function saveInterests(interests) {

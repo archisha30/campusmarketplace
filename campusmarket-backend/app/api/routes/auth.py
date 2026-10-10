@@ -123,6 +123,7 @@ def complete_profile(
     user.college = payload.college
     user.course = payload.course
     user.year = payload.year
+    user.phone = payload.phone
     user.profile_completed = True
     db.commit()
     db.refresh(user)
