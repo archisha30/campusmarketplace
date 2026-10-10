@@ -43,6 +43,17 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto max-w-[1180px] px-6 py-9">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-[30px] font-bold">Seller Dashboard</h1>
+          <p className="mt-1.5 text-[14.5px] text-ink-soft">Your notifications, what students are looking for, and your listings, all in one place.</p>
+        </div>
+        <div className="flex gap-2">
+          <Link to="/sell" className="btn-accent btn-sm">+ Sell an Item</Link>
+          <Link to="/resources/new" className="btn-ghost btn-sm">+ Post a Resource</Link>
+        </div>
+      </div>
+
       <Notifications />
       <BuyerRequests />
 

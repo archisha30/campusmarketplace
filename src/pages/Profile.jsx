@@ -294,7 +294,7 @@ function SellerSection({ user }) {
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-[19px] font-semibold">Your shop</h2>
         <div className="flex gap-2">
-          <Link to="/dashboard" className="btn-ghost btn-sm">My Listings</Link>
+          <Link to="/dashboard" className="btn-ghost btn-sm">Seller Dashboard</Link>
           <Link to="/sell" className="btn-accent btn-sm">Sell an Item</Link>
         </div>
       </div>
