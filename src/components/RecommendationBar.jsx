@@ -8,7 +8,8 @@ import { useAuth } from '../hooks/useAuth.jsx'
 // "picked for you", separate from the full browse-and-filter list underneath.
 export default function RecommendationBar() {
   const { user } = useAuth()
-  const { items, personalized, loading } = useRecommendations()
+  // With interests chosen, only those categories are shown (strict), never filler from others.
+  const { items, personalized, loading } = useRecommendations({ strict: true })
   const interests = user?.interests || []
 
   const scroller = useRef(null)
@@ -35,7 +36,8 @@ export default function RecommendationBar() {
     el.scrollBy({ left: direction * el.clientWidth * 0.8, behavior: 'smooth' })
   }
 
-  if (!loading && items.length === 0) return null
+  const empty = !loading && items.length === 0
+  if (empty && interests.length === 0) return null
 
   return (
     <section aria-labelledby="picked-for-you" className="mb-8 w-full max-w-[780px] rounded-[18px] border border-brand/15 bg-brand-tint p-3.5 md:p-4">
@@ -61,7 +63,7 @@ export default function RecommendationBar() {
           )}
         </div>
 
-        <div className="hidden flex-none gap-1.5 md:flex">
+        <div className={`hidden flex-none gap-1.5 ${empty ? '' : 'md:flex'}`}>
           <button
             type="button"
             aria-label="Previous picks"
@@ -83,7 +85,11 @@ export default function RecommendationBar() {
         </div>
       </div>
 
-      {loading ? (
+      {empty ? (
+        <p className="rounded-card bg-paper px-4 py-5 text-[13.5px] text-ink-soft">
+          Nothing in {interests.join(', ')} right now. New listings in your interests will show up here.
+        </p>
+      ) : loading ? (
         <div className="flex gap-3 overflow-hidden">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="skeleton h-[176px] w-[176px] flex-none" />

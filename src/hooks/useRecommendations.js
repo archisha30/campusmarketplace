@@ -7,7 +7,8 @@ import { studyYear } from '../lib/resources.js'
 
 // Listing picks. Two callers (Marketplace, ListingDetail). Reads the client-side
 // affinity signal once per mount so both consumers score against the same snapshot.
-export function useRecommendations({ excludeId } = {}) {
+// strict: only listings in the student's chosen interests (no filler from other categories).
+export function useRecommendations({ excludeId, strict = false } = {}) {
   const { user } = useAuth()
   const { hasHistory, scores: categoryScores } = useMemo(
     () => affinity(user, 'listing', user?.interests || []),
@@ -16,8 +17,13 @@ export function useRecommendations({ excludeId } = {}) {
   )
 
   const { data, loading } = useApi(
-    () => listingsApi.recommended({ excludeId, campusId: user?.campus_id, categoryScores }),
-    [excludeId, user?.id, user?.campus_id, hasHistory, user?.interests]
+    () => listingsApi.recommended({
+      excludeId,
+      campusId: user?.campus_id,
+      categoryScores,
+      onlyCategories: strict ? user?.interests || [] : [],
+    }),
+    [excludeId, strict, user?.id, user?.campus_id, hasHistory, user?.interests]
   )
 
   return {

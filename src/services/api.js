@@ -36,10 +36,16 @@ export const listingsApi = {
   // GET /api/listings/recommended?category_scores=&exclude_id=&campus_id=
   // Content-based: server would score by the same category-affinity signal the
   // client tracks locally, plus same-campus boost and recency. See lib/recommendations.js.
-  recommended: ({ excludeId, campusId, categoryScores } = {}) =>
+  // onlyCategories: restrict to these categories (used by "Picked for you" with the student's interests)
+  recommended: ({ excludeId, campusId, categoryScores, onlyCategories } = {}) =>
     pick(
-      () => http.get('/listings/recommended', { exclude_id: excludeId, campus_id: campusId, category_scores: JSON.stringify(categoryScores || {}) }),
-      () => mock.getRecommendations({ excludeId, campusId, categoryScores })
+      () => http.get('/listings/recommended', {
+        exclude_id: excludeId,
+        campus_id: campusId,
+        category_scores: JSON.stringify(categoryScores || {}),
+        only_categories: onlyCategories?.length ? JSON.stringify(onlyCategories) : undefined,
+      }),
+      () => mock.getRecommendations({ excludeId, campusId, categoryScores, onlyCategories })
     )(),
 }
 

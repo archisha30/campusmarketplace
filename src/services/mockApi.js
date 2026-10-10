@@ -14,9 +14,10 @@ let nextId = 100
 
 const delay = (value, ms = 350) => new Promise((r) => setTimeout(() => r(structuredClone(value)), ms))
 
-export function getRecommendations({ excludeId, campusId, categoryScores = {} } = {}) {
+export function getRecommendations({ excludeId, campusId, categoryScores = {}, onlyCategories = [] } = {}) {
   const hasAffinity = Object.keys(categoryScores).length > 0
   let pool = listings.filter((l) => l.status === 'available' && l.id !== Number(excludeId))
+  if (onlyCategories.length) pool = pool.filter((l) => onlyCategories.includes(l.category))
 
   const scored = pool.map((l) => {
     let score = categoryScores[l.category] || 0

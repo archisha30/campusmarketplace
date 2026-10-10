@@ -130,6 +130,7 @@ def recommended_listings(
     exclude_id: Optional[int] = None,
     campus_id: Optional[int] = None,
     category_scores: Optional[str] = None,  # JSON like {"Electronics": 2.0}, built by the frontend
+    only_categories: Optional[str] = None,  # JSON list, e.g. ["F&B"]: restrict picks to these (the student's interests)
     db: Session = Depends(get_db),
     _viewer: User = Depends(require_verified),
 ):
@@ -143,9 +144,21 @@ def recommended_listings(
         except (ValueError, TypeError):
             scores = {}  # malformed input just means "no personalization"
 
+    only: list[str] = []
+    if only_categories:
+        try:
+            parsed = json.loads(only_categories)
+            if isinstance(parsed, list):
+                only = [str(c) for c in parsed if c]
+        except (ValueError, TypeError):
+            only = []
+
     query = db.query(Listing).filter(Listing.status == "available", _not_expired())
     if exclude_id:
         query = query.filter(Listing.id != exclude_id)
+    if only:
+        # "Picked for you" with chosen interests shows only those categories, never filler.
+        query = query.filter(Listing.category.in_(only))
     pool = query.order_by(Listing.created_at.desc()).all()
 
     def score(listing: Listing) -> float:
