@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
+import { COLLEGES } from '../data/sample.js'
 
 export default function Onboarding() {
   const { completeProfile } = useAuth()
   const navigate = useNavigate()
-  const [form, setForm] = useState({ name: '', phone: '', college: '', course: '', year: '' })
+  const [form, setForm] = useState({ name: '', phone: '', college: COLLEGES[0], course: '', year: '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -59,7 +60,9 @@ export default function Onboarding() {
         <p className="mb-4 mt-1 text-[12px] text-ink-faint">When someone taps "Contact Seller" on your items, WhatsApp opens a chat with this number.</p>
 
         <label className="field-label" htmlFor="college">College</label>
-        <input id="college" required className="field-input mb-4" value={form.college} onChange={set('college')} placeholder="Polaris School of Technology" />
+        <select id="college" required className="field-input mb-4" value={form.college} onChange={set('college')}>
+          {COLLEGES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
 
         <label className="field-label" htmlFor="course">Course / Branch</label>
         <input id="course" className="field-input mb-4" value={form.course} onChange={set('course')} placeholder="e.g. AI/ML" />

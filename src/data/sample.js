@@ -11,6 +11,9 @@ export const FOOD_TEMPS = [
   { value: 'hot', label: 'Hot', emoji: '🔥' },
   { value: 'cold', label: 'Cold', emoji: '❄️' },
 ]
+// Colleges offered in the signup / profile dropdown. Add more here as campuses join.
+export const COLLEGES = ['Polaris School Of Technology']
+
 export const CONDITIONS = ['New', 'Like New', 'Good', 'Fair']
 export const LISTING_TYPES = [
   { value: 'sale', label: 'Sell' },

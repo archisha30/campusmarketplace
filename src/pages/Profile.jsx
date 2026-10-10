@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { useWishlist } from '../hooks/useWishlist.jsx'
 import { useToast } from '../hooks/useToast.jsx'
 import Avatar from '../components/Avatar.jsx'
+import { COLLEGES } from '../data/sample.js'
 import { shrinkToJpeg } from '../lib/images.js'
 import Modal from '../components/Modal.jsx'
 import PostRequestModal from '../components/PostRequestModal.jsx'
@@ -84,7 +85,7 @@ function EditProfileModal({ open, onClose }) {
     setForm({
       name: user.name || '',
       phone: user.phone ? user.phone.replace(/^91/, '') : '',
-      college: user.college || '',
+      college: user.college || COLLEGES[0],
       course: user.course || '',
       year: user.year || '',
     })
@@ -137,7 +138,10 @@ function EditProfileModal({ open, onClose }) {
           <p className="mb-4 text-[12px] text-ink-faint">Required. "Contact Seller" on your listings opens a WhatsApp chat with this number.</p>
 
           <label className="field-label" htmlFor="pf-college">College</label>
-          <input id="pf-college" required className="field-input mb-4" value={form.college} onChange={set('college')} />
+          <select id="pf-college" required className="field-input mb-4" value={form.college} onChange={set('college')}>
+            {/* Keep an older free-text value selectable so saving doesn't silently change it. */}
+            {[...new Set([...COLLEGES, form.college].filter(Boolean))].map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
 
           <div className="mb-5 grid grid-cols-2 gap-3">
             <div>
