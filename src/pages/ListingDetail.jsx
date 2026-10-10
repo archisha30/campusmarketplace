@@ -14,10 +14,14 @@ import Avatar from '../components/Avatar.jsx'
 import LinkifiedText from '../components/LinkifiedText.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { recordContact } from '../hooks/useNotifications.js'
+import { useWishlist } from '../hooks/useWishlist.jsx'
+import { useToast } from '../hooks/useToast.jsx'
 
 export default function ListingDetail() {
   const { id } = useParams()
   const { user, loading: authLoading } = useAuth()
+  const { isSaved, toggle } = useWishlist()
+  const toast = useToast()
   const [reporting, setReporting] = useState(false)
   const [activeImage, setActiveImage] = useState(0)
   const [viewerOpen, setViewerOpen] = useState(false)
@@ -85,13 +89,26 @@ export default function ListingDetail() {
         </div>
 
         <div>
-          <div className="mb-3 flex gap-2">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
             <TypeBadge type={l.listing_type} />
             {l.food_temp && (
               <span className={`badge ${l.food_temp === 'hot' ? 'bg-coral/12 text-coral' : 'bg-brand-tint text-brand'}`}>{foodTempLabel(l)}</span>
             )}
             {isExpired(l) && <span className="badge bg-line/60 text-ink-faint">Expired</span>}
             <VerifiedBadge />
+            {String(l.seller?.id) !== String(user?.id) && (
+              <button
+                type="button"
+                aria-pressed={isSaved(l.id)}
+                onClick={() => toast(toggle(l) ? 'Saved to your wishlist' : 'Removed from your wishlist')}
+                className={`ml-auto inline-flex items-center gap-1.5 rounded-pill border-[1.5px] px-3 py-1 text-[12.5px] font-semibold transition ${
+                  isSaved(l.id) ? 'border-coral bg-coral/10 text-coral' : 'border-line bg-paper text-ink-soft hover:border-ink hover:text-ink'
+                }`}
+              >
+                <span aria-hidden>{isSaved(l.id) ? '♥' : '♡'}</span>
+                {isSaved(l.id) ? 'Saved' : 'Save to wishlist'}
+              </button>
+            )}
           </div>
           <h1 className="text-[28px] font-bold">{l.title}</h1>
           <p className="my-3 font-display text-[32px] font-bold">{formatPrice(l.price)}</p>
