@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
-from sqlalchemy import or_
+from sqlalchemy import case, or_
 from sqlalchemy.orm import Session
 
 from app.core.images import ImageError, check_image, read_upload
@@ -80,7 +80,7 @@ def list_listings(
     status: Optional[str] = None,
     seller_id: Optional[str] = None,
     campus_id: Optional[int] = None,
-    include_sold: bool = False,
+    include_sold: bool = True,  # kept for older clients; sold listings are always included now
     sort: str = "newest",
     db: Session = Depends(get_db),
     _viewer: User = Depends(require_verified),  # the marketplace is for verified students only
@@ -108,17 +108,17 @@ def list_listings(
             raise HTTPException(status_code=422, detail="Invalid seller id")
     if status:
         query = query.filter(Listing.status == status)
-    elif not include_sold and not seller_id:
-        query = query.filter(Listing.status != "sold")
+    # Sold listings stay visible (marked Sold on the card), listed after the ones still for sale.
     if not seller_id:
         query = query.filter(_not_expired())  # expired food leaves the marketplace; sellers still see it
 
+    sold_last = case((Listing.status == "sold", 1), else_=0)
     if sort == "price_low":
-        query = query.order_by(Listing.price.asc())
+        query = query.order_by(sold_last, Listing.price.asc())
     elif sort == "price_high":
-        query = query.order_by(Listing.price.desc())
+        query = query.order_by(sold_last, Listing.price.desc())
     else:
-        query = query.order_by(Listing.created_at.desc())
+        query = query.order_by(sold_last, Listing.created_at.desc())
 
     items = query.all()
     return ListingListOut(

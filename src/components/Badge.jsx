@@ -26,7 +26,7 @@ export function StatusPill({ status }) {
   const tone = {
     available: 'bg-bg text-ink-soft',
     reserved: 'bg-sun/25 text-[#946B00]',
-    sold: 'bg-line/60 text-ink-faint',
+    sold: 'bg-coral text-white',
   }[status]
   return <span className={`badge ${tone}`}>{status[0].toUpperCase() + status.slice(1)}</span>
 }

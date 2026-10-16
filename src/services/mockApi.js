@@ -33,7 +33,8 @@ export function getRecommendations({ excludeId, campusId, categoryScores = {}, o
 }
 
 export function listListings(f = {}) {
-  let out = listings.filter((l) => l.status !== 'sold' || f.include_sold)
+  // Sold listings stay visible (after the rest), like the real API.
+  let out = [...listings]
   if (f.category && f.category !== 'All') out = out.filter((l) => l.category === f.category)
   if (f.q) out = out.filter((l) => l.title.toLowerCase().includes(f.q.toLowerCase()))
   if (f.condition && f.condition !== 'any') out = out.filter((l) => l.condition === f.condition)
@@ -50,6 +51,7 @@ export function listListings(f = {}) {
   if (f.sort === 'price_asc') out.sort((a, b) => a.price - b.price)
   else if (f.sort === 'price_desc') out.sort((a, b) => b.price - a.price)
   else out.sort((a, b) => b.id - a.id)
+  out.sort((a, b) => (a.status === 'sold') - (b.status === 'sold')) // stable: keeps the order above
 
   return delay({ items: out, total: out.length })
 }

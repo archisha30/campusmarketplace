@@ -10,11 +10,15 @@ export default function ListingCard({ listing, compact = false }) {
   const toast = useToast()
   const saved = isSaved(id)
   const thumbnail = images && images.length > 0 ? images[0] : null
+  const sold = status === 'sold'
 
   return (
     <Link
       to={`/listing/${id}`}
-      className="group block overflow-hidden rounded-card border border-line bg-paper transition hover:-translate-y-[3px] hover:shadow-lift"
+      // Sold items stay in the marketplace, outlined in red so they're obviously gone.
+      className={`group block overflow-hidden rounded-card border bg-paper transition hover:-translate-y-[3px] hover:shadow-lift ${
+        sold ? 'border-2 border-coral' : 'border-line'
+      }`}
     >
       <div
         className={`relative flex items-center justify-center overflow-hidden ${compact ? 'h-[96px] text-[34px]' : 'h-[130px] text-[44px]'}`}
@@ -35,9 +39,14 @@ export default function ListingCard({ listing, compact = false }) {
           {saved ? '♥' : '♡'}
         </button>
         {thumbnail ? (
-          <img src={thumbnail} alt={title} className="h-full w-full object-cover" />
+          <img src={thumbnail} alt={title} className={`h-full w-full object-cover ${sold ? 'opacity-60' : ''}`} />
         ) : (
-          <span aria-hidden>{art?.emoji || '📦'}</span>
+          <span aria-hidden className={sold ? 'opacity-60' : ''}>{art?.emoji || '📦'}</span>
+        )}
+        {sold && (
+          <span className="absolute bottom-2.5 left-2.5 rounded-pill bg-coral px-2.5 py-0.5 text-[11.5px] font-bold uppercase tracking-wide text-white">
+            Sold
+          </span>
         )}
       </div>
 

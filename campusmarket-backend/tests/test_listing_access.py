@@ -68,3 +68,20 @@ def test_recommendations_can_be_limited_to_interests(client, auth, db_session, u
     assert ranked[0] == "Red Bull 4-pack" and len(ranked) == 3
     # Interests with nothing to show come back empty rather than padded with other categories.
     assert titles(only_categories=json.dumps(["Sports"])) == []
+
+
+def test_sold_listings_stay_visible_after_available_ones(client, auth, db_session, users):
+    db, _ = db_session
+    for title, status in [("Sold lamp", "sold"), ("Kettle", "available"), ("Reserved bike", "reserved")]:
+        db.add(Listing(owner_id=users["owner"].id, title=title, category="Dorm Essentials", listing_type="sale",
+                       price=100, condition="Good", pickup_spot="Gate", images=[], status=status))
+    db.commit()
+
+    items = client.get("/api/listings", headers=auth("buyer")).json()["items"]
+    assert [i["status"] for i in items][-1] == "sold"  # still listed, but after the rest
+    assert {i["title"] for i in items} == {"Sold lamp", "Kettle", "Reserved bike"}
+    cheap_first = client.get("/api/listings", params={"sort": "price_low"}, headers=auth("buyer")).json()["items"]
+    assert cheap_first[-1]["status"] == "sold"
+    # "Picked for you" only suggests things you can still buy.
+    recs = client.get("/api/listings/recommended", headers=auth("buyer")).json()["items"]
+    assert all(i["status"] == "available" for i in recs)

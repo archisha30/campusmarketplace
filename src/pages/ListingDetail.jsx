@@ -108,6 +108,7 @@ export default function ListingDetail() {
         <div>
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <TypeBadge type={l.listing_type} />
+            {l.status === 'sold' && <span className="badge bg-coral text-white">Sold</span>}
             {l.food_temp && (
               <span className={`badge ${l.food_temp === 'hot' ? 'bg-coral/12 text-coral' : 'bg-brand-tint text-brand'}`}>{foodTempLabel(l)}</span>
             )}
@@ -165,7 +166,9 @@ export default function ListingDetail() {
           </p>
 
           <div className="flex flex-wrap gap-2.5">
-            {l.seller?.has_phone ? (
+            {l.status === 'sold' ? (
+              <p className="rounded-pill bg-coral/10 px-4 py-2.5 text-[14px] font-semibold text-coral">This item has been sold.</p>
+            ) : l.seller?.has_phone ? (
               <>
                 <button className="btn-accent" disabled={contacting} onClick={() => contact('whatsapp')}>Contact Seller</button>
                 <button className="btn-ghost" disabled={contacting} onClick={() => contact('email')}>Email instead</button>
