@@ -140,7 +140,10 @@ class ListingOut(BaseModel):
 
 class ListingListOut(BaseModel):
     items: list[ListingOut]
-    total: int
+    total: int  # all matching listings, not just this page
+    page: int | None = None  # set when the request asked for a page
+    page_size: int | None = None
+    pages: int | None = None
 
 
 class RecommendedOut(BaseModel):

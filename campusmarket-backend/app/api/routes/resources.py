@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.routes.notifications import notify
+from app.core.pagination import paginate
 from app.core.pdf_preview import PdfError, open_pdf, read_limited, render_previews
 from app.core.security import get_current_user, require_seller, require_verified
 from app.core.storage import storage
@@ -293,6 +294,8 @@ def list_resources(
     offer_type: Optional[str] = None,
     sort: str = "newest",
     mine: bool = False,
+    page: Optional[int] = None,  # 1-based; omit to get everything
+    page_size: int = 18,
     db: Session = Depends(get_db),
     viewer: User = Depends(require_verified),  # the Resource Hub is for verified students only
 ):
@@ -323,8 +326,14 @@ def list_resources(
     else:
         query = query.order_by(Resource.created_at.desc(), Resource.id.desc())
 
-    items = query.all()
-    return ResourceListOut(items=[_resource_out(r, request) for r in items], total=len(items))
+    items, total, page, page_size, pages = paginate(query, page, page_size)
+    return ResourceListOut(
+        items=[_resource_out(r, request) for r in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=pages,
+    )
 
 
 @router.get("/facets", response_model=FacetsOut)

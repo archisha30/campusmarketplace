@@ -14,6 +14,15 @@ let nextId = 100
 
 const delay = (value, ms = 350) => new Promise((r) => setTimeout(() => r(structuredClone(value)), ms))
 
+// Same as the API: only paginates when a page is asked for; pages are clamped.
+function paged(all, f, defaultSize) {
+  if (!f.page) return { items: all, total: all.length, page: null, page_size: null, pages: null }
+  const size = Math.min(Math.max(Number(f.page_size) || defaultSize, 1), 60)
+  const pages = Math.max(1, Math.ceil(all.length / size))
+  const page = Math.min(Math.max(Number(f.page) || 1, 1), pages)
+  return { items: all.slice((page - 1) * size, page * size), total: all.length, page, page_size: size, pages }
+}
+
 export function getRecommendations({ excludeId, campusId, categoryScores = {}, onlyCategories = [] } = {}) {
   const hasAffinity = Object.keys(categoryScores).length > 0
   let pool = listings.filter((l) => l.status === 'available' && l.id !== Number(excludeId))
@@ -48,12 +57,12 @@ export function listListings(f = {}) {
   const today = new Date().toISOString().slice(0, 10)
   if (!f.seller_id) out = out.filter((l) => !l.expiry_date || l.expiry_date >= today)
 
-  if (f.sort === 'price_asc') out.sort((a, b) => a.price - b.price)
-  else if (f.sort === 'price_desc') out.sort((a, b) => b.price - a.price)
+  if (f.sort === 'price_low' || f.sort === 'price_asc') out.sort((a, b) => a.price - b.price)
+  else if (f.sort === 'price_high' || f.sort === 'price_desc') out.sort((a, b) => b.price - a.price)
   else out.sort((a, b) => b.id - a.id)
   out.sort((a, b) => (a.status === 'sold') - (b.status === 'sold')) // stable: keeps the order above
 
-  return delay({ items: out, total: out.length })
+  return delay(paged(out, f, 24))
 }
 
 export function getListing(id) {
@@ -262,7 +271,7 @@ export function listResources(f = {}) {
   else if (f.sort === 'price_high') out.sort((a, b) => b.price - a.price)
   else out.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
 
-  return delay({ items: out.map((r) => resourceOut(r)), total: out.length })
+  return delay(paged(out.map((r) => resourceOut(r)), f, 18))
 }
 
 export function recommendedResources({ excludeId, year, subjectScores = {} } = {}) {

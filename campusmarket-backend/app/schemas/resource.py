@@ -228,7 +228,10 @@ class ResourceOut(BaseModel):
 
 class ResourceListOut(BaseModel):
     items: list[ResourceOut]
-    total: int
+    total: int  # all matching resources, not just this page
+    page: int | None = None  # set when the request asked for a page
+    page_size: int | None = None
+    pages: int | None = None
 
 
 class ResourceRecommendedOut(BaseModel):

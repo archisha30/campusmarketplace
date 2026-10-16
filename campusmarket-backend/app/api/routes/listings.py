@@ -9,6 +9,7 @@ from sqlalchemy import case, or_
 from sqlalchemy.orm import Session
 
 from app.core.images import ImageError, check_image, read_upload
+from app.core.pagination import paginate
 from app.core.security import require_seller, require_verified
 from app.core.storage import delete_public_urls, storage
 from app.db.session import get_db
@@ -82,6 +83,8 @@ def list_listings(
     campus_id: Optional[int] = None,
     include_sold: bool = True,  # kept for older clients; sold listings are always included now
     sort: str = "newest",
+    page: Optional[int] = None,  # 1-based; omit to get everything (seller dashboard/profile)
+    page_size: int = 24,
     db: Session = Depends(get_db),
     _viewer: User = Depends(require_verified),  # the marketplace is for verified students only
 ):
@@ -120,10 +123,13 @@ def list_listings(
     else:
         query = query.order_by(sold_last, Listing.created_at.desc())
 
-    items = query.all()
+    items, total, page, page_size, pages = paginate(query, page, page_size)
     return ListingListOut(
         items=[ListingOut.from_orm_with_art(i) for i in items],
-        total=len(items),
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=pages,
     )
 
 

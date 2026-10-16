@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { resourcesApi } from '../services/api.js'
 import { useApi, useDebounced } from '../hooks/useApi.js'
@@ -10,6 +10,10 @@ import PostRequestBanner from '../components/PostRequestBanner.jsx'
 import { SUBJECTS, YEARS } from '../lib/resources.js'
 import ResourceCard from '../components/ResourceCard.jsx'
 import ResourcePicks from '../components/ResourcePicks.jsx'
+import Pagination from '../components/Pagination.jsx'
+import { usePage } from '../hooks/usePage.js'
+
+const PAGE_SIZE = 18 // 6 rows of 3
 
 const SORTS = [
   { value: 'newest', label: 'Newest first' },
@@ -28,13 +32,22 @@ export default function Resources() {
   const [mine, setMine] = useState(false)
   const debouncedQ = useDebounced(q)
 
+  // Any new search/filter/sort starts again from page 1.
+  const [page, setPage] = usePage([debouncedQ, subject, year, copyType, offerType, sort, mine].join('|'))
+  const listTop = useRef(null)
   const { data: facets } = useApi(() => resourcesApi.facets(), [])
   const { data, loading, error } = useApi(
     () => resourcesApi.list({
       q: debouncedQ, subject, year, copy_type: copyType, offer_type: offerType, sort, mine: mine || undefined,
+      page, page_size: PAGE_SIZE,
     }),
-    [debouncedQ, subject, year, copyType, offerType, sort, mine]
+    [debouncedQ, subject, year, copyType, offerType, sort, mine, page]
   )
+
+  function goToPage(p) {
+    setPage(p)
+    listTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
   const items = data?.items || []
   const subjects = facets?.subjects || SUBJECTS
   const filtered = Boolean(debouncedQ) || subject !== 'All' || year !== 'any' || copyType !== 'any' || offerType !== 'any'
@@ -54,7 +67,7 @@ export default function Resources() {
 
       <div className="mt-6">{!mine && !filtered && <ResourcePicks />}</div>
 
-      <div className="mb-5 flex flex-wrap gap-2.5">
+      <div ref={listTop} className="mb-5 flex scroll-mt-24 flex-wrap gap-2.5">
         <SearchBar value={q} onChange={setQ} placeholder="Search titles, subjects, descriptions…" />
       </div>
 
@@ -104,6 +117,10 @@ export default function Resources() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((r) => <ResourceCard key={r.id} r={r} showStatus={mine} />)}
         </div>
+      )}
+
+      {!loading && !error && data?.pages > 1 && (
+        <Pagination page={data.page} pages={data.pages} total={data.total} pageSize={data.page_size} onChange={goToPage} noun="resources" />
       )}
 
       <PostRequestBanner className="mt-12" />

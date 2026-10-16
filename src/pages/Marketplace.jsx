@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { listingsApi } from '../services/api.js'
 import { useApi, useDebounced } from '../hooks/useApi.js'
 import { CATEGORIES, CONDITIONS } from '../data/sample.js'
@@ -10,6 +10,10 @@ import SearchBar from '../components/SearchBar.jsx'
 import { ChipRow, Select, Toggle } from '../components/FilterBar.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import RecommendationBar from '../components/RecommendationBar.jsx'
+import Pagination from '../components/Pagination.jsx'
+import { usePage } from '../hooks/usePage.js'
+
+const PAGE_SIZE = 24 // 6 rows of 4
 
 const PRICE_BANDS = [
   { value: 'any', label: 'Any price', min: undefined, max: undefined },
@@ -30,6 +34,14 @@ export default function Marketplace() {
 
   const debouncedQ = useDebounced(q)
   const price = PRICE_BANDS.find((b) => b.value === band)
+  // Any new search/filter/sort starts again from page 1.
+  const [page, setPage] = usePage([debouncedQ, category, condition, listingType, band, sort, scope].join('|'))
+  const listTop = useRef(null)
+
+  function goToPage(p) {
+    setPage(p)
+    listTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   const { data, loading, error } = useApi(
     () =>
@@ -42,8 +54,10 @@ export default function Marketplace() {
         max_price: price.max,
         sort,
         campus_id: scope === 'My Campus' ? user?.campus_id : undefined,
+        page,
+        page_size: PAGE_SIZE,
       }),
-    [debouncedQ, category, condition, listingType, band, sort, scope, user?.campus_id]
+    [debouncedQ, category, condition, listingType, band, sort, scope, user?.campus_id, page]
   )
 
   const items = data?.items || []
@@ -61,10 +75,10 @@ export default function Marketplace() {
 
       <RecommendationBar />
 
-      <div className="mb-5 flex items-baseline justify-between gap-4">
+      <div ref={listTop} className="mb-5 flex scroll-mt-24 items-baseline justify-between gap-4">
         <h2 className="text-[22px] font-bold">All listings</h2>
         {!loading && !error && (
-          <span className="text-[13px] text-ink-faint">{items.length} {items.length === 1 ? 'item' : 'items'}</span>
+          <span className="text-[13px] text-ink-faint">{data?.total ?? items.length} {(data?.total ?? items.length) === 1 ? 'item' : 'items'}</span>
         )}
       </div>
 
@@ -76,8 +90,8 @@ export default function Marketplace() {
           onChange={setSort}
           options={[
             { value: 'newest', label: 'Newest' },
-            { value: 'price_asc', label: 'Price: Low → High' },
-            { value: 'price_desc', label: 'Price: High → Low' },
+            { value: 'price_low', label: 'Price: Low → High' },
+            { value: 'price_high', label: 'Price: High → Low' },
           ]}
         />
       </div>
@@ -141,6 +155,10 @@ export default function Marketplace() {
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {items.map((l) => <ListingCard key={l.id} listing={l} />)}
         </div>
+      )}
+
+      {!loading && !error && data?.pages > 1 && (
+        <Pagination page={data.page} pages={data.pages} total={data.total} pageSize={data.page_size} onChange={goToPage} noun="listings" />
       )}
 
       <PostRequestBanner className="mt-12" />
