@@ -8,6 +8,8 @@ import { SkeletonRows } from '../../components/SkeletonCard.jsx'
 import { formatPrice, titleCase } from '../../lib/format.js'
 import { deliveryLabel, yearLabel } from '../../lib/resources.js'
 import { Stat, Table, Td, formatDate } from './AdminLayout.jsx'
+import Pagination from '../../components/Pagination.jsx'
+import { usePage } from '../../hooks/usePage.js'
 
 const VIEWS = ['Listings', 'Resources']
 
@@ -36,9 +38,18 @@ export default function AdminContent() {
   const [view, setView] = useState('Listings')
   const [q, setQ] = useState('')
   const debouncedQ = useDebounced(q)
-  const listings = useApi(() => adminApi.listings(debouncedQ), [debouncedQ])
-  const resources = useApi(() => adminApi.resources(debouncedQ), [debouncedQ])
+  // One page number for the tab you're on; switching tab or searching starts from page 1.
+  const [page, setPage] = usePage(`${view}|${debouncedQ}`)
+  const listingsPage = view === 'Listings' ? page : 1
+  const resourcesPage = view === 'Resources' ? page : 1
+  const listings = useApi(() => adminApi.listings(debouncedQ, listingsPage), [debouncedQ, listingsPage])
+  const resources = useApi(() => adminApi.resources(debouncedQ, resourcesPage), [debouncedQ, resourcesPage])
   const current = view === 'Listings' ? listings : resources
+
+  function goToPage(p) {
+    setPage(p)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
   const items = current.data?.items || []
 
   async function remove(kind, item) {
@@ -58,9 +69,9 @@ export default function AdminContent() {
       {!debouncedQ && listings.data && resources.data && (
         <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
           <Stat label="Listings" value={listings.data.total} />
-          <Stat label="Available listings" value={listings.data.items.filter((l) => l.status === 'available').length} />
+          <Stat label="Available listings" value={listings.data.available} />
           <Stat label="Resources" value={resources.data.total} />
-          <Stat label="Open resources" value={resources.data.items.filter((r) => r.status === 'available').length} />
+          <Stat label="Open resources" value={resources.data.open} />
         </div>
       )}
 
@@ -134,6 +145,17 @@ export default function AdminContent() {
           ))}
           {items.length === 0 && <tr><Td className="text-ink-soft">No resources{debouncedQ ? ` match “${debouncedQ}”` : ' yet'}.</Td></tr>}
         </Table>
+      )}
+
+      {!current.loading && !current.error && current.data?.pages > 1 && (
+        <Pagination
+          page={current.data.page}
+          pages={current.data.pages}
+          total={current.data.total}
+          pageSize={current.data.page_size}
+          onChange={goToPage}
+          noun={view === 'Listings' ? 'listings' : 'resources'}
+        />
       )}
     </>
   )

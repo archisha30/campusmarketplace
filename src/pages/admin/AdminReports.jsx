@@ -6,6 +6,8 @@ import { useToast } from '../../hooks/useToast.jsx'
 import { SkeletonRows } from '../../components/SkeletonCard.jsx'
 import { titleCase } from '../../lib/format.js'
 import { Stat, Table, Td, formatDate } from './AdminLayout.jsx'
+import Pagination from '../../components/Pagination.jsx'
+import { usePage } from '../../hooks/usePage.js'
 
 const FILTERS = [
   { value: 'open', label: 'Open' },
@@ -17,7 +19,13 @@ const FILTERS = [
 export default function AdminReports() {
   const toast = useToast()
   const [status, setStatus] = useState('open')
-  const { data, loading, error, refetch } = useApi(() => adminApi.reports(status || undefined), [status])
+  const [page, setPage] = usePage(status) // switching Open/Resolved/All starts from page 1
+  const { data, loading, error, refetch } = useApi(() => adminApi.reports(status || undefined, page), [status, page])
+
+  function goToPage(p) {
+    setPage(p)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
   const items = data?.items || []
 
   async function setReport(r, next) {
@@ -115,6 +123,9 @@ export default function AdminReports() {
             <tr><Td className="text-ink-soft">{status === 'open' ? 'No open reports. 🎉' : 'No reports here.'}</Td></tr>
           )}
         </Table>
+      )}
+      {!loading && !error && data?.pages > 1 && (
+        <Pagination page={data.page} pages={data.pages} total={data.total} pageSize={data.page_size} onChange={goToPage} noun="reports" />
       )}
     </>
   )

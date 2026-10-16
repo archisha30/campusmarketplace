@@ -107,3 +107,44 @@ def test_admin_sees_closed_resources_with_contact_and_can_delete(client, auth, c
     assert items[0]["owner"]["email"] == "owner@campus.edu"
     assert client.delete(f"/api/resources/{rid}", headers=auth("admin")).status_code == 204
     assert client.get("/api/admin/resources", headers=auth("admin")).json()["total"] == 0
+
+
+def test_admin_lists_page_with_site_wide_counts(client, auth, db_session, users):
+    from conftest import _user
+
+    db, _ = db_session
+    for i in range(30):  # 30 more users (+5 from the fixture = 35)
+        _user(db, f"student{i:02d}@campus.edu", account_type="seller" if i < 10 else "buyer")
+    for i in range(7):
+        db.add(Listing(owner_id=users["owner"].id, title=f"L{i}", category="Sports", listing_type="sale",
+                       price=10, condition="Good", pickup_spot="Gate", images=[], status="sold" if i < 2 else "available"))
+    db.commit()
+
+    first = client.get("/api/admin/users", params={"page": 1, "page_size": 10}, headers=auth("admin")).json()
+    assert (first["total"], first["page"], first["pages"], len(first["items"])) == (35, 1, 4, 10)
+    assert first["sellers"] == 11 and first["admins"] == 2 and first["verified"] == 34
+    emails = {u["email"] for p in range(1, 5)
+              for u in client.get("/api/admin/users", params={"page": p, "page_size": 10}, headers=auth("admin")).json()["items"]}
+    assert len(emails) == 35  # every user exactly once across pages
+
+    # Searching narrows the list, but the summary counts stay site-wide.
+    found = client.get("/api/admin/users", params={"q": "student0"}, headers=auth("admin")).json()
+    assert found["total"] == 10 and found["sellers"] == 11
+
+    listings = client.get("/api/admin/listings", params={"page": 2, "page_size": 5}, headers=auth("admin")).json()
+    assert (listings["total"], listings["pages"], len(listings["items"]), listings["available"]) == (7, 2, 2, 5)
+
+
+def test_admin_reports_page(client, auth, db_session, users):
+    from app.models.report import Report
+
+    db, _ = db_session
+    for i in range(12):
+        db.add(Report(reporter_id=users["buyer"].id, owner_id=users["owner"].id, target_type="listing",
+                      target_id=1000 + i, target_title=f"Thing {i}", reason="Spam",
+                      status="resolved" if i < 4 else "open"))
+    db.commit()
+    res = client.get("/api/admin/reports", params={"page": 2, "page_size": 5}, headers=auth("admin")).json()
+    assert (res["total"], res["page"], res["pages"], len(res["items"]), res["open"]) == (12, 2, 3, 5, 8)
+    open_only = client.get("/api/admin/reports", params={"status": "open", "page_size": 5}, headers=auth("admin")).json()
+    assert open_only["total"] == 8 and open_only["pages"] == 2

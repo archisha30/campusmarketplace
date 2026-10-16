@@ -8,13 +8,21 @@ import Avatar from '../../components/Avatar.jsx'
 import { SkeletonRows } from '../../components/SkeletonCard.jsx'
 import { formatPhone } from '../../lib/format.js'
 import { Stat, Table, Td, formatDate } from './AdminLayout.jsx'
+import Pagination from '../../components/Pagination.jsx'
+import { usePage } from '../../hooks/usePage.js'
 
 export default function AdminUsers() {
   const { user: me, isOwner } = useAuth()
   const toast = useToast()
   const [q, setQ] = useState('')
   const debouncedQ = useDebounced(q)
-  const { data, loading, error, setData } = useApi(() => adminApi.users(debouncedQ), [debouncedQ])
+  const [page, setPage] = usePage(debouncedQ) // a new search starts from page 1
+  const { data, loading, error, setData } = useApi(() => adminApi.users(debouncedQ, page), [debouncedQ, page])
+
+  function goToPage(p) {
+    setPage(p)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
   const [busy, setBusy] = useState(null)
   const items = data?.items || []
 
@@ -38,9 +46,9 @@ export default function AdminUsers() {
       {!loading && data && !debouncedQ && (
         <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
           <Stat label="Users" value={data.total} />
-          <Stat label="Verified" value={items.filter((u) => u.verified).length} />
-          <Stat label="Sellers" value={items.filter((u) => u.account_type === 'seller').length} />
-          <Stat label="Admins" value={items.filter((u) => u.is_admin).length} />
+          <Stat label="Verified" value={data.verified} />
+          <Stat label="Sellers" value={data.sellers} />
+          <Stat label="Admins" value={data.admins} />
         </div>
       )}
 
@@ -107,6 +115,9 @@ export default function AdminUsers() {
             <tr><Td className="text-ink-soft">No users match “{debouncedQ}”.</Td></tr>
           )}
         </Table>
+      )}
+      {!loading && !error && data?.pages > 1 && (
+        <Pagination page={data.page} pages={data.pages} total={data.total} pageSize={data.page_size} onChange={goToPage} noun="users" />
       )}
     </>
   )

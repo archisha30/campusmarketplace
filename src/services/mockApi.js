@@ -536,13 +536,13 @@ export function createReport({ listing_id, resource_id, reason, details }) {
   return delay({ ok: true })
 }
 
-export function adminReports(status) {
+export function adminReports(status, page = 1) {
   const counts = {}
   reports.forEach((r) => { counts[`${r.target_type}:${r.target_id}`] = (counts[`${r.target_type}:${r.target_id}`] || 0) + 1 })
   const items = reports
     .filter((r) => !status || r.status === status)
     .map((r) => ({ ...r, reports_on_item: counts[`${r.target_type}:${r.target_id}`] }))
-  return delay({ items, open: reports.filter((r) => r.status === 'open').length })
+  return delay({ ...paged(items, { page }, 25), open: reports.filter((r) => r.status === 'open').length })
 }
 
 export function setReportStatus(id, status) {
@@ -779,12 +779,17 @@ function adminUserOut(u) {
   }
 }
 
-export function adminUsers(q = '') {
+export function adminUsers(q = '', page = 1) {
   const needle = (q || '').toLowerCase()
   // In mock mode the seeded current user is the owner.
-  const all = users.map((u) => (sameId(u.id, seed.currentUser.id) ? { ...u, is_owner: true } : u))
-  const items = all.filter((u) => `${u.name} ${u.email}`.toLowerCase().includes(needle)).map(adminUserOut)
-  return delay({ items, total: items.length })
+  const all = users.map((u) => (sameId(u.id, seed.currentUser.id) ? { ...u, is_owner: true } : u)).map(adminUserOut)
+  const matches = all.filter((u) => `${u.name} ${u.email}`.toLowerCase().includes(needle))
+  return delay({
+    ...paged(matches, { page }, 25),
+    verified: all.filter((u) => u.verified).length,
+    sellers: all.filter((u) => u.account_type === 'seller').length,
+    admins: all.filter((u) => u.is_admin).length,
+  })
 }
 
 export function setAdmin(id, isAdmin) {
@@ -795,16 +800,16 @@ export function setAdmin(id, isAdmin) {
   return delay(adminUserOut(u))
 }
 
-export function adminListings(q = '') {
+export function adminListings(q = '', page = 1) {
   const needle = (q || '').toLowerCase()
-  const items = listings.filter((l) => l.title.toLowerCase().includes(needle)).sort((a, b) => b.id - a.id)
-  return delay({ items, total: items.length })
+  const matches = listings.filter((l) => l.title.toLowerCase().includes(needle)).sort((a, b) => b.id - a.id)
+  return delay({ ...paged(matches, { page }, 25), available: listings.filter((l) => l.status === 'available').length })
 }
 
-export function adminResources(q = '') {
+export function adminResources(q = '', page = 1) {
   const needle = (q || '').toLowerCase()
-  const items = resources
+  const matches = resources
     .filter((r) => `${r.title} ${r.subject}`.toLowerCase().includes(needle))
     .map((r) => ({ ...resourceOut(r), owner: r.owner }))
-  return delay({ items, total: items.length })
+  return delay({ ...paged(matches, { page }, 25), open: resources.filter((r) => r.status === 'available').length })
 }

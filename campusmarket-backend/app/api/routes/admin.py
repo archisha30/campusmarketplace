@@ -8,6 +8,8 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.routes.resources import _owner_out, _resource_out
+from app.core.config import settings
+from app.core.pagination import paginate
 from app.core.security import require_admin, require_owner
 from app.core.storage import delete_public_urls
 from app.db.session import get_db
@@ -21,6 +23,8 @@ from app.schemas.resource import ResourceOut
 
 # Admin dashboard: the owner(s) in OWNER_EMAILS plus the admins they approve.
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+ADMIN_PAGE_SIZE = 25
 
 
 class AdminUserOut(BaseModel):
@@ -44,7 +48,14 @@ class AdminUserOut(BaseModel):
 
 class AdminUsersOut(BaseModel):
     items: list[AdminUserOut]
-    total: int
+    total: int  # users matching the search (all pages)
+    page: int
+    page_size: int
+    pages: int
+    # Site-wide counts for the summary cards (not just this page or search).
+    verified: int
+    sellers: int
+    admins: int
 
 
 class AdminRoleIn(BaseModel):
@@ -54,11 +65,19 @@ class AdminRoleIn(BaseModel):
 class AdminListingsOut(BaseModel):
     items: list[ListingOut]
     total: int
+    page: int
+    page_size: int
+    pages: int
+    available: int  # site-wide
 
 
 class AdminResourcesOut(BaseModel):
     items: list[ResourceOut]
     total: int
+    page: int
+    page_size: int
+    pages: int
+    open: int  # site-wide, status "available"
 
 
 def _counts(db: Session, model) -> dict:
@@ -89,6 +108,8 @@ def _user_out(u: User, listings: dict, resources: dict) -> AdminUserOut:
 @router.get("/users", response_model=AdminUsersOut)
 def list_users(
     q: Optional[str] = None,
+    page: int = 1,
+    page_size: int = ADMIN_PAGE_SIZE,
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
@@ -96,9 +117,16 @@ def list_users(
     if q and q.strip():
         like = f"%{q.strip()}%"
         query = query.filter(or_(User.email.ilike(like), User.name.ilike(like)))
-    users = query.order_by(User.created_at.desc()).all()
+    users, total, page, page_size, pages = paginate(query.order_by(User.created_at.desc(), User.id), page, page_size)
     listings, resources = _counts(db, Listing), _counts(db, Resource)
-    return AdminUsersOut(items=[_user_out(u, listings, resources) for u in users], total=len(users))
+    owner_emails = [e.lower() for e in settings.OWNER_EMAILS]
+    return AdminUsersOut(
+        items=[_user_out(u, listings, resources) for u in users],
+        total=total, page=page, page_size=page_size, pages=pages,
+        verified=db.query(User).filter(User.verified.is_(True)).count(),
+        sellers=db.query(User).filter(User.account_type == "seller").count(),
+        admins=db.query(User).filter(or_(User.role == "admin", func.lower(User.email).in_(owner_emails))).count(),
+    )
 
 
 @router.patch("/users/{user_id}/admin", response_model=AdminUserOut)
@@ -129,6 +157,8 @@ def set_admin(
 @router.get("/listings", response_model=AdminListingsOut)
 def list_all_listings(
     q: Optional[str] = None,
+    page: int = 1,
+    page_size: int = ADMIN_PAGE_SIZE,
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
@@ -136,8 +166,12 @@ def list_all_listings(
     query = db.query(Listing).options(joinedload(Listing.owner))
     if q and q.strip():
         query = query.filter(Listing.title.ilike(f"%{q.strip()}%"))
-    items = query.order_by(Listing.created_at.desc()).all()
-    return AdminListingsOut(items=[ListingOut.from_orm_with_art(i, include_contact=True) for i in items], total=len(items))
+    items, total, page, page_size, pages = paginate(query.order_by(Listing.created_at.desc(), Listing.id.desc()), page, page_size)
+    return AdminListingsOut(
+        items=[ListingOut.from_orm_with_art(i, include_contact=True) for i in items],
+        total=total, page=page, page_size=page_size, pages=pages,
+        available=db.query(Listing).filter(Listing.status == "available").count(),
+    )
 
 
 @router.delete("/listings/{listing_id}", status_code=204)
@@ -160,6 +194,8 @@ def delete_any_listing(
 def list_all_resources(
     request: Request,
     q: Optional[str] = None,
+    page: int = 1,
+    page_size: int = ADMIN_PAGE_SIZE,
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
@@ -169,13 +205,16 @@ def list_all_resources(
     if q and q.strip():
         like = f"%{q.strip()}%"
         query = query.filter(or_(Resource.title.ilike(like), Resource.subject.ilike(like)))
-    rows = query.order_by(Resource.created_at.desc(), Resource.id.desc()).all()
+    rows, total, page, page_size, pages = paginate(query.order_by(Resource.created_at.desc(), Resource.id.desc()), page, page_size)
     items = []
     for r in rows:
         out = _resource_out(r, request)
         out.owner = _owner_out(r.owner, with_contact=True)
         items.append(out)
-    return AdminResourcesOut(items=items, total=len(items))
+    return AdminResourcesOut(
+        items=items, total=total, page=page, page_size=page_size, pages=pages,
+        open=db.query(Resource).filter(Resource.status == "available").count(),
+    )
 
 
 def _person(u: User) -> ReportPersonOut:
@@ -185,6 +224,8 @@ def _person(u: User) -> ReportPersonOut:
 @router.get("/reports", response_model=AdminReportsOut)
 def list_reports(
     status: Optional[str] = None,  # "open" | "resolved"; omit for all
+    page: int = 1,
+    page_size: int = ADMIN_PAGE_SIZE,
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
@@ -192,7 +233,7 @@ def list_reports(
     query = db.query(Report).options(joinedload(Report.reporter), joinedload(Report.owner))
     if status in ("open", "resolved"):
         query = query.filter(Report.status == status)
-    rows = query.order_by(Report.created_at.desc(), Report.id.desc()).all()
+    rows, total, page, page_size, pages = paginate(query.order_by(Report.created_at.desc(), Report.id.desc()), page, page_size)
 
     per_item = dict(
         ((t, i), n)
@@ -222,7 +263,7 @@ def list_reports(
         for r in rows
     ]
     open_count = db.query(Report).filter(Report.status == "open").count()
-    return AdminReportsOut(items=items, open=open_count)
+    return AdminReportsOut(items=items, open=open_count, total=total, page=page, page_size=page_size, pages=pages)
 
 
 @router.patch("/reports/{report_id}", status_code=204)

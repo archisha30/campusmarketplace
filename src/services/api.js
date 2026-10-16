@@ -202,18 +202,19 @@ export const campusesApi = {
 // Admin dashboard. Owners (OWNER_EMAILS) and the admins they approve; the backend enforces it.
 export const adminApi = {
   // GET /api/admin/users?q=  -> { items, total }  every user, with listing/resource counts
-  users: (q) => pick(() => http.get('/admin/users', { q }), () => mock.adminUsers(q))(),
+  //   All admin lists are paged (25 per page) and include site-wide counts for the summary cards.
+  users: (q, page = 1) => pick(() => http.get('/admin/users', { q, page }), () => mock.adminUsers(q, page))(),
   // PATCH /api/admin/users/:id/admin  body: { is_admin }  (owners only)
   setAdmin: (id, isAdmin) =>
     pick(() => http.patch(`/admin/users/${id}/admin`, { is_admin: isAdmin }), () => mock.setAdmin(id, isAdmin))(),
   // GET /api/admin/listings?q=  -> every listing, including reserved and sold
-  listings: (q) => pick(() => http.get('/admin/listings', { q }), () => mock.adminListings(q))(),
+  listings: (q, page = 1) => pick(() => http.get('/admin/listings', { q, page }), () => mock.adminListings(q, page))(),
   // DELETE /api/admin/listings/:id  (moderation; resources use resourcesApi.remove, which admins may call)
   deleteListing: (id) => pick(() => http.del(`/admin/listings/${id}`), () => mock.deleteListing(id))(),
   // GET /api/admin/resources?q=  -> every resource, including closed, with owner contact
-  resources: (q) => pick(() => http.get('/admin/resources', { q }), () => mock.adminResources(q))(),
+  resources: (q, page = 1) => pick(() => http.get('/admin/resources', { q, page }), () => mock.adminResources(q, page))(),
   // GET /api/admin/reports?status=open|resolved  -> { items, open }  (includes who reported)
-  reports: (status) => pick(() => http.get('/admin/reports', { status }), () => mock.adminReports(status))(),
+  reports: (status, page = 1) => pick(() => http.get('/admin/reports', { status, page }), () => mock.adminReports(status, page))(),
   // PATCH /api/admin/reports/:id  body: { status: "open" | "resolved" }
   setReportStatus: (id, status) =>
     pick(() => http.patch(`/admin/reports/${id}`, { status }), () => mock.setReportStatus(id, status))(),

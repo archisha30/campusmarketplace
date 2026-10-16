@@ -61,4 +61,8 @@ class AdminReportOut(BaseModel):
 
 class AdminReportsOut(BaseModel):
     items: list[AdminReportOut]
-    open: int
+    open: int  # site-wide open reports
+    total: int  # reports matching the filter (all pages)
+    page: int
+    page_size: int
+    pages: int
