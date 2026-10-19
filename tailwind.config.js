@@ -23,6 +23,7 @@ export default {
       },
       keyframes: {
         shimmer: { '0%': { backgroundPosition: '100% 0' }, '100%': { backgroundPosition: '0 0' } },
+        fadeIn: { '0%': { opacity: '0', transform: 'translateY(-2px)' }, '100%': { opacity: '1', transform: 'none' } },
       },
       animation: { shimmer: 'shimmer 1.3s ease infinite' },
     },

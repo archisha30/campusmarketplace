@@ -98,6 +98,19 @@ export default function Signup() {
                   )
                 })}
               </div>
+              {/* Friendly hint, not a warning: many students want to buy AND sell. */}
+              <p
+                key={accountType}
+                aria-live="polite"
+                className="mt-2.5 flex items-start gap-2 rounded-[10px] bg-brand-tint px-3 py-2 text-[12.5px] leading-snug text-brand-deep motion-safe:animate-[fadeIn_.2s_ease-out]"
+              >
+                <span aria-hidden>{accountType === 'buyer' ? '💡' : '✨'}</span>
+                {accountType === 'buyer' ? (
+                  <span>Want to sell too? Switch to <strong>Seller</strong> anytime from your Profile.</span>
+                ) : (
+                  <span>Sellers can <strong>buy too</strong>, so you get both.</span>
+                )}
+              </p>
             </fieldset>
 
             <label className="field-label" htmlFor="email">College email</label>
