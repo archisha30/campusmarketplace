@@ -349,7 +349,13 @@ function WishlistTile() {
   return (
     <Tile
       to="/wishlist"
-      emoji="♡"
+      emoji={
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-coral/10">
+          <svg width="20" height="20" viewBox="0 0 24 24" className="fill-coral">
+            <path d="M12 21s-7.5-4.6-9.6-9.4C.9 8.1 3 4 6.9 4c2.1 0 3.7 1.1 5.1 3 1.4-1.9 3-3 5.1-3C21 4 23.1 8.1 21.6 11.6 19.5 16.4 12 21 12 21Z" />
+          </svg>
+        </span>
+      }
       title="My Wishlist"
       body={count ? `${count} saved item${count === 1 ? '' : 's'}` : 'Nothing saved yet.'}
       cta="View wishlist"
