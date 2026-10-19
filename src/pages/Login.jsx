@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { trackEvent } from '../lib/analytics.js'
 import PasswordInput from '../components/PasswordInput.jsx'
+import GoogleButton from '../components/GoogleButton.jsx'
 
 // Email + password. Every failure gets the same message (so nobody can find out which emails
 // have accounts); accounts from before passwords existed create their first one via Forgot password.
@@ -35,6 +36,18 @@ export default function Login() {
     <div className="mx-auto my-14 w-full max-w-[420px] rounded-slab border border-line bg-paper p-8 md:p-10">
       <h2 className="mb-2 text-[26px] font-bold">Welcome back</h2>
       <p className="mb-6 text-sm text-ink-soft">Log in with your college email and password.</p>
+
+      <GoogleButton
+        onSuccess={({ user, created }) => {
+          trackEvent(created ? 'sign_up' : 'login', { method: 'google' })
+          if (!user.profile_completed) navigate('/onboarding', { replace: true })
+          else navigate(location.state?.from || '/marketplace', { replace: true })
+        }}
+        onError={(err) => setError(err.message)}
+      />
+      <div className="my-5 flex items-center gap-3 text-[12.5px] text-ink-faint">
+        <span className="h-px flex-1 bg-line" />or log in with email<span className="h-px flex-1 bg-line" />
+      </div>
 
       <form onSubmit={submit}>
         <label className="field-label" htmlFor="email">Email</label>

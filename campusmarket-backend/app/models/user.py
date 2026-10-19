@@ -29,6 +29,8 @@ class User(Base):
     locked_until = Column(DateTime, nullable=True)
     # Login sessions issued before this moment are rejected (set on every password change).
     password_changed_at = Column(DateTime, nullable=True)
+    # Google account id ("sub") once the student has used "Continue with Google".
+    google_sub = Column(String(255), nullable=True, unique=True, index=True)
     profile_completed = Column(Boolean, default=False)
     interests = Column(ARRAY(String), nullable=False, default=list, server_default="{}")
     # Recent things this user opened, for recommendations: [{"kind": "listing"|"resource",
@@ -39,6 +41,16 @@ class User(Base):
     @property
     def has_password(self) -> bool:
         return bool(self.password_hash)
+
+    @property
+    def uses_google(self) -> bool:
+        return bool(self.google_sub)
+
+    @property
+    def needs_password(self) -> bool:
+        """Old email-only accounts must create a password before anything else. Google accounts
+        don't need one (Google already proves who they are); they can add one in Profile."""
+        return not self.password_hash and not self.google_sub
 
     @property
     def is_owner(self) -> bool:

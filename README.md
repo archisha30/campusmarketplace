@@ -155,6 +155,7 @@ All paths are under `/api`. In this table, *seller* means `account_type = "selle
 |---|---|---|---|
 | POST | `/auth/signup` | – | `{ email, account_type }`: emails a 6-digit code (or, for an existing account, an "you already have an account" notice). Same answer either way. Creates nothing yet |
 | POST | `/auth/signup/verify` | – | `{ email, otp, account_type, password, confirm_password }` → `{ user }` + cookie: creates the verified account |
+| POST | `/auth/google` | – | `{ credential, account_type }` → `{ user, created }` + cookie. "Continue with Google": the server verifies Google's signed token (our Client ID, verified email, college Google Workspace domain). Creates the account (no password needed) or logs into the existing one |
 | POST | `/auth/login` | – | `{ email, password }` → `{ user }` + **HttpOnly session cookie** (no token in the body). One "Invalid email or password" for every failure; 5 failures lock for 15 min (unknown emails too), plus a per-IP limit |
 | POST | `/auth/refresh`, `/auth/logout` | user / – | Renew the 30-day session cookie (the app does this on every visit) / clear it |
 | POST | `/auth/set-password` | user | `{ password, confirm_password }`: first password only (409 if one exists). Until it's set, every other endpoint except `GET /users/me` returns `403 { code: "password_required" }` |

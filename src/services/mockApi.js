@@ -630,6 +630,13 @@ export function signupVerify({ email, otp, account_type, password, confirm_passw
   return delay(becomeAccount(email), 400)
 }
 
+// Mock "Continue with Google": logs in as the main sample account.
+export function googleSignIn() {
+  const res = becomeAccount(seed.currentUser.email || 'aashi@polaris.edu')
+  Object.assign(res.user, { uses_google: true, needs_password: false })
+  return delay({ user: res.user, created: false }, 300)
+}
+
 // One message for every failure, like the real API.
 export function login(email, password) {
   const acc = mockAccounts[email]

@@ -11,6 +11,8 @@ import { shrinkToJpeg } from '../lib/images.js'
 import Modal from '../components/Modal.jsx'
 import PostRequestModal from '../components/PostRequestModal.jsx'
 import { formatPhone, timeAgo } from '../lib/format.js'
+import PasswordInput from '../components/PasswordInput.jsx'
+import { PASSWORD_HINT, newPasswordErrors } from '../lib/password.js'
 
 export default function Profile() {
   const { user, isSeller, isAdmin, logout } = useAuth()
@@ -54,6 +56,9 @@ export default function Profile() {
       </section>
 
       <EditProfileModal open={editing} onClose={() => setEditing(false)} />
+
+      {/* Google accounts don't need a password; this lets them add one to log in by email too. */}
+      {!user.has_password && <AddPasswordCard />}
 
       {isSeller ? <SellerSection user={user} /> : <BuyerSection />}
 
@@ -371,5 +376,63 @@ function Tile({ to, emoji, title, body, cta }) {
       <p className="mt-1 line-clamp-2 text-[13.5px] text-ink-soft">{body}</p>
       <p className="mt-3 text-[13.5px] font-semibold text-brand group-hover:underline">{cta} →</p>
     </Link>
+  )
+}
+
+function AddPasswordCard() {
+  const { setPassword: savePassword } = useAuth()
+  const toast = useToast()
+  const [open, setOpen] = useState(false)
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [errors, setErrors] = useState({})
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function save(e) {
+    e.preventDefault()
+    setError('')
+    const problems = newPasswordErrors(password, confirm)
+    setErrors(problems)
+    if (Object.keys(problems).length) return
+    setBusy(true)
+    try {
+      await savePassword(password, confirm)
+      toast('Password added. You can now also log in with your email.')
+      setOpen(false)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-card border border-line bg-paper px-5 py-4">
+      <div>
+        <p className="text-[14.5px] font-semibold">You sign in with Google</p>
+        <p className="text-[13px] text-ink-soft">Optional: add a password to also log in with your email.</p>
+      </div>
+      <button className="btn-ghost btn-sm" onClick={() => setOpen(true)}>Add a password</button>
+      <Modal open={open} onClose={() => setOpen(false)} title="Add a password">
+        <form onSubmit={save} noValidate>
+          <label className="field-label" htmlFor="ap-password">Password</label>
+          <PasswordInput id="ap-password" autoComplete="new-password" value={password}
+            onChange={(e) => setPassword(e.target.value)} placeholder="Create a password" />
+          {errors.password
+            ? <p className="mt-1.5 text-[13px] text-coral">{errors.password}</p>
+            : <p className="mt-1.5 text-[12.5px] text-ink-faint">{PASSWORD_HINT}</p>}
+          <label className="field-label mt-4" htmlFor="ap-confirm">Confirm password</label>
+          <PasswordInput id="ap-confirm" autoComplete="new-password" value={confirm}
+            onChange={(e) => setConfirm(e.target.value)} placeholder="Type it again" />
+          {errors.confirm && <p className="mt-1.5 text-[13px] text-coral">{errors.confirm}</p>}
+          {error && <p className="mt-3 text-[13px] text-coral">{error}</p>}
+          <div className="mt-5 flex gap-2">
+            <button type="button" className="btn-ghost flex-1" onClick={() => setOpen(false)}>Cancel</button>
+            <button className="btn-primary flex-1" disabled={busy}>{busy ? 'Saving…' : 'Save password'}</button>
+          </div>
+        </form>
+      </Modal>
+    </section>
   )
 }

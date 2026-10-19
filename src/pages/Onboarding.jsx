@@ -5,9 +5,9 @@ import { COLLEGES } from '../data/sample.js'
 import { cleanIndianMobile } from '../lib/format.js'
 
 export default function Onboarding() {
-  const { completeProfile } = useAuth()
+  const { user, completeProfile } = useAuth()
   const navigate = useNavigate()
-  const [form, setForm] = useState({ name: '', phone: '', college: COLLEGES[0], course: '', year: '' })
+  const [form, setForm] = useState({ name: user?.name || '', phone: '', college: COLLEGES[0], course: '', year: '' }) // name pre-filled from Google
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 

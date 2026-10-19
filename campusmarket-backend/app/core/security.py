@@ -126,7 +126,7 @@ PASSWORD_REQUIRED = {"code": "password_required", "message": "Create a password 
 def get_current_user(user: User = Depends(get_current_user_any)) -> User:
     """Logged in AND has a password. Accounts created before passwords existed are blocked
     from everything (all other dependencies build on this one) until they set one."""
-    if not user.password_hash:
+    if user.needs_password:
         raise HTTPException(status_code=403, detail=PASSWORD_REQUIRED)
     return user
 
@@ -146,7 +146,7 @@ def get_optional_user(
     except HTTPException:
         return None
     user = db.query(User).filter(User.id == user_id).first()
-    if not user or not user.password_hash or not _session_still_valid(user, issued_at):
+    if not user or user.needs_password or not _session_still_valid(user, issued_at):
         return None
     return user
 

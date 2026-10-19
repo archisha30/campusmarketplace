@@ -52,8 +52,14 @@ export function AuthProvider({ children }) {
     isOwner: Boolean(user?.is_owner),
     // Sellers can buy and sell; buyers can only buy. Admins can do everything.
     isSeller: user?.account_type === 'seller' || user?.role === 'admin',
-    // Accounts from before passwords existed must create one before doing anything else.
-    needsPassword: Boolean(user && user.has_password === false),
+    // Old email-only accounts must create a password before doing anything else (Google accounts don't).
+    needsPassword: Boolean(user && (user.needs_password ?? user.has_password === false)),
+    // Continue with Google: returns { user, created } (created = brand-new account -> onboarding).
+    async googleSignIn(credential, accountType) {
+      const res = await authApi.googleSignIn(credential, accountType)
+      setUser(res.user)
+      return res
+    },
     async login(email, password) {
       return startSession(await authApi.login(email, password))
     },

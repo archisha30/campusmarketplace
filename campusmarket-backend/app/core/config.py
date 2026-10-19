@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     SUPABASE_PUBLIC_BUCKET: str = "campusmarket-public"
     SUPABASE_PRIVATE_BUCKET: str = "campusmarket-private"
 
+    # --- Google sign-in ---
+    # OAuth Client ID from Google Cloud (not secret). Blank = the Google button is off.
+    GOOGLE_CLIENT_ID: str | None = None
+
     # --- Admin ---
     # Owners always have admin access and are the only ones who can approve or remove other
     # admins (users whose role is "admin"). JSON list, e.g. ["you@college.edu.in"].

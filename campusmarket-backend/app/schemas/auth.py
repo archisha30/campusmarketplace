@@ -59,6 +59,16 @@ class SignupVerifyRequest(NewPasswordMixin):
     account_type: AccountType = "buyer"
 
 
+class GoogleSignInRequest(BaseModel):
+    credential: str = Field(min_length=20, max_length=4096)  # Google's ID token
+    account_type: AccountType = "buyer"  # only used when this creates a new account
+
+
+class GoogleLoginResponse(BaseModel):
+    user: "UserOut"
+    created: bool  # True when this was a new signup (the app goes to onboarding)
+
+
 class PasswordLoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(max_length=PASSWORD_MAX)
@@ -177,6 +187,8 @@ class UserOut(BaseModel):
     verified: bool
     profile_completed: bool
     has_password: bool = False  # never the hash itself
+    uses_google: bool = False
+    needs_password: bool = False  # old email-only accounts: the app shows "Create a password"
     interests: list[str] = []
     view_history: list[ViewEntry] = []
 
@@ -187,3 +199,6 @@ class UserOut(BaseModel):
 class LoginResponse(BaseModel):
     # The session itself is set as an HttpOnly cookie, never returned to page scripts.
     user: UserOut
+
+
+GoogleLoginResponse.model_rebuild()

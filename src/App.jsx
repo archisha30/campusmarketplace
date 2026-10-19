@@ -21,6 +21,8 @@ import ResourceForm from './pages/ResourceForm.jsx'
 import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
 import ForgotPassword from './pages/ForgotPassword.jsx'
+import Privacy from './pages/legal/Privacy.jsx'
+import Terms from './pages/legal/Terms.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import Interests from './pages/Interests.jsx'
 import AdminLayout from './pages/admin/AdminLayout.jsx'
@@ -50,6 +52,9 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          {/* Public: Google and new visitors must be able to read these. */}
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
 
           {/* Verified students only */}
           <Route element={<RequireAuth />}>

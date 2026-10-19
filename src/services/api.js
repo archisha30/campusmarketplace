@@ -117,6 +117,13 @@ export const authApi = {
   // POST /api/auth/signup/verify  body: { email, otp, account_type, password, confirm_password } -> { user } + cookie
   signupVerify: (payload) =>
     pick(() => http.post('/auth/signup/verify', payload), () => mock.signupVerify(payload))(),
+  // POST /api/auth/google  body: { credential, account_type } -> { user, created } + cookie.
+  //   One tap with the student's college Google account; account_type only used for new accounts.
+  googleSignIn: (credential, accountType = 'buyer') =>
+    pick(
+      () => http.post('/auth/google', { credential, account_type: accountType }),
+      () => mock.googleSignIn(credential, accountType)
+    )(),
   // POST /api/auth/login  body: { email, password } -> { user } + HttpOnly session cookie.
   //   Same "Invalid email or password" for every failure (accounts without a password included:
   //   they use Forgot password to create their first one).

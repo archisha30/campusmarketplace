@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.email import EmailError, send_account_exists_email, send_otp_email
+from app.core.google import GoogleTokenError, verify_google_token
 from app.core.images import ImageError, check_image, read_upload
 from app.core.ratelimit import SlidingWindowLimiter
 from app.core.security import (
@@ -32,6 +33,8 @@ from app.models.user import User
 from app.schemas.auth import (
     AccountTypeRequest,
     ForgotPasswordRequest,
+    GoogleLoginResponse,
+    GoogleSignInRequest,
     InterestsRequest,
     LoginResponse,
     PasswordLoginRequest,
@@ -204,6 +207,46 @@ def login(payload: PasswordLoginRequest, request: Request, response: Response, d
     db.commit()
     db.refresh(user)
     return _login_response(user, response)
+
+
+# ---------- Continue with Google ----------
+
+
+@router.post("/auth/google", response_model=GoogleLoginResponse)
+def google_sign_in(payload: GoogleSignInRequest, request: Request, response: Response, db: Session = Depends(get_db)):
+    """One tap: Google proves the student owns their college email, so no code step. Signs up a
+    new account (with the chosen buyer/seller type) or logs into the existing one for that email."""
+    if not _login_ip_limiter.allow(_client_ip(request)):
+        raise HTTPException(status_code=429, detail="Too many login attempts. Wait a few minutes and try again.")
+    try:
+        claims = verify_google_token(payload.credential)
+    except GoogleTokenError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+    email = claims["email"].lower()
+    is_owner = email in {e.lower() for e in settings.OWNER_EMAILS}
+    domain = email.split("@")[-1]
+    # Must be a college Google Workspace account (Google's "hd" claim), apart from owners.
+    if not is_owner and (domain not in settings.ALLOWED_EMAIL_DOMAINS or claims.get("hd") != domain):
+        raise HTTPException(status_code=403, detail="Use your college Google account (@" + settings.ALLOWED_EMAIL_DOMAINS[0] + ")")
+
+    user = db.query(User).filter(User.google_sub == claims["sub"]).first() or _find_user(db, email)
+    created = user is None
+    if created:
+        user = User(email=email, account_type=payload.account_type, name=claims.get("name"))
+        db.add(user)
+    elif user.google_sub and user.google_sub != claims["sub"]:
+        raise HTTPException(status_code=409, detail="This email is linked to a different Google account")
+    user.google_sub = claims["sub"]
+    user.verified = True  # Google verified the email
+    if not user.name and claims.get("name"):
+        user.name = claims["name"][:80]
+    user.failed_logins = 0
+    user.locked_until = None
+    db.commit()
+    db.refresh(user)
+    set_session_cookie(response, create_access_token(user.id))
+    return {"user": user, "created": created}
 
 
 # ---------- passwords ----------

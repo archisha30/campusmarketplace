@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { trackEvent } from '../lib/analytics.js'
 import { PASSWORD_HINT, newPasswordErrors } from '../lib/password.js'
 import PasswordInput from '../components/PasswordInput.jsx'
+import GoogleButton from '../components/GoogleButton.jsx'
 
 const ACCOUNT_TYPES = [
   { value: 'buyer', emoji: '🛍️', title: 'Buyer', body: 'Browse and buy from students on your campus.' },
@@ -113,6 +114,20 @@ export default function Signup() {
               </p>
             </fieldset>
 
+            {/* One tap with the college Google account: no typing the email, no code. */}
+            <GoogleButton
+              text="signup_with"
+              accountType={accountType}
+              onSuccess={({ user, created }) => {
+                trackEvent(created ? 'sign_up' : 'login', { method: 'google', account_type: accountType })
+                navigate(user.profile_completed ? '/marketplace' : '/onboarding')
+              }}
+              onError={(err) => setError(err.message)}
+            />
+            <div className="my-5 flex items-center gap-3 text-[12.5px] text-ink-faint">
+              <span className="h-px flex-1 bg-line" />or sign up with email<span className="h-px flex-1 bg-line" />
+            </div>
+
             <label className="field-label" htmlFor="email">College email</label>
             <input id="email" type="email" required autoComplete="email" className="field-input mb-4" value={email}
               onChange={(e) => setEmail(e.target.value)} placeholder="you@medhaviskillsuniversity.edu.in" />
@@ -162,6 +177,12 @@ export default function Signup() {
 
       <p className="mt-5 flex gap-2 rounded-xl bg-brand-tint px-3.5 py-3 text-[13px] text-brand-deep">
         🔒 Only approved institutional domains can sign up.
+      </p>
+
+      <p className="mt-3 text-center text-[12px] text-ink-faint">
+        By signing up you agree to our{' '}
+        <Link to="/terms" className="font-semibold text-ink-soft hover:underline">Terms</Link> and{' '}
+        <Link to="/privacy" className="font-semibold text-ink-soft hover:underline">Privacy Policy</Link>.
       </p>
 
       <p className="mt-5 text-center text-[13.5px] text-ink-soft">
