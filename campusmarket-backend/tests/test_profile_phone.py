@@ -18,7 +18,7 @@ def fresh_auth(fresh):
     return {"Authorization": f"Bearer {create_access_token(fresh.id)}"}
 
 
-PROFILE = {"name": "Riya", "college": "Polaris", "course": "AI/ML", "year": "1st Year"}
+PROFILE = {"name": "Riya", "college": "Polaris", "course": "AI/ML", "year": "Sem 1"}
 
 
 @pytest.mark.parametrize("raw", ["9876543210", "+91 98765 43210", "098765-43210"])
@@ -52,3 +52,15 @@ def test_posting_needs_a_phone(client, db_session, users, auth, create):
     assert res.status_code == 403 and "WhatsApp number" in res.json()["detail"]
     res = create()
     assert res.status_code == 403 and "WhatsApp number" in res.json()["detail"]
+
+
+@pytest.mark.parametrize("year", ["2nd Year", "Sem 9", "", "anything"])
+def test_semester_must_be_sem_1_to_8(client, fresh_auth, auth, year):
+    body = {**PROFILE, "phone": "9876543210", "year": year}
+    assert client.post("/api/auth/profile", json=body, headers=fresh_auth).status_code == 422
+    assert client.patch("/api/users/me", json={"year": year}, headers=auth("owner")).status_code == 422
+
+
+def test_semester_saves(client, auth):
+    res = client.patch("/api/users/me", json={"year": "Sem 5"}, headers=auth("owner"))
+    assert res.status_code == 200 and res.json()["year"] == "Sem 5"

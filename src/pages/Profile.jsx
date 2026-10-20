@@ -6,7 +6,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { useWishlist } from '../hooks/useWishlist.jsx'
 import { useToast } from '../hooks/useToast.jsx'
 import Avatar from '../components/Avatar.jsx'
-import { COLLEGES } from '../data/sample.js'
+import { COLLEGES, SEMESTERS } from '../data/sample.js'
 import { shrinkToJpeg } from '../lib/images.js'
 import Modal from '../components/Modal.jsx'
 import PostRequestModal from '../components/PostRequestModal.jsx'
@@ -92,7 +92,8 @@ function EditProfileModal({ open, onClose }) {
       phone: user.phone ? user.phone.replace(/^91/, '') : '',
       college: user.college || COLLEGES[0],
       course: user.course || '',
-      year: user.year || '',
+      // Older free-text values ("2nd Year") aren't valid any more, so those users pick a semester.
+      year: SEMESTERS.includes(user.year) ? user.year : '',
     })
   }
   if (!open && form) {
@@ -154,8 +155,11 @@ function EditProfileModal({ open, onClose }) {
               <input id="pf-course" className="field-input" value={form.course} onChange={set('course')} placeholder="e.g. AI/ML" />
             </div>
             <div>
-              <label className="field-label" htmlFor="pf-year">Year</label>
-              <input id="pf-year" className="field-input" value={form.year} onChange={set('year')} placeholder="e.g. 2nd Year" />
+              <label className="field-label" htmlFor="pf-year">Semester</label>
+              <select id="pf-year" required className="field-input" value={form.year} onChange={set('year')}>
+                <option value="" disabled>Select</option>
+                {SEMESTERS.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
           </div>
 

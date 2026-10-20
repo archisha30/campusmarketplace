@@ -13,6 +13,7 @@ export const FOOD_TEMPS = [
 ]
 // Colleges offered in the signup / profile dropdown. Add more here as campuses join.
 export const COLLEGES = ['Polaris School Of Technology']
+export const SEMESTERS = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6', 'Sem 7', 'Sem 8']
 
 export const CONDITIONS = ['New', 'Like New', 'Good', 'Fair']
 export const LISTING_TYPES = [

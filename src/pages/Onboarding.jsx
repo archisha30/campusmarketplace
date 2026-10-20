@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
-import { COLLEGES } from '../data/sample.js'
+import { COLLEGES, SEMESTERS } from '../data/sample.js'
 import { cleanIndianMobile } from '../lib/format.js'
 
 export default function Onboarding() {
@@ -68,8 +68,11 @@ export default function Onboarding() {
         <label className="field-label" htmlFor="course">Course / Branch</label>
         <input id="course" className="field-input mb-4" value={form.course} onChange={set('course')} placeholder="e.g. AI/ML" />
 
-        <label className="field-label" htmlFor="year">Year / Semester</label>
-        <input id="year" className="field-input mb-6" value={form.year} onChange={set('year')} placeholder="e.g. 2nd Year, 3rd Semester" />
+        <label className="field-label" htmlFor="year">Semester</label>
+        <select id="year" required className="field-input mb-6" value={form.year} onChange={set('year')}>
+          <option value="" disabled>Select your semester</option>
+          {SEMESTERS.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
 
         {error && <p className="mb-3 text-[13px] text-coral">{error}</p>}
         <button className="btn-primary w-full" disabled={busy}>{busy ? 'Setting up…' : 'Finish Setup'}</button>

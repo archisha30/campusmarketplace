@@ -87,11 +87,15 @@ class ResetPasswordRequest(NewPasswordMixin):
     otp: str
 
 
+SEMESTERS = tuple(f"Sem {n}" for n in range(1, 9))
+Semester = Literal[SEMESTERS]  # type: ignore[valid-type]
+
+
 class ProfileRequest(BaseModel):
     name: str = Field(max_length=80)
     college: str = Field(max_length=120)
     course: str = Field(max_length=60)
-    year: str = Field(max_length=40)
+    year: Semester
     # WhatsApp number: buyers tap "Contact Seller" and land on the seller's own chat.
     phone: str
 
@@ -124,7 +128,7 @@ class ProfileUpdateRequest(BaseModel):
     name: str | None = Field(default=None, max_length=80)
     college: str | None = Field(default=None, max_length=120)
     course: str | None = Field(default=None, max_length=60)
-    year: str | None = Field(default=None, max_length=40)
+    year: Semester | None = None
     phone: str | None = Field(default=None, max_length=20)
 
     @field_validator("name", "college")
@@ -134,7 +138,7 @@ class ProfileUpdateRequest(BaseModel):
             raise ValueError("This field can't be empty")
         return value.strip()
 
-    @field_validator("course", "year")
+    @field_validator("course")
     @classmethod
     def strip(cls, value: str | None) -> str | None:
         return value.strip() if value else value
