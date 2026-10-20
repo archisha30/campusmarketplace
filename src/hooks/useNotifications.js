@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { notificationsApi } from '../services/api.js'
 import { useAuth } from './useAuth.jsx'
+import { usePolling } from './usePolling.js'
 
 const POLL_MS = 60_000
 
@@ -35,10 +36,8 @@ export function useNotifications({ poll = false, freeze = false } = {}) {
 
   useEffect(() => {
     load()
-    if (!poll || !user || !isSeller) return
-    const t = setInterval(load, POLL_MS)
-    return () => clearInterval(t)
-  }, [load, poll, user, isSeller])
+  }, [load])
+  usePolling(load, POLL_MS, poll && !!user && isSeller)
 
   // The navbar badge listens for this so it clears as soon as the dashboard marks things read.
   useEffect(() => {

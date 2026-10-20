@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { requestsApi } from '../services/api.js'
 import { useAuth } from './useAuth.jsx'
+import { usePolling } from './usePolling.js'
 
 const POLL_MS = 60_000
 
@@ -41,10 +42,8 @@ export function useRequestNotifications({ poll = false, freeze = false } = {}) {
   useEffect(() => {
     if (!freeze) setSeenAt(readSeen(user))
     load()
-    if (!poll || !isSeller) return
-    const t = setInterval(load, POLL_MS)
-    return () => clearInterval(t)
-  }, [load, poll, isSeller, user, freeze])
+  }, [load, user, freeze])
+  usePolling(load, POLL_MS, poll && isSeller)
 
   // Other components (the navbar badge) listen for this to clear their count.
   useEffect(() => {
