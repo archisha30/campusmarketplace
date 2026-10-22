@@ -130,7 +130,7 @@ export default function Signup() {
 
             <label className="field-label" htmlFor="email">College email</label>
             <input id="email" type="email" required autoComplete="email" className="field-input mb-4" value={email}
-              onChange={(e) => setEmail(e.target.value)} placeholder="you@medhaviskillsuniversity.edu.in" />
+              onChange={(e) => setEmail(e.target.value)} placeholder="Your college email" />
 
             <label className="field-label" htmlFor="password">Create password</label>
             <PasswordInput id="password" required autoComplete="new-password" value={password}

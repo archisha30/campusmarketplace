@@ -59,7 +59,7 @@ export default function ForgotPassword() {
           <form onSubmit={sendCode}>
             <label className="field-label" htmlFor="email">Email</label>
             <input id="email" type="email" required autoComplete="email" className="field-input mb-4" value={email}
-              onChange={(e) => setEmail(e.target.value)} placeholder="you@medhaviskillsuniversity.edu.in" />
+              onChange={(e) => setEmail(e.target.value)} placeholder="Your college email" />
             {error && <p className="mb-3 text-[13px] text-coral">{error}</p>}
             <button className="btn-primary w-full" disabled={busy}>{busy ? 'Sending…' : 'Send reset code'}</button>
           </form>

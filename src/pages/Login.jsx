@@ -52,7 +52,7 @@ export default function Login() {
       <form onSubmit={submit}>
         <label className="field-label" htmlFor="email">Email</label>
         <input id="email" type="email" required autoComplete="email" className="field-input mb-4" value={email}
-          onChange={(e) => setEmail(e.target.value)} placeholder="you@medhaviskillsuniversity.edu.in" />
+          onChange={(e) => setEmail(e.target.value)} placeholder="Your college email" />
 
         <div className="flex items-center justify-between">
           <label className="field-label" htmlFor="password">Password</label>

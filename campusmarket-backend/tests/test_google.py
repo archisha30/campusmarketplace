@@ -136,3 +136,12 @@ def test_google_only_account_cannot_password_login(client):
     client.cookies.clear()
     res = client.post("/api/auth/login", json={"email": "riya@campus.edu", "password": "anything123"})
     assert res.status_code == 401 and res.json()["detail"] == "Invalid email or password"
+
+
+def test_domain_message_lists_every_college(monkeypatch):
+    from app.api.routes import auth as auth_routes
+
+    monkeypatch.setattr(auth_routes.settings, "ALLOWED_EMAIL_DOMAINS", ["a.edu.in", "b.com"])
+    assert auth_routes._allowed_domains_text() == "@a.edu.in or @b.com"
+    monkeypatch.setattr(auth_routes.settings, "ALLOWED_EMAIL_DOMAINS", ["a.edu.in"])
+    assert auth_routes._allowed_domains_text() == "@a.edu.in"

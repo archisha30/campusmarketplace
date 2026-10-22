@@ -60,7 +60,13 @@ def _check_domain(email: str) -> None:
         return
     domain = email.split("@")[-1].lower()
     if domain not in settings.ALLOWED_EMAIL_DOMAINS:
-        raise HTTPException(status_code=400, detail=f"{domain} is not a recognised campus email")
+        raise HTTPException(status_code=400, detail=f"{domain} is not a recognised campus email. Use your {_allowed_domains_text()} email")
+
+
+def _allowed_domains_text() -> str:
+    """'@a.edu.in' or '@a.edu.in or @b.com', for error messages."""
+    names = [f"@{d}" for d in settings.ALLOWED_EMAIL_DOMAINS]
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " or " + names[-1]
 
 
 def _issue_otp(db: Session, email: str, purpose: str) -> str:
@@ -228,7 +234,7 @@ def google_sign_in(payload: GoogleSignInRequest, request: Request, response: Res
     domain = email.split("@")[-1]
     # Must be a college Google Workspace account (Google's "hd" claim), apart from owners.
     if not is_owner and (domain not in settings.ALLOWED_EMAIL_DOMAINS or claims.get("hd") != domain):
-        raise HTTPException(status_code=403, detail="Use your college Google account (@" + settings.ALLOWED_EMAIL_DOMAINS[0] + ")")
+        raise HTTPException(status_code=403, detail=f"Use your college Google account ({_allowed_domains_text()})")
 
     user = db.query(User).filter(User.google_sub == claims["sub"]).first() or _find_user(db, email)
     created = user is None
