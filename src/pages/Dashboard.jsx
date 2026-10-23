@@ -40,8 +40,10 @@ export default function Dashboard() {
     () => (showingTrash ? trashApi.list() : listingsApi.list({ seller_id: user?.id, status: tab.status, include_sold: true })),
     [user?.id, tab.status]
   )
-  const items = showingTrash ? [] : data?.items || []
-  const trashed = showingTrash ? data || [] : []
+  // Right after switching tabs, `data` still holds the previous tab's response for one
+  // render (listings come as { items }, the trash as a plain array), so check the shape.
+  const items = !showingTrash && Array.isArray(data?.items) ? data.items : []
+  const trashed = showingTrash && Array.isArray(data) ? data : []
 
   async function restore(t) {
     try {
