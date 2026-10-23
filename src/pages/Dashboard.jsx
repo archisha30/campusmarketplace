@@ -7,6 +7,7 @@ import { useToast } from '../hooks/useToast.jsx'
 import { SkeletonRows } from '../components/SkeletonCard.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import Avatar from '../components/Avatar.jsx'
+import Modal from '../components/Modal.jsx'
 import { useRequestNotifications } from '../hooks/useRequestNotifications.js'
 import { useNotifications } from '../hooks/useNotifications.js'
 import { openContact } from '../lib/contact.js'
@@ -23,6 +24,8 @@ export default function Dashboard() {
   const toast = useToast()
   const navigate = useNavigate()
   const [tab, setTab] = useState(TABS[0])
+  const [confirmDelete, setConfirmDelete] = useState(null) // listing waiting for "Yes, delete"
+  const [deleting, setDeleting] = useState(false)
 
   const { data, loading, refetch } = useApi(
     () => listingsApi.list({ seller_id: user?.id, status: tab.status, include_sold: true }),
@@ -36,10 +39,18 @@ export default function Dashboard() {
     refetch()
   }
 
-  async function remove(id) {
-    await listingsApi.remove(id)
-    toast('Listing deleted')
-    refetch()
+  async function remove() {
+    setDeleting(true)
+    try {
+      await listingsApi.remove(confirmDelete.id)
+      toast('Listing deleted')
+      setConfirmDelete(null)
+      refetch()
+    } catch (err) {
+      toast(err.message || "Couldn't delete the listing")
+    } finally {
+      setDeleting(false)
+    }
   }
 
   return (
@@ -116,10 +127,29 @@ export default function Dashboard() {
             {l.status !== 'sold' && (
               <button className="btn-ghost btn-sm" onClick={() => changeStatus(l.id, 'sold')}>Mark Sold</button>
             )}
-            <button className="btn-danger btn-sm" onClick={() => remove(l.id)}>Delete</button>
+            <button className="btn-danger btn-sm" onClick={() => setConfirmDelete(l)}>Delete</button>
           </div>
         </div>
       ))}
+
+      <Modal open={Boolean(confirmDelete)} onClose={() => !deleting && setConfirmDelete(null)} title="Delete this listing?">
+        {confirmDelete && (
+          <>
+            <p className="text-[14px] text-ink-soft">
+              Are you sure you want to delete <strong className="text-ink">"{confirmDelete.title}"</strong>? This can't be undone.
+            </p>
+            {confirmDelete.status !== 'sold' && (
+              <p className="mt-3 rounded-[10px] bg-brand-tint px-3 py-2 text-[12.5px] text-brand-deep">
+                Sold it? Use <strong>Mark Sold</strong> instead, so it stays on the marketplace as sold.
+              </p>
+            )}
+            <div className="mt-5 flex gap-2.5">
+              <button className="btn-ghost flex-1" onClick={() => setConfirmDelete(null)} disabled={deleting} autoFocus>Cancel</button>
+              <button className="btn-danger flex-1" onClick={remove} disabled={deleting}>{deleting ? 'Deleting…' : 'Yes, delete'}</button>
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   )
 }
