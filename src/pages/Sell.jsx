@@ -7,10 +7,11 @@ import { CATEGORIES, CONDITIONS, FOOD_CATEGORY, FOOD_TEMPS, LISTING_TYPES } from
 import { todayISO } from '../lib/format.js'
 import { trackEvent } from '../lib/analytics.js'
 import { shrinkToJpeg } from '../lib/images.js'
+import PriceTag from '../components/PriceTag.jsx'
 
 const BLANK = {
   title: '', category: CATEGORIES[0], listing_type: 'sale',
-  price: '', condition: 'Good', description: '', pickup_spot: '',
+  price: '', mrp: '', condition: 'Good', description: '', pickup_spot: '',
   food_temp: '', expiry_date: '', // F&B only
 }
 
@@ -46,6 +47,7 @@ export default function Sell() {
           category: l.category || CATEGORIES[0],
           listing_type: l.listing_type || 'sale',
           price: l.listing_type === 'free' ? '' : String(l.price ?? ''),
+          mrp: l.mrp ? String(l.mrp) : '',
           condition: l.condition || 'Good',
           description: l.description || '',
           pickup_spot: l.pickup_spot || '',
@@ -91,6 +93,10 @@ export default function Sell() {
     if (form.listing_type !== 'free' && (form.price === '' || Number(form.price) < 0)) {
       next.price = 'Enter a price, or switch the listing type to Free.'
     }
+    if (form.listing_type === 'sale' && form.mrp !== '') {
+      if (!(Number(form.mrp) > 0)) next.mrp = 'Enter the MRP in rupees, or leave it blank.'
+      else if (form.price !== '' && Number(form.mrp) < Number(form.price)) next.mrp = "MRP can't be lower than your selling price."
+    }
     if (!form.pickup_spot.trim()) next.pickup_spot = 'Name a campus spot where you can hand it over.'
     if (isFood && !form.food_temp) next.food_temp = 'Is it served hot or cold?'
     if (isFood && form.expiry_date && form.expiry_date < todayISO()) next.expiry_date = 'That date has already passed.'
@@ -105,6 +111,7 @@ export default function Sell() {
       const payload = {
         ...form,
         price: form.listing_type === 'free' ? 0 : Number(form.price),
+        mrp: form.listing_type === 'sale' && form.mrp !== '' ? Number(form.mrp) : null,
         // F&B has no wear-and-tear condition; the server stores "Fresh".
         condition: isFood ? 'Fresh' : form.condition,
         food_temp: isFood ? form.food_temp : null,
@@ -177,10 +184,25 @@ export default function Sell() {
         </fieldset>
 
         {form.listing_type !== 'free' && (
-          <div className="mb-4">
-            <label className="field-label" htmlFor="price">Price (₹)</label>
-            <input id="price" type="number" min="0" className="field-input" value={form.price} onChange={set('price')} placeholder="e.g. 900" />
-            {errors.price && <p className="mt-1.5 text-[13px] text-coral">{errors.price}</p>}
+          <div className={`mb-4 grid gap-3 ${form.listing_type === 'sale' ? 'grid-cols-2' : ''}`}>
+            <div>
+              <label className="field-label" htmlFor="price">{form.listing_type === 'sale' ? 'Selling price (₹)' : 'Price (₹)'}</label>
+              <input id="price" type="number" min="0" className="field-input" value={form.price} onChange={set('price')} placeholder="e.g. 900" />
+              {errors.price && <p className="mt-1.5 text-[13px] text-coral">{errors.price}</p>}
+            </div>
+            {form.listing_type === 'sale' && (
+              <div>
+                <label className="field-label" htmlFor="mrp">MRP (₹) <span className="font-normal text-ink-faint">optional</span></label>
+                <input id="mrp" type="number" min="1" className="field-input" value={form.mrp} onChange={set('mrp')} placeholder="What you paid" />
+                {errors.mrp && <p className="mt-1.5 text-[13px] text-coral">{errors.mrp}</p>}
+              </div>
+            )}
+            {form.listing_type === 'sale' && Number(form.mrp) > Number(form.price) && Number(form.price) > 0 && (
+              <div className="col-span-2 flex items-baseline gap-2 rounded-[10px] bg-brand-tint px-3 py-2 text-[12.5px] text-brand-deep">
+                <span>Buyers will see:</span>
+                <PriceTag price={Number(form.price)} mrp={Number(form.mrp)} size="sm" />
+              </div>
+            )}
           </div>
         )}
 

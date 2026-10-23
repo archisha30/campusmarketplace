@@ -9,7 +9,8 @@ import EmptyState from '../components/EmptyState.jsx'
 import ImageLightbox from '../components/ImageLightbox.jsx'
 import RecommendedForYou from '../components/RecommendedForYou.jsx'
 import { recordListingView } from '../lib/recommendations.js'
-import { formatPrice, titleCase, foodTempLabel, formatDay, isExpired } from '../lib/format.js'
+import PriceTag from '../components/PriceTag.jsx'
+import { titleCase, foodTempLabel, formatDay, isExpired } from '../lib/format.js'
 import { openContact } from '../lib/contact.js'
 import Avatar from '../components/Avatar.jsx'
 import LinkifiedText from '../components/LinkifiedText.jsx'
@@ -129,7 +130,7 @@ export default function ListingDetail() {
             )}
           </div>
           <h1 className="text-[28px] font-bold">{l.title}</h1>
-          <p className="my-3 font-display text-[32px] font-bold">{formatPrice(l.price)}</p>
+          <PriceTag price={l.price} mrp={l.mrp} size="lg" className="my-3" />
 
           <dl className="my-5 flex flex-wrap gap-5 border-y border-line py-4 text-[13.5px] text-ink-soft">
             {l.food_temp ? (

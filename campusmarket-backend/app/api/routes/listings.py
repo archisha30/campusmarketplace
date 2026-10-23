@@ -61,6 +61,14 @@ def _apply_food_rules(listing: Listing, check_expiry: bool) -> None:
         listing.expiry_date = None
 
 
+def _apply_mrp_rule(listing: Listing) -> None:
+    """MRP only means something for a sale, and can't be below the selling price."""
+    if listing.listing_type != "sale":
+        listing.mrp = None
+    elif listing.mrp is not None and listing.mrp < listing.price:
+        raise HTTPException(status_code=422, detail="MRP can't be lower than the selling price")
+
+
 def _get_owned_listing(listing_id: int, db: Session, user: User) -> Listing:
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
@@ -207,6 +215,7 @@ def create_listing(
         raise HTTPException(status_code=403, detail="Add your WhatsApp number in your profile so buyers can contact you")
     listing = Listing(**payload.model_dump(), owner_id=user.id)
     _apply_food_rules(listing, check_expiry=True)
+    _apply_mrp_rule(listing)
     db.add(listing)
     db.commit()
     db.refresh(listing)
@@ -235,6 +244,7 @@ def update_listing(
         setattr(listing, key, value)
     # Only re-check the expiry date when it's being changed, so an expired item can still be edited.
     _apply_food_rules(listing, check_expiry="expiry_date" in data)
+    _apply_mrp_rule(listing)
     db.commit()
     _delete_upload_files(removed)
     db.refresh(listing)

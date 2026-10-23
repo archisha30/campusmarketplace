@@ -53,6 +53,7 @@ class ListingCreate(BaseModel):
     category: str
     listing_type: Literal["sale", "rent", "free"] = "sale"
     price: float = Field(default=0, ge=0, le=MAX_PRICE)
+    mrp: Optional[float] = Field(default=None, gt=0, le=MAX_PRICE)  # sale only
     condition: str = Field(max_length=30)
     description: Optional[str] = Field(default=None, max_length=2000)
     pickup_spot: str = Field(min_length=1, max_length=120)
@@ -67,6 +68,7 @@ class ListingUpdate(BaseModel):
     category: Optional[str] = None
     listing_type: Optional[Literal["sale", "rent", "free"]] = None
     price: Optional[float] = Field(default=None, ge=0, le=MAX_PRICE)
+    mrp: Optional[float] = Field(default=None, gt=0, le=MAX_PRICE)
     condition: Optional[str] = Field(default=None, max_length=30)
     description: Optional[str] = Field(default=None, max_length=2000)
     pickup_spot: Optional[str] = Field(default=None, min_length=1, max_length=120)
@@ -88,6 +90,7 @@ class ListingOut(BaseModel):
     category: str
     listing_type: str
     price: float
+    mrp: float | None = None
     condition: str
     description: str | None = None
     pickup_spot: str
@@ -113,6 +116,7 @@ class ListingOut(BaseModel):
             category=listing.category,
             listing_type=listing.listing_type,
             price=listing.price,
+            mrp=listing.mrp,
             condition=listing.condition,
             description=listing.description,
             pickup_spot=listing.pickup_spot,

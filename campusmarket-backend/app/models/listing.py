@@ -18,6 +18,8 @@ class Listing(Base):
     category = Column(String, nullable=False)
     listing_type = Column(String, nullable=False, default="sale")  # sale | rent | free
     price = Column(Float, nullable=False, default=0)
+    # Optional original price (MRP) for sale items; shown slashed next to the selling price.
+    mrp = Column(Float, nullable=True)
     condition = Column(String, nullable=False)
     description = Column(String, nullable=True)
     pickup_spot = Column(String, nullable=False)
