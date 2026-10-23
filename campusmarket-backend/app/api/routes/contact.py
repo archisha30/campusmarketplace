@@ -50,7 +50,7 @@ def _load_target(db: Session, payload: ContactIn, user: User):
             raise HTTPException(status_code=404, detail="That request no longer exists")
         return req.user, req.product
     model = Listing if payload.target_type == "listing" else Resource
-    target = db.query(model).filter(model.id == payload.target_id).first()
+    target = db.query(model).filter(model.id == payload.target_id, model.deleted_at.is_(None)).first()
     if not target:
         raise HTTPException(status_code=404, detail="That item no longer exists")
     return target.owner, target.title

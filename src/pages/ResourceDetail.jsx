@@ -382,11 +382,11 @@ function OwnerPanel({ r, onChange, refetch }) {
   }
 
   async function remove() {
-    if (!window.confirm(`Delete "${r.title}"? This also removes its files and access requests.`)) return
+    if (!window.confirm(`Delete "${r.title}"? You can restore it from the Deleted tab on your Seller Dashboard for 24 hours.`)) return
     setBusy(true)
     try {
       await resourcesApi.remove(r.id)
-      toast('Resource deleted')
+      toast('Resource deleted. Restore it from your dashboard within 24 hours')
       navigate('/resources', { replace: true })
     } catch (err) {
       toast(err.message)

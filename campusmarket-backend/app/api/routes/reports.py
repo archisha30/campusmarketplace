@@ -27,7 +27,7 @@ def create_report(
     else:
         target_type, model, target_id = "resource", Resource, payload.resource_id
 
-    target = db.query(model).filter(model.id == target_id).first()
+    target = db.query(model).filter(model.id == target_id, model.deleted_at.is_(None)).first()
     if not target:
         raise HTTPException(status_code=404, detail="That item no longer exists")
     if target.owner_id == user.id:

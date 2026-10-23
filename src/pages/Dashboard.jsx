@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { listingsApi } from '../services/api.js'
+import { listingsApi, resourcesApi, trashApi } from '../services/api.js'
 import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useToast } from '../hooks/useToast.jsx'
@@ -13,10 +13,18 @@ import { useNotifications } from '../hooks/useNotifications.js'
 import { openContact } from '../lib/contact.js'
 import { formatPrice, isExpired, titleCase, timeAgo } from '../lib/format.js'
 
+// "Deletes for good in 5h" / "in 40m", counting down to the end of the 24-hour window.
+function timeLeft(iso) {
+  const mins = Math.max(0, Math.round((new Date(iso).getTime() - Date.now()) / 60000))
+  if (mins >= 60) return `Deletes for good in ${Math.floor(mins / 60)}h`
+  return `Deletes for good in ${Math.max(1, mins)}m`
+}
+
 const TABS = [
   { label: 'Active', status: 'available' },
   { label: 'Reserved', status: 'reserved' },
   { label: 'Sold', status: 'sold' },
+  { label: 'Deleted', status: 'deleted' }, // restorable for 24 hours
 ]
 
 export default function Dashboard() {
@@ -27,11 +35,24 @@ export default function Dashboard() {
   const [confirmDelete, setConfirmDelete] = useState(null) // listing waiting for "Yes, delete"
   const [deleting, setDeleting] = useState(false)
 
+  const showingTrash = tab.status === 'deleted'
   const { data, loading, refetch } = useApi(
-    () => listingsApi.list({ seller_id: user?.id, status: tab.status, include_sold: true }),
+    () => (showingTrash ? trashApi.list() : listingsApi.list({ seller_id: user?.id, status: tab.status, include_sold: true })),
     [user?.id, tab.status]
   )
-  const items = data?.items || []
+  const items = showingTrash ? [] : data?.items || []
+  const trashed = showingTrash ? data || [] : []
+
+  async function restore(t) {
+    try {
+      await (t.type === 'listing' ? listingsApi.restore(t.id) : resourcesApi.restore(t.id))
+      toast(`Restored "${t.title}"`)
+      refetch()
+    } catch (err) {
+      toast(err.message || "Couldn't restore it")
+      refetch()
+    }
+  }
 
   async function changeStatus(id, status) {
     await listingsApi.setStatus(id, status)
@@ -43,7 +64,7 @@ export default function Dashboard() {
     setDeleting(true)
     try {
       await listingsApi.remove(confirmDelete.id)
-      toast('Listing deleted')
+      toast('Listing deleted. You can restore it from the Deleted tab for 24 hours')
       setConfirmDelete(null)
       refetch()
     } catch (err) {
@@ -88,7 +109,7 @@ export default function Dashboard() {
 
       {loading && <SkeletonRows />}
 
-      {!loading && items.length === 0 && (
+      {!showingTrash && !loading && items.length === 0 && (
         <EmptyState
           emoji="📭"
           title="Nothing here yet"
@@ -97,6 +118,30 @@ export default function Dashboard() {
           actionTo="/sell"
         />
       )}
+
+      {showingTrash && !loading && trashed.length === 0 && (
+        <p className="rounded-card bg-paper px-4 py-8 text-center text-[14px] text-ink-soft">
+          Nothing here. Listings and resources you delete stay here for 24 hours, so you can restore them.
+        </p>
+      )}
+
+      {showingTrash && !loading && trashed.map((t) => (
+        <div key={`${t.type}-${t.id}`} className="mb-3 flex flex-wrap items-center gap-4 rounded-card border border-dashed border-line bg-paper p-3.5">
+          <div className="flex h-[60px] w-[60px] flex-none items-center justify-center overflow-hidden rounded-[10px] text-[26px] opacity-70" style={{ background: t.bg }}>
+            {t.image ? <img src={t.image} alt="" className="h-full w-full object-cover" /> : t.emoji}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="flex flex-wrap items-center gap-2 text-[14.5px] font-semibold">
+              {t.title}
+              <span className="rounded-pill bg-bg px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">{t.type}</span>
+            </p>
+            <p className="text-[13px] text-ink-soft">
+              Deleted {timeAgo(t.deleted_at)} · <span className="font-semibold text-coral">{timeLeft(t.restore_until)}</span>
+            </p>
+          </div>
+          <button className="btn-accent btn-sm" onClick={() => restore(t)}>Restore</button>
+        </div>
+      ))}
 
       {!loading && items.map((l) => (
         <div key={l.id} className="mb-3 flex flex-wrap items-center gap-4 rounded-card border border-line bg-paper p-3.5">
@@ -136,7 +181,7 @@ export default function Dashboard() {
         {confirmDelete && (
           <>
             <p className="text-[14px] text-ink-soft">
-              Are you sure you want to delete <strong className="text-ink">"{confirmDelete.title}"</strong>? This can't be undone.
+              Are you sure you want to delete <strong className="text-ink">"{confirmDelete.title}"</strong>? You can restore it from the <strong className="text-ink">Deleted</strong> tab for 24 hours, then it's gone for good.
             </p>
             {confirmDelete.status !== 'sold' && (
               <p className="mt-3 rounded-[10px] bg-brand-tint px-3 py-2 text-[12.5px] text-brand-deep">

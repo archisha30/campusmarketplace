@@ -10,7 +10,7 @@ import ImageLightbox from '../components/ImageLightbox.jsx'
 import RecommendedForYou from '../components/RecommendedForYou.jsx'
 import { recordListingView } from '../lib/recommendations.js'
 import PriceTag from '../components/PriceTag.jsx'
-import { titleCase, foodTempLabel, formatDay, isExpired } from '../lib/format.js'
+import { listedOn, titleCase, foodTempLabel, formatDay, isExpired } from '../lib/format.js'
 import { openContact } from '../lib/contact.js'
 import Avatar from '../components/Avatar.jsx'
 import LinkifiedText from '../components/LinkifiedText.jsx'
@@ -164,6 +164,7 @@ export default function ListingDetail() {
           <p className="mb-5 text-[13.5px] text-ink-soft">
             <span className="font-semibold text-ink">Pickup spot:</span> {l.pickup_spot} ·{' '}
             <span className="font-semibold text-ink">Status:</span> {titleCase(l.status)}
+            {l.created_at && <> · <span className="font-semibold text-ink">{listedOn(l.created_at)}</span></>}
           </p>
 
           <div className="flex flex-wrap gap-2.5">

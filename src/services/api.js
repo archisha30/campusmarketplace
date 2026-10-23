@@ -25,6 +25,8 @@ export const listingsApi = {
   update: (id, payload) => pick(() => http.put(`/listings/${id}`, payload), () => mock.updateListing(id, payload))(),
   // DELETE /api/listings/:id
   remove: (id) => pick(() => http.del(`/listings/${id}`), () => mock.deleteListing(id))(),
+  // POST /api/listings/:id/restore  (within 24h of deleting)
+  restore: (id) => pick(() => http.post(`/listings/${id}/restore`), () => mock.restoreListing(id))(),
   // PATCH /api/listings/:id/status  body: { status: "available" | "reserved" | "sold" }
   setStatus: (id, status) =>
     pick(() => http.patch(`/listings/${id}/status`, { status }), () => mock.setListingStatus(id, status))(),
@@ -86,6 +88,8 @@ export const resourcesApi = {
     )(),
   // DELETE /api/resources/:id
   remove: (id) => pick(() => http.del(`/resources/${id}`), () => mock.deleteResource(id))(),
+  // POST /api/resources/:id/restore  (within 24h of deleting)
+  restore: (id) => pick(() => http.post(`/resources/${id}/restore`), () => mock.restoreResource(id))(),
   // PATCH /api/resources/:id/status  body: { status: "available" | "closed" }
   setStatus: (id, status) =>
     pick(() => http.patch(`/resources/${id}/status`, { status }), () => mock.setResourceStatus(id, status))(),
@@ -183,6 +187,11 @@ export const requestsApi = {
   list: () => pick(() => http.get('/requests'), () => mock.listRequests())(),
   // DELETE /api/requests/:id
   remove: (id) => pick(() => http.del(`/requests/${id}`), () => mock.deleteRequest(id))(),
+}
+
+export const trashApi = {
+  // GET /api/trash -> [{ type: "listing" | "resource", id, title, price, image, emoji, bg, deleted_at, restore_until }]
+  list: () => pick(() => http.get('/trash'), () => mock.listTrash())(),
 }
 
 export const notificationsApi = {

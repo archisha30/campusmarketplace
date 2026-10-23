@@ -53,7 +53,7 @@ def test_edit_checks_mrp_against_new_price(client, auth):
     assert ok.status_code == 200 and ok.json()["mrp"] is None and ok.json()["price"] == 1200
 
 
-def test_deleting_a_listing_removes_its_photos(client, auth, db_session, monkeypatch):
+def test_deleted_listing_photos_go_after_restore_window(client, auth, db_session, monkeypatch, expire_trash):
     from app.api.routes import listings as listings_routes
     from app.models.listing import Listing
 
@@ -65,6 +65,9 @@ def test_deleting_a_listing_removes_its_photos(client, auth, db_session, monkeyp
     db.commit()
 
     assert client.delete(f"/api/listings/{lid}", headers=auth("owner")).status_code == 204
+    assert removed == []  # still restorable
+    expire_trash()
+    client.get("/api/trash", headers=auth("owner"))
     got = list(removed[0])
     if got and all(len(c) == 1 for c in got):  # SQLite test artifact: ARRAY reads back as JSON characters
         got = json.loads("".join(got))

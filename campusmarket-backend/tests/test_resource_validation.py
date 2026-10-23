@@ -163,10 +163,16 @@ def test_update_replaces_file_and_cleans_old_one(client, auth, create, file_dirs
     assert old.isdisjoint(new)
 
 
-def test_delete_removes_files(client, auth, create, db_session, file_dirs):
+def test_delete_removes_files_after_restore_window(client, auth, create, db_session, file_dirs, expire_trash):
     rid = create().json()["id"]
     assert _files(file_dirs)
     assert client.delete(f"/api/resources/{rid}", headers=auth("owner")).status_code == 204
+    # Hidden straight away, but its files stay while it can still be restored.
+    assert client.get(f"/api/resources/{rid}", headers=auth("owner")).status_code == 404
+    assert _files(file_dirs)
+
+    expire_trash()
+    assert client.get("/api/trash", headers=auth("owner")).json() == []
     assert _count(db_session) == 0
     assert _files(file_dirs) == []
 

@@ -1,6 +1,6 @@
 import json
 import uuid
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
 
@@ -12,6 +12,7 @@ from app.core.images import ImageError, check_image, read_upload
 from app.core.pagination import paginate
 from app.core.security import require_seller, require_verified
 from app.core.storage import delete_public_urls, storage
+from app.core.trash import live, restore_cutoff
 from app.db.session import get_db
 from app.models.listing import Listing
 from app.models.user import User
@@ -70,7 +71,7 @@ def _apply_mrp_rule(listing: Listing) -> None:
 
 
 def _get_owned_listing(listing_id: int, db: Session, user: User) -> Listing:
-    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    listing = db.query(Listing).filter(Listing.id == listing_id, live(Listing)).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     if listing.owner_id != user.id:
@@ -96,7 +97,7 @@ def list_listings(
     db: Session = Depends(get_db),
     _viewer: User = Depends(require_verified),  # the marketplace is for verified students only
 ):
-    query = db.query(Listing)
+    query = db.query(Listing).filter(live(Listing))
 
     if q:
         query = query.filter(Listing.title.ilike(f"%{q}%"))
@@ -169,7 +170,7 @@ def recommended_listings(
         except (ValueError, TypeError):
             only = []
 
-    query = db.query(Listing).filter(Listing.status == "available", _not_expired())
+    query = db.query(Listing).filter(Listing.status == "available", _not_expired(), live(Listing))
     if exclude_id:
         query = query.filter(Listing.id != exclude_id)
     if only:
@@ -197,7 +198,7 @@ def get_listing(
     db: Session = Depends(get_db),
     _viewer: User = Depends(require_verified),
 ):
-    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    listing = db.query(Listing).filter(Listing.id == listing_id, live(Listing)).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     return ListingOut.from_orm_with_art(listing)
@@ -271,9 +272,40 @@ def delete_listing(
     db: Session = Depends(get_db),
     user: User = Depends(require_seller),
 ):
+    """Moves the listing to the owner's Deleted tab; it can be restored for 24 hours."""
     listing = _get_owned_listing(listing_id, db, user)
-    photos = listing.images or []  # read before the delete; the row is gone after commit
-    db.delete(listing)
+    listing.deleted_at = datetime.utcnow()
+    db.commit()
+    purge_deleted_listings(db)
+
+
+@router.post("/{listing_id}/restore", response_model=ListingOut)
+def restore_listing(
+    listing_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_seller),
+):
+    listing = (
+        db.query(Listing)
+        .filter(Listing.id == listing_id, Listing.owner_id == user.id, Listing.deleted_at >= restore_cutoff())
+        .first()
+    )
+    if not listing:
+        raise HTTPException(status_code=404, detail="This listing can't be restored any more")
+    listing.deleted_at = None
+    db.commit()
+    db.refresh(listing)
+    return ListingOut.from_orm_with_art(listing)
+
+
+def purge_deleted_listings(db: Session) -> None:
+    """Permanently remove listings deleted more than 24 hours ago, with their photos."""
+    expired = db.query(Listing).filter(Listing.deleted_at < restore_cutoff()).all()
+    if not expired:
+        return
+    photos = [url for listing in expired for url in (listing.images or [])]
+    for listing in expired:
+        db.delete(listing)
     db.commit()
     _delete_upload_files(photos)  # after the commit, so a failed delete never loses photos
 

@@ -81,7 +81,7 @@ class AdminResourcesOut(BaseModel):
 
 
 def _counts(db: Session, model) -> dict:
-    return dict(db.query(model.owner_id, func.count(model.id)).group_by(model.owner_id).all())
+    return dict(db.query(model.owner_id, func.count(model.id)).filter(model.deleted_at.is_(None)).group_by(model.owner_id).all())
 
 
 def _user_out(u: User, listings: dict, resources: dict) -> AdminUserOut:
@@ -163,14 +163,14 @@ def list_all_listings(
     _admin: User = Depends(require_admin),
 ):
     """Every listing, including reserved and sold ones."""
-    query = db.query(Listing).options(joinedload(Listing.owner))
+    query = db.query(Listing).options(joinedload(Listing.owner)).filter(Listing.deleted_at.is_(None))
     if q and q.strip():
         query = query.filter(Listing.title.ilike(f"%{q.strip()}%"))
     items, total, page, page_size, pages = paginate(query.order_by(Listing.created_at.desc(), Listing.id.desc()), page, page_size)
     return AdminListingsOut(
         items=[ListingOut.from_orm_with_art(i, include_contact=True) for i in items],
         total=total, page=page, page_size=page_size, pages=pages,
-        available=db.query(Listing).filter(Listing.status == "available").count(),
+        available=db.query(Listing).filter(Listing.status == "available", Listing.deleted_at.is_(None)).count(),
     )
 
 
@@ -201,7 +201,7 @@ def list_all_resources(
 ):
     """Every resource, including closed ones, with the owner's contact details.
     Deleting one uses the normal DELETE /api/resources/{id}, which already allows admins."""
-    query = db.query(Resource).options(joinedload(Resource.owner))
+    query = db.query(Resource).options(joinedload(Resource.owner)).filter(Resource.deleted_at.is_(None))
     if q and q.strip():
         like = f"%{q.strip()}%"
         query = query.filter(or_(Resource.title.ilike(like), Resource.subject.ilike(like)))
@@ -213,7 +213,7 @@ def list_all_resources(
         items.append(out)
     return AdminResourcesOut(
         items=items, total=total, page=page, page_size=page_size, pages=pages,
-        open=db.query(Resource).filter(Resource.status == "available").count(),
+        open=db.query(Resource).filter(Resource.status == "available", Resource.deleted_at.is_(None)).count(),
     )
 
 
@@ -241,8 +241,8 @@ def list_reports(
         .group_by(Report.target_type, Report.target_id)
         .all()
     )
-    listing_ids = {id_ for (id_,) in db.query(Listing.id).filter(Listing.id.in_([r.target_id for r in rows if r.target_type == "listing"])).all()}
-    resource_ids = {id_ for (id_,) in db.query(Resource.id).filter(Resource.id.in_([r.target_id for r in rows if r.target_type == "resource"])).all()}
+    listing_ids = {id_ for (id_,) in db.query(Listing.id).filter(Listing.deleted_at.is_(None), Listing.id.in_([r.target_id for r in rows if r.target_type == "listing"])).all()}
+    resource_ids = {id_ for (id_,) in db.query(Resource.id).filter(Resource.deleted_at.is_(None), Resource.id.in_([r.target_id for r in rows if r.target_type == "resource"])).all()}
 
     items = [
         AdminReportOut(

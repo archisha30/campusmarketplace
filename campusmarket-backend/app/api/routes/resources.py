@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.routes.notifications import notify
+from app.core.trash import live, restore_cutoff
 from app.core.pagination import paginate
 from app.core.pdf_preview import PdfError, open_pdf, read_limited, render_previews
 from app.core.security import get_current_user, require_seller, require_verified
@@ -268,7 +269,7 @@ def _form_fields(
 
 
 def _get_resource(resource_id: int, db: Session) -> Resource:
-    r = db.query(Resource).options(joinedload(Resource.owner)).filter(Resource.id == resource_id).first()
+    r = db.query(Resource).options(joinedload(Resource.owner)).filter(Resource.id == resource_id, live(Resource)).first()
     if not r:
         raise HTTPException(status_code=404, detail="Resource not found")
     return r
@@ -299,7 +300,7 @@ def list_resources(
     db: Session = Depends(get_db),
     viewer: User = Depends(require_verified),  # the Resource Hub is for verified students only
 ):
-    query = db.query(Resource).options(joinedload(Resource.owner))
+    query = db.query(Resource).options(joinedload(Resource.owner)).filter(live(Resource))
 
     if mine:
         query = query.filter(Resource.owner_id == viewer.id)
@@ -340,7 +341,7 @@ def list_resources(
 def resource_facets(db: Session = Depends(get_db), _viewer: User = Depends(require_verified)):
     """Subjects for the filter dropdown and the form's autocomplete: the standard list first,
     then any other subjects that available resources use."""
-    rows = db.query(Resource.subject).filter(Resource.status == "available").distinct().all()
+    rows = db.query(Resource.subject).filter(Resource.status == "available", live(Resource)).distinct().all()
     standard = {s.lower() for s in SUBJECTS}
     extra: dict[str, str] = {}
     for (subject,) in rows:
@@ -369,7 +370,7 @@ def recommended_resources(
         except (ValueError, TypeError):
             scores = {}  # malformed input just means "no personalization"
 
-    query = db.query(Resource).options(joinedload(Resource.owner)).filter(Resource.status == "available")
+    query = db.query(Resource).options(joinedload(Resource.owner)).filter(Resource.status == "available", live(Resource))
     if exclude_id:
         query = query.filter(Resource.id != exclude_id)
     pool = query.order_by(Resource.created_at.desc(), Resource.id.desc()).all()
@@ -502,8 +503,44 @@ def delete_resource(
     user: User = Depends(get_current_user),
 ):
     r = _get_owned_resource(resource_id, db, user, allow_admin=True)
+    if r.owner_id == user.id:
+        # The owner's own delete goes to their Deleted tab, restorable for 24 hours.
+        r.deleted_at = datetime.utcnow()
+        db.commit()
+        purge_deleted_resources(db)
+        return
+    # An admin removing someone else's resource (moderation) deletes it straight away.
     files = _resource_files(r)
     db.delete(r)
+    db.commit()
+    _remove_files(files)
+
+
+@router.post("/{resource_id}/restore", status_code=204)
+def restore_resource(
+    resource_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    r = (
+        db.query(Resource)
+        .filter(Resource.id == resource_id, Resource.owner_id == user.id, Resource.deleted_at >= restore_cutoff())
+        .first()
+    )
+    if not r:
+        raise HTTPException(status_code=404, detail="This resource can't be restored any more")
+    r.deleted_at = None
+    db.commit()
+
+
+def purge_deleted_resources(db: Session) -> None:
+    """Permanently remove resources deleted more than 24 hours ago, with their files."""
+    expired = db.query(Resource).filter(Resource.deleted_at < restore_cutoff()).all()
+    if not expired:
+        return
+    files = [f for r in expired for f in _resource_files(r)]
+    for r in expired:
+        db.delete(r)
     db.commit()
     _remove_files(files)
 

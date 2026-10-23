@@ -207,3 +207,21 @@ def create(client, auth):
         return client.post("/api/resources", data=data, files=files, headers=auth(as_user))
 
     return _create
+
+
+@pytest.fixture
+def expire_trash(db_session):
+    """Pretend 25 hours have passed since everything in the Deleted tab was deleted."""
+    from datetime import datetime, timedelta
+
+    from app.models.listing import Listing
+    from app.models.resource import Resource
+
+    def run():
+        db, _ = db_session
+        past = datetime.utcnow() - timedelta(hours=25)
+        for model in (Listing, Resource):
+            db.query(model).filter(model.deleted_at.isnot(None)).update({model.deleted_at: past})
+        db.commit()
+
+    return run

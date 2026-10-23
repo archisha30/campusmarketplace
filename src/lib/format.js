@@ -33,6 +33,22 @@ export function timeAgo(iso) {
   return new Date(t).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 
+// When a listing went up: "Listed today" / "Listed yesterday" / "Listed Mon, 20 Oct"
+// (with the year once it's from an earlier year). Works with naive-UTC API timestamps.
+export function listedOn(iso) {
+  if (!iso) return ''
+  const s = String(iso)
+  const t = new Date(s.length <= 10 ? `${s}T00:00:00` : /[zZ]|[+-]\d\d:\d\d$/.test(s) ? s : `${s}Z`)
+  const today = new Date()
+  const startOf = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const days = Math.round((startOf(today) - startOf(t)) / 86400000)
+  if (days <= 0) return 'Listed today'
+  if (days === 1) return 'Listed yesterday'
+  const opts = { weekday: 'short', day: 'numeric', month: 'short' }
+  if (t.getFullYear() !== today.getFullYear()) opts.year = 'numeric'
+  return `Listed ${t.toLocaleDateString('en-IN', opts)}`
+}
+
 // "2026-10-09" -> "9 Oct 2026". Date-only values from the API (no time zone).
 export function formatDay(isoDate) {
   if (!isoDate) return ''

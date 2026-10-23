@@ -102,8 +102,53 @@ export function setListingStatus(id, status) {
   return getListing(id)
 }
 
+// Deleted items wait here for 24 hours so they can be restored, like the real API.
+const RESTORE_MS = 24 * 3600e3
+let trash = [] // { type: 'listing' | 'resource', item, deleted_at }
+
+function moveToTrash(type, item) {
+  trash.unshift({ type, item, deleted_at: Date.now() })
+}
+
+function takeFromTrash(type, id) {
+  const entry = trash.find((t) => t.type === type && t.item.id === Number(id) && Date.now() - t.deleted_at < RESTORE_MS)
+  if (!entry) return null
+  trash = trash.filter((t) => t !== entry)
+  return entry.item
+}
+
+export function listTrash() {
+  const u = mockViewer()
+  trash = trash.filter((t) => Date.now() - t.deleted_at < RESTORE_MS)
+  const art = (t) => (t.type === 'resource' ? { emoji: '📚', bg: '#EEF0FF' } : t.item.art || { emoji: '📦', bg: '#EFEFEC' })
+  return delay(trash
+    .filter((t) => u && sameId(t.type === 'listing' ? t.item.seller?.id : t.item.owner?.id, u.id))
+    .map((t) => ({
+      type: t.type, id: t.item.id, title: t.item.title, price: t.item.price,
+      image: t.type === 'listing' ? t.item.images?.[0] || null : null, ...art(t),
+      deleted_at: new Date(t.deleted_at).toISOString(),
+      restore_until: new Date(t.deleted_at + RESTORE_MS).toISOString(),
+    })), 150)
+}
+
 export function deleteListing(id) {
+  const item = listings.find((l) => l.id === Number(id))
+  if (item) moveToTrash('listing', item)
   listings = listings.filter((l) => l.id !== Number(id))
+  return delay(null)
+}
+
+export function restoreListing(id) {
+  const item = takeFromTrash('listing', id)
+  if (!item) return Promise.reject(new Error("This listing can't be restored any more"))
+  listings = [item, ...listings]
+  return getListing(id)
+}
+
+export function restoreResource(id) {
+  const item = takeFromTrash('resource', id)
+  if (!item) return Promise.reject(new Error("This resource can't be restored any more"))
+  resources = [item, ...resources]
   return delay(null)
 }
 
@@ -338,9 +383,9 @@ export function deleteResource(id) {
   } catch (err) {
     return Promise.reject(err)
   }
+  // Kept in the trash (with its access requests and file) so it can be restored for 24 hours.
+  moveToTrash('resource', resources.find((r) => r.id === Number(id)))
   resources = resources.filter((r) => r.id !== Number(id))
-  resourceAccess = resourceAccess.filter((a) => a.resource_id !== Number(id))
-  resourceFiles.delete(Number(id))
   return delay(null)
 }
 

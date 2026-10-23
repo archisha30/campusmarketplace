@@ -36,5 +36,7 @@ class Listing(Base):
     campus_id = Column(Integer, nullable=False, default=1)
 
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Set when the owner deletes it; restorable for 24h from the Deleted tab (see core/trash.py).
+    deleted_at = Column(DateTime, nullable=True, index=True)
 
     owner = relationship("User")

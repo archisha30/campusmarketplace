@@ -92,7 +92,7 @@ def test_supabase_url_derived_from_database_url(monkeypatch):
     assert storage_module.supabase_url() == "https://abcd1234.supabase.co"
 
 
-def test_resource_flow_on_supabase(client, auth, create, supa, fake, monkeypatch):
+def test_resource_flow_on_supabase(client, auth, create, supa, fake, monkeypatch, expire_trash):
     monkeypatch.setattr(resources_routes, "storage", supa)
     monkeypatch.setattr(storage_module, "storage", supa)
 
@@ -109,6 +109,9 @@ def test_resource_flow_on_supabase(client, auth, create, supa, fake, monkeypatch
     assert client.get(f"/api/resources/{body['id']}/file", headers=auth("buyer")).status_code == 403
 
     assert client.delete(f"/api/resources/{body['id']}", headers=auth("owner")).status_code == 204
+    assert fake.objects  # kept for the 24h restore window
+    expire_trash()
+    client.get("/api/trash", headers=auth("owner"))
     assert fake.objects == {}
 
 

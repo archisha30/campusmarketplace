@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { TypeBadge, VerifiedBadge, StatusPill } from './Badge.jsx'
-import { foodTempLabel, formatDay, isExpired } from '../lib/format.js'
+import { foodTempLabel, formatDay, isExpired, listedOn } from '../lib/format.js'
 import PriceTag from './PriceTag.jsx'
 import { useWishlist } from '../hooks/useWishlist.jsx'
 import { useToast } from '../hooks/useToast.jsx'
@@ -60,6 +60,9 @@ export default function ListingCard({ listing, compact = false }) {
             : [condition, seller?.campus]
           ).filter(Boolean).join(' · ')}
         </p>
+        {listing.created_at && (
+          <p className={`mt-0.5 text-ink-faint ${compact ? 'text-[11.5px]' : 'text-[12px]'}`}>🗓️ {listedOn(listing.created_at)}</p>
+        )}
         {!compact && (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <VerifiedBadge />
