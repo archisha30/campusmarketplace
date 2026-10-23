@@ -190,6 +190,10 @@ export const notificationsApi = {
   list: () => pick(() => http.get('/notifications'), () => mock.listNotifications())(),
   // POST /api/notifications/read-all
   markAllRead: () => pick(() => http.post('/notifications/read-all'), () => mock.markNotificationsRead())(),
+  // DELETE /api/notifications/:id  (dismiss one)
+  dismiss: (id) => pick(() => http.del(`/notifications/${id}`), () => mock.dismissNotification(id))(),
+  // DELETE /api/notifications  (clear all)
+  clearAll: () => pick(() => http.del('/notifications'), () => mock.clearNotifications())(),
 }
 
 export const contactApi = {

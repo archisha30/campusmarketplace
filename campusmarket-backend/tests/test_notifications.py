@@ -97,3 +97,41 @@ def test_contacting_yourself_does_not_notify(client, auth, resource_id):
 
 def test_notifications_require_login(client):
     assert client.get("/api/notifications").status_code in (401, 403)
+
+
+def _add_note(db, user, actor, title):
+    from app.models.notification import Notification
+
+    n = Notification(user_id=user.id, actor_id=actor.id, type="contact", channel="whatsapp",
+                     target_type="listing", target_id=1, target_title=title)
+    db.add(n)
+    db.commit()
+    return n.id
+
+
+def test_dismiss_one_notification(client, auth, db_session, users):
+    db, _ = db_session
+    keep = _add_note(db, users["owner"], users["buyer"], "Keep me")
+    gone = _add_note(db, users["owner"], users["buyer"], "Dismiss me")
+
+    assert client.delete(f"/api/notifications/{gone}", headers=auth("owner")).status_code == 204
+    assert [n["id"] for n in _notes(client, auth, "owner")["items"]] == [keep]
+    assert client.delete(f"/api/notifications/{gone}", headers=auth("owner")).status_code == 404
+
+
+def test_cannot_dismiss_someone_elses_notification(client, auth, db_session, users):
+    db, _ = db_session
+    nid = _add_note(db, users["owner"], users["buyer"], "Not yours")
+    assert client.delete(f"/api/notifications/{nid}", headers=auth("buyer")).status_code == 404
+    assert len(_notes(client, auth, "owner")["items"]) == 1
+
+
+def test_clear_all_only_clears_your_own(client, auth, db_session, users):
+    db, _ = db_session
+    _add_note(db, users["owner"], users["buyer"], "One")
+    _add_note(db, users["owner"], users["buyer"], "Two")
+    _add_note(db, users["buyer"], users["owner"], "Buyer's own")
+
+    assert client.delete("/api/notifications", headers=auth("owner")).status_code == 204
+    assert _notes(client, auth, "owner") == {"items": [], "unread": 0}
+    assert len(_notes(client, auth, "buyer")["items"]) == 1

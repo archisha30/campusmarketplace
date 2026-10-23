@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.security import get_current_user
@@ -72,4 +72,31 @@ def mark_all_read(
     db.query(Notification).filter(
         Notification.user_id == user.id, Notification.read_at.is_(None)
     ).update({Notification.read_at: datetime.utcnow()}, synchronize_session=False)
+    db.commit()
+
+
+@router.delete("/{notification_id}", status_code=204)
+def dismiss_notification(
+    notification_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Dismiss (delete) one of your own notifications."""
+    deleted = (
+        db.query(Notification)
+        .filter(Notification.id == notification_id, Notification.user_id == user.id)
+        .delete(synchronize_session=False)
+    )
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    db.commit()
+
+
+@router.delete("", status_code=204)
+def dismiss_all(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Clear every notification you have."""
+    db.query(Notification).filter(Notification.user_id == user.id).delete(synchronize_session=False)
     db.commit()

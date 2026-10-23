@@ -485,6 +485,18 @@ export function markNotificationsRead() {
   return delay(null, 100)
 }
 
+export function dismissNotification(id) {
+  const u = mockViewer()
+  notifications = notifications.filter((n) => !(n.id === Number(id) && u && sameId(n.user_id, u.id)))
+  return delay(null, 100)
+}
+
+export function clearNotifications() {
+  const u = mockViewer()
+  notifications = notifications.filter((n) => !(u && sameId(n.user_id, u.id)))
+  return delay(null, 100)
+}
+
 // Mirrors POST /api/contact: one person's WhatsApp or email, fetched when a button is tapped.
 export function revealContact(targetType, targetId, channel) {
   const u = mockViewer()

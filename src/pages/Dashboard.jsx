@@ -154,10 +154,37 @@ export default function Dashboard() {
   )
 }
 
+const PREVIEW_COUNT = 2
+
 function Notifications() {
-  const { items, loading, markAllRead } = useNotifications({ freeze: true })
+  const { items, loading, markAllRead, dismiss, clearAll } = useNotifications({ freeze: true })
+  const toast = useToast()
   const [showAll, setShowAll] = useState(false)
+  const [confirmClear, setConfirmClear] = useState(false)
+  const [clearing, setClearing] = useState(false)
   const fresh = items.filter((n) => !n.read).length
+
+  async function onDismiss(id) {
+    try {
+      await dismiss(id)
+    } catch (err) {
+      toast(err.message || "Couldn't dismiss that notification")
+    }
+  }
+
+  async function onClearAll() {
+    setClearing(true)
+    try {
+      await clearAll()
+      setConfirmClear(false)
+      setShowAll(false)
+      toast('Notifications cleared')
+    } catch (err) {
+      toast(err.message || "Couldn't clear notifications")
+    } finally {
+      setClearing(false)
+    }
+  }
 
   // Opening the dashboard marks everything read (clearing the navbar badge); the
   // "New" markers stay for this visit because the list keeps its load-time snapshot.
@@ -165,7 +192,8 @@ function Notifications() {
     if (!loading && fresh > 0) markAllRead()
   }, [loading, fresh, markAllRead])
 
-  const shown = showAll ? items : items.slice(0, 5)
+  const shown = showAll ? items : items.slice(0, PREVIEW_COUNT)
+  const hidden = items.length - PREVIEW_COUNT
 
   return (
     <section id="notifications" className="mb-6 scroll-mt-24 rounded-slab border border-line bg-paper p-5 md:p-6">
@@ -176,8 +204,11 @@ function Notifications() {
             <span className="rounded-pill bg-coral px-2 py-0.5 text-[11.5px] font-bold text-white">{fresh} new</span>
           )}
         </h2>
-        <p className="text-[13px] text-ink-faint">Access requests, students reaching out, and reports on your items</p>
+        {!loading && items.length > 0 && (
+          <button className="btn-ghost btn-sm" onClick={() => setConfirmClear(true)}>Clear all</button>
+        )}
       </div>
+      <p className="-mt-2 mb-4 text-[13px] text-ink-faint">Access requests, students reaching out, and reports on your items</p>
 
       {loading && <div className="skeleton h-20" />}
 
@@ -187,18 +218,30 @@ function Notifications() {
         </p>
       )}
 
-      {!loading && shown.map((n) => <NotificationRow key={n.id} n={n} />)}
+      {!loading && shown.map((n) => <NotificationRow key={n.id} n={n} onDismiss={() => onDismiss(n.id)} />)}
 
-      {!loading && items.length > 5 && (
-        <button className="mt-2 text-[13.5px] font-semibold text-brand hover:underline" onClick={() => setShowAll((v) => !v)}>
-          {showAll ? 'Show fewer' : `Show all ${items.length} notifications`}
+      {!loading && hidden > 0 && (
+        <button
+          className="mt-1 text-[13.5px] font-semibold text-brand hover:underline"
+          aria-expanded={showAll}
+          onClick={() => setShowAll((v) => !v)}
+        >
+          {showAll ? 'Show less ▲' : `Show ${hidden} more ▼`}
         </button>
       )}
+
+      <Modal open={confirmClear} onClose={() => !clearing && setConfirmClear(false)} title="Clear all notifications?">
+        <p className="text-[14px] text-ink-soft">This removes all {items.length} notifications. It can't be undone.</p>
+        <div className="mt-5 flex gap-2.5">
+          <button className="btn-ghost flex-1" onClick={() => setConfirmClear(false)} disabled={clearing} autoFocus>Cancel</button>
+          <button className="btn-danger flex-1" onClick={onClearAll} disabled={clearing}>{clearing ? 'Clearing…' : 'Clear all'}</button>
+        </div>
+      </Modal>
     </section>
   )
 }
 
-function NotificationRow({ n }) {
+function NotificationRow({ n, onDismiss }) {
   const { actor } = n
   const fresh = !n.read
   const href = n.target_type === 'listing' ? `/listing/${n.target_id}` : `/resources/${n.target_id}`
@@ -259,6 +302,15 @@ function NotificationRow({ n }) {
             {actor.phone ? 'Reply on WhatsApp' : 'Reply by Email'}
           </a>
         )}
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label={`Dismiss notification about ${n.target_title}`}
+          title="Dismiss"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-[18px] leading-none text-ink-faint hover:bg-bg hover:text-ink"
+        >
+          ×
+        </button>
       </div>
     </div>
   )

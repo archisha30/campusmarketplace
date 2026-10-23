@@ -1,5 +1,7 @@
 """Optional MRP on sale listings, shown slashed next to the selling price."""
 
+import json
+
 import pytest
 
 
@@ -49,3 +51,21 @@ def test_edit_checks_mrp_against_new_price(client, auth):
     assert too_high.status_code == 422
     ok = client.put(f"/api/listings/{lid}", json={"price": 1200, "mrp": None}, headers=auth("owner"))
     assert ok.status_code == 200 and ok.json()["mrp"] is None and ok.json()["price"] == 1200
+
+
+def test_deleting_a_listing_removes_its_photos(client, auth, db_session, monkeypatch):
+    from app.api.routes import listings as listings_routes
+    from app.models.listing import Listing
+
+    removed = []
+    monkeypatch.setattr(listings_routes, "delete_public_urls", removed.append)
+    lid = post(client, auth, item()).json()["id"]
+    db, _ = db_session
+    db.get(Listing, lid).images = ["https://x.supabase.co/a.jpg", "https://x.supabase.co/b.jpg"]
+    db.commit()
+
+    assert client.delete(f"/api/listings/{lid}", headers=auth("owner")).status_code == 204
+    got = list(removed[0])
+    if got and all(len(c) == 1 for c in got):  # SQLite test artifact: ARRAY reads back as JSON characters
+        got = json.loads("".join(got))
+    assert list(got) == ["https://x.supabase.co/a.jpg", "https://x.supabase.co/b.jpg"]

@@ -272,8 +272,10 @@ def delete_listing(
     user: User = Depends(require_seller),
 ):
     listing = _get_owned_listing(listing_id, db, user)
+    photos = listing.images or []  # read before the delete; the row is gone after commit
     db.delete(listing)
     db.commit()
+    _delete_upload_files(photos)  # after the commit, so a failed delete never loses photos
 
 
 @router.post("/{listing_id}/images", response_model=ListingOut)

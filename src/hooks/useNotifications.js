@@ -56,5 +56,19 @@ export function useNotifications({ poll = false, freeze = false } = {}) {
     window.dispatchEvent(new Event('cm:notifications-read'))
   }, [freeze])
 
-  return { items, unread, loading, markAllRead, reload: load }
+  // Dismissing removes items here straight away, then tells the navbar badge to refresh.
+  const dismiss = useCallback(async (id) => {
+    await notificationsApi.dismiss(id)
+    setItems((list) => list.filter((n) => n.id !== id))
+    window.dispatchEvent(new Event('cm:notifications-read'))
+  }, [])
+
+  const clearAll = useCallback(async () => {
+    await notificationsApi.clearAll()
+    setItems([])
+    setUnread(0)
+    window.dispatchEvent(new Event('cm:notifications-read'))
+  }, [])
+
+  return { items, unread, loading, markAllRead, dismiss, clearAll, reload: load }
 }
