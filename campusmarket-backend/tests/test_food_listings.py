@@ -5,6 +5,7 @@ from datetime import date, timedelta
 import pytest
 
 from app.models.listing import Listing
+from conftest import post_listing
 
 TOMORROW = (date.today() + timedelta(days=1)).isoformat()
 YESTERDAY = (date.today() - timedelta(days=1)).isoformat()
@@ -20,7 +21,7 @@ def food(**overrides):
 
 
 def post(client, auth, body):
-    return client.post("/api/listings", json=body, headers=auth("owner"))
+    return post_listing(client, auth("owner"), body)
 
 
 def test_food_listing_with_temp_and_expiry(client, auth):

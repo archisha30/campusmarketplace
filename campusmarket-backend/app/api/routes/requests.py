@@ -52,6 +52,7 @@ def list_requests(
         .filter(
             ProductRequest.created_at >= datetime.utcnow() - VISIBLE_FOR,
             ProductRequest.user_id != user.id,
+            ProductRequest.user.has(User.suspended_at.is_(None)),  # suspended students' requests disappear
         )
         .order_by(ProductRequest.created_at.desc())
         .limit(100)

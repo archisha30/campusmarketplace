@@ -14,11 +14,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <WishlistProvider>
-          <ToastProvider>
+        <ToastProvider>
+          <WishlistProvider>
             <App />
-          </ToastProvider>
-        </WishlistProvider>
+          </WishlistProvider>
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>

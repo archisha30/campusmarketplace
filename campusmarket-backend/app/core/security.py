@@ -12,6 +12,7 @@ from fastapi import Depends, HTTPException, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from app.core.bans import SUSPENDED
 from app.core.config import settings
 from app.db.session import get_db  # <-- point this at your existing db session dependency
 from app.models.user import User
@@ -108,6 +109,8 @@ def get_current_user_any(
         raise HTTPException(status_code=401, detail="User not found")
     if not _session_still_valid(user, issued_at):
         raise HTTPException(status_code=401, detail="Your password was changed. Log in again.")
+    if user.suspended_at:
+        raise HTTPException(status_code=403, detail=SUSPENDED)
     return user
 
 

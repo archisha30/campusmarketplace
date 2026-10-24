@@ -70,7 +70,8 @@ export function getListing(id) {
   return found ? delay(found) : Promise.reject(new Error('Listing not found'))
 }
 
-export function createListing(payload) {
+export function createListing(payload, photos = []) {
+  if (!photos.length) return Promise.reject(new Error('Add at least one photo of the item'))
   const art = {
     Textbooks: { emoji: '📘', bg: '#F1EAFF' }, 'Lab Gear': { emoji: '📐', bg: '#EAF0FF' },
     Electronics: { emoji: '🔌', bg: '#EAFBF0' }, 'Dorm Essentials': { emoji: '🛏️', bg: '#FFECEA' },
@@ -81,6 +82,7 @@ export function createListing(payload) {
 
   const item = {
     ...payload,
+    images: photos.slice(0, 3).map((f) => URL.createObjectURL(f)),
     id: nextId++,
     status: 'available',
     created_at: new Date().toISOString().slice(0, 10),
@@ -92,9 +94,37 @@ export function createListing(payload) {
   return delay(item, 500)
 }
 
-export function updateListing(id, payload) {
-  listings = listings.map((l) => (l.id === Number(id) ? { ...l, ...payload } : l))
+export function updateListing(id, payload, photos = []) {
+  const added = photos.map((f) => URL.createObjectURL(f))
+  listings = listings.map((l) => {
+    if (l.id !== Number(id)) return l
+    const kept = payload.images ? (l.images || []).filter((u) => payload.images.includes(u)) : l.images || []
+    return { ...l, ...payload, images: [...kept, ...added].slice(0, 3) }
+  })
   return getListing(id)
+}
+
+// Saved listings, like /api/wishlist (one list per mock user).
+let wishlist = [] // listing ids, most recently saved first
+
+export function listWishlist() {
+  return delay(wishlist.map((id) => listings.find((l) => l.id === id)).filter(Boolean), 150)
+}
+
+export function saveToWishlist(id) {
+  if (!listings.some((l) => l.id === Number(id))) return Promise.reject(new Error('Listing not found'))
+  wishlist = [Number(id), ...wishlist.filter((x) => x !== Number(id))]
+  return delay(null, 100)
+}
+
+export function removeFromWishlist(id) {
+  wishlist = wishlist.filter((x) => x !== Number(id))
+  return delay(null, 100)
+}
+
+export function importWishlist(ids) {
+  ids.forEach((id) => { if (listings.some((l) => l.id === Number(id)) && !wishlist.includes(Number(id))) wishlist.push(Number(id)) })
+  return listWishlist()
 }
 
 export function setListingStatus(id, status) {
@@ -271,6 +301,7 @@ function cleanResourcePayload(p, hasFile) {
   d.title = (d.title || '').trim()
   d.subject = canonicalSubject(d.subject || '')
   if (!d.title || !d.subject) throw new Error('Title and subject are required')
+  if (!(d.description || '').trim()) throw new Error("Add a description: what's covered and how it's organised")
   if ((d.description || '').length > DESCRIPTION_MAX) throw new Error(`Description must be ${DESCRIPTION_MAX} characters or fewer`)
   if (d.offer_type === 'sale') {
     if (!/^\d+$/.test(String(d.price)) || Number(d.price) < 1) throw new Error('A sale needs a whole-rupee price of at least ₹1')
@@ -292,6 +323,7 @@ function cleanResourcePayload(p, hasFile) {
     }
   } else {
     if (!(d.pickup_spot || '').trim()) throw new Error('Hard copies need a pickup spot')
+    if (!hasFile) throw new Error('Add a sample PDF (a few scanned pages) so students can see the printed copy')
     d.delivery = null
     d.drive_url = null
   }
@@ -887,6 +919,7 @@ function adminUserOut(u) {
     verified: u.status !== 'unverified', profile_completed: true, created_at: u.created_at || '2026-09-01T10:00:00',
     listings: listings.filter((l) => sameId(l.seller.id, u.id)).length,
     resources: resources.filter((r) => sameId(r.owner.id, u.id)).length,
+    suspended: Boolean(u.suspended_at), suspended_at: u.suspended_at || null, suspension_reason: u.suspension_reason || null,
   }
 }
 
@@ -900,7 +933,24 @@ export function adminUsers(q = '', page = 1) {
     verified: all.filter((u) => u.verified).length,
     sellers: all.filter((u) => u.account_type === 'seller').length,
     admins: all.filter((u) => u.is_admin).length,
+    suspended: all.filter((u) => u.suspended).length,
   })
+}
+
+export function suspendUser(id, reason) {
+  const u = users.find((x) => sameId(x.id, id))
+  if (!u) return Promise.reject(new Error('User not found'))
+  if (sameId(u.id, seed.currentUser.id)) return Promise.reject(new Error("You can't suspend your own account"))
+  if (!reason?.trim()) return Promise.reject(new Error('Say why the account is being suspended'))
+  Object.assign(u, { suspended_at: nowIso(), suspension_reason: reason.trim(), role: 'student' })
+  return delay(adminUserOut(u))
+}
+
+export function reinstateUser(id) {
+  const u = users.find((x) => sameId(x.id, id))
+  if (!u) return Promise.reject(new Error('User not found'))
+  Object.assign(u, { suspended_at: null, suspension_reason: null })
+  return delay(adminUserOut(u))
 }
 
 export function setAdmin(id, isAdmin) {

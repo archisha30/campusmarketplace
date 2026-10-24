@@ -6,11 +6,15 @@ import { trackEvent } from '../lib/analytics.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useDraft } from '../hooks/useDraft.js'
 import { timeAgo } from '../lib/format.js'
+import { revealFirstError } from '../lib/forms.js'
 import {
   DESCRIPTION_MAX, MAX_PDF_MB, SUBJECTS, YEARS, canonicalSubject, checkPdfFile, isAllowedDriveUrl,
 } from '../lib/resources.js'
 
 const OTHER = '__other__'
+
+// Error keys in the order the fields appear, for scrolling to the first problem.
+const FIELD_ORDER = ['title', 'subject', 'price', 'upi_id', 'drive_url', 'pickup_spot', 'file', 'description']
 
 const BLANK = {
   title: '', subject: '', year: 'any', copy_type: 'soft', offer_type: 'sale', price: '',
@@ -62,7 +66,6 @@ export default function ResourceForm() {
   const toast = useToast()
   const [form, setForm] = useState(BLANK)
   const [existing, setExisting] = useState(null) // { has_file, page_count } in edit mode
-  const [removeFile, setRemoveFile] = useState(false)
   const [file, setFile] = useState(null)
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
@@ -112,12 +115,16 @@ export default function ResourceForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, user?.id])
 
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const set = (k) => (e) => {
+    setForm((f) => ({ ...f, [k]: e.target.value }))
+    if (errors[k]) setErrors((x) => ({ ...x, [k]: undefined })) // fixed it: drop the red
+  }
   const choose = (k) => (v) => setForm((f) => ({ ...f, [k]: v }))
 
   const soft = form.copy_type === 'soft'
-  const fileRole = soft && form.delivery === 'pdf' ? 'full' : soft ? 'sample-required' : 'sample-optional'
-  const keepsFile = Boolean(existing?.has_file) && !removeFile
+  // Every resource has a PDF: the full thing, or a sample students can preview.
+  const fileRole = soft && form.delivery === 'pdf' ? 'full' : soft ? 'sample-drive' : 'sample-print'
+  const keepsFile = Boolean(existing?.has_file)
   const hasFile = Boolean(file) || keepsFile
 
   async function pickFile(e) {
@@ -132,7 +139,6 @@ export default function ResourceForm() {
     }
     setErrors((x) => ({ ...x, file: undefined }))
     setFile(f)
-    setRemoveFile(false)
   }
 
   function validate() {
@@ -144,7 +150,8 @@ export default function ResourceForm() {
     } else if (form.offer_type === 'sale' && Number(form.price) < 1) {
       next.price = 'A sale needs a price of at least ₹1, or switch to Free.'
     }
-    if (form.description.length > DESCRIPTION_MAX) next.description = `Keep it under ${DESCRIPTION_MAX} characters.`
+    if (!form.description.trim()) next.description = 'Describe what’s covered and how it’s organised.'
+    else if (form.description.length > DESCRIPTION_MAX) next.description = `Keep it under ${DESCRIPTION_MAX} characters.`
     if (soft && form.delivery === 'drive' && !isAllowedDriveUrl(form.drive_url.trim())) {
       next.drive_url = 'Use an https link from Google Drive/Docs, OneDrive, SharePoint, Dropbox or Mega.'
     }
@@ -153,9 +160,15 @@ export default function ResourceForm() {
       next.upi_id = 'Enter a UPI ID like name@okbank.'
     }
     if (fileRole === 'full' && !hasFile) next.file = 'Upload the PDF you’re sharing.'
-    if (fileRole === 'sample-required' && !hasFile) next.file = 'Drive links need a sample PDF so students can preview it.'
+    if (fileRole === 'sample-drive' && !hasFile) next.file = 'Drive links need a sample PDF so students can preview it.'
+    if (fileRole === 'sample-print' && !hasFile) next.file = 'Add a sample PDF (a few scanned pages) so students can see the printed copy.'
     setErrors(next)
-    return Object.keys(next).length === 0
+    const problems = FIELD_ORDER.filter((k) => next[k])
+    if (problems.length) {
+      toast(problems.length === 1 ? next[problems[0]] : `${problems.length} things need fixing. ${next[problems[0]]}`)
+      revealFirstError(next, FIELD_ORDER)
+    }
+    return problems.length === 0
   }
 
   async function save() {
@@ -176,7 +189,7 @@ export default function ResourceForm() {
         upi_id: form.upi_id.trim(),
       }
       const saved = isEdit
-        ? await resourcesApi.update(id, payload, file, removeFile && !file)
+        ? await resourcesApi.update(id, payload, file)
         : await resourcesApi.create(payload, file)
       if (!isEdit) discardDraft()
       if (!isEdit) trackEvent('post_resource', { subject: payload.subject, copy_type: payload.copy_type, offer_type: payload.offer_type })
@@ -210,13 +223,13 @@ export default function ResourceForm() {
 
   const fileLabel = {
     full: 'PDF',
-    'sample-required': 'Sample PDF (required)',
-    'sample-optional': 'Sample PDF (optional)',
+    'sample-drive': 'Sample PDF',
+    'sample-print': 'Sample PDF',
   }[fileRole]
   const fileHint = {
     full: 'The full resource. Page 1 is shown as a preview; the rest stays locked until access is given.',
-    'sample-required': 'A few pages from the drive content, so students can preview it before buying.',
-    'sample-optional': 'Scan a few pages of the printed copy so students know what they’re getting.',
+    'sample-drive': 'A few pages from the drive content, so students can preview it before buying.',
+    'sample-print': 'Scan a few pages of the printed copy so students know what they’re getting.',
   }[fileRole]
 
   return (
@@ -232,18 +245,18 @@ export default function ResourceForm() {
             📝 You're working on a draft{savedAt ? `, last saved ${timeAgo(savedAt)}` : ''}. Files aren't kept in drafts, so add the PDF before you post.
           </p>
         )}
-        <div className="mb-4">
+        <div data-field="title" className="mb-4">
           <label className="field-label" htmlFor="title">Title</label>
-          <input id="title" className="field-input" maxLength={120} value={form.title} onChange={set('title')} placeholder="e.g. DBMS handwritten notes, units 1–5" />
+          <input id="title" aria-invalid={Boolean(errors.title)} className="field-input" maxLength={120} value={form.title} onChange={set('title')} placeholder="e.g. DBMS handwritten notes, units 1–5" />
           <FieldError msg={errors.title} />
         </div>
 
         <div className="mb-4 grid gap-4 sm:grid-cols-2">
-          <div>
+          <div data-field="subject">
             <label className="field-label" htmlFor="subject">Subject</label>
             <select
               id="subject"
-              className="field-input"
+              aria-invalid={Boolean(errors.subject)} className="field-input"
               value={otherSubject ? OTHER : form.subject}
               onChange={(e) => {
                 const other = e.target.value === OTHER
@@ -282,14 +295,14 @@ export default function ResourceForm() {
 
         {form.offer_type === 'sale' && (
           <div className="mb-4 grid gap-4 sm:grid-cols-2">
-            <div>
+            <div data-field="price">
               <label className="field-label" htmlFor="price">Price (₹)</label>
-              <input id="price" type="number" min="1" step="1" inputMode="numeric" className="field-input" value={form.price} onChange={set('price')} placeholder="e.g. 50" />
+              <input id="price" type="number" min="1" step="1" inputMode="numeric" aria-invalid={Boolean(errors.price)} className="field-input" value={form.price} onChange={set('price')} placeholder="e.g. 50" />
               <FieldError msg={errors.price} />
             </div>
-            <div>
+            <div data-field="upi_id">
               <label className="field-label" htmlFor="upi">UPI ID <span className="font-normal text-ink-faint">(optional)</span></label>
-              <input id="upi" className="field-input" value={form.upi_id} onChange={set('upi_id')} placeholder="name@okbank" />
+              <input id="upi" aria-invalid={Boolean(errors.upi_id)} className="field-input" value={form.upi_id} onChange={set('upi_id')} placeholder="name@okbank" />
               <FieldError msg={errors.upi_id} />
             </div>
           </div>
@@ -303,30 +316,27 @@ export default function ResourceForm() {
             <Segmented legend="Delivered as" value={form.delivery} onChange={choose('delivery')}
               options={[{ value: 'pdf', label: 'PDF upload' }, { value: 'drive', label: 'Drive link' }]} />
             {form.delivery === 'drive' && (
-              <div className="mb-4">
+              <div data-field="drive_url" className="mb-4">
                 <label className="field-label" htmlFor="drive">Drive link</label>
-                <input id="drive" type="url" className="field-input" value={form.drive_url} onChange={set('drive_url')} placeholder="https://drive.google.com/…" />
+                <input id="drive" type="url" aria-invalid={Boolean(errors.drive_url)} className="field-input" value={form.drive_url} onChange={set('drive_url')} placeholder="https://drive.google.com/…" />
                 <p className="mt-1.5 text-[12.5px] text-ink-faint">Only shown to students with access. Google Drive/Docs, OneDrive, SharePoint, Dropbox or Mega.</p>
                 <FieldError msg={errors.drive_url} />
               </div>
             )}
           </>
         ) : (
-          <div className="mb-4">
+          <div data-field="pickup_spot" className="mb-4">
             <label className="field-label" htmlFor="pickup">Campus pickup spot</label>
-            <input id="pickup" className="field-input" maxLength={120} value={form.pickup_spot} onChange={set('pickup_spot')} placeholder="e.g. Library foyer" />
+            <input id="pickup" aria-invalid={Boolean(errors.pickup_spot)} className="field-input" maxLength={120} value={form.pickup_spot} onChange={set('pickup_spot')} placeholder="e.g. Library foyer" />
             <FieldError msg={errors.pickup_spot} />
           </div>
         )}
 
-        <div className="mb-4">
+        <div data-field="file" className="mb-4">
           <label className="field-label" htmlFor="pdf">{fileLabel}</label>
           {keepsFile && !file && (
             <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-[11px] border border-line bg-[#fbfbf9] px-3.5 py-2.5 text-[13.5px]">
               <span>📄 Current file{existing.page_count ? ` · ${existing.page_count} page${existing.page_count === 1 ? '' : 's'}` : ''}</span>
-              {fileRole === 'sample-optional' && (
-                <button type="button" className="btn-ghost btn-sm ml-auto" onClick={() => setRemoveFile(true)}>Remove</button>
-              )}
             </div>
           )}
           {file && (
@@ -335,7 +345,7 @@ export default function ResourceForm() {
               <button type="button" className="btn-ghost btn-sm ml-auto" onClick={() => setFile(null)}>Clear</button>
             </div>
           )}
-          <div className="rounded-[14px] border-[1.5px] border-dashed border-line bg-[#fbfbf9] p-5 text-center text-[13.5px] text-ink-faint">
+          <div className={`rounded-[14px] border-[1.5px] border-dashed p-5 text-center text-[13.5px] text-ink-faint ${errors.file ? 'border-coral bg-coral/5' : 'border-line bg-[#fbfbf9]'}`}>
             <input id="pdf" type="file" accept="application/pdf,.pdf" onChange={pickFile} className="mx-auto mb-2 block" />
             {hasFile ? 'Choose a file to replace it. ' : ''}PDF only, up to {MAX_PDF_MB} MB, no password.
           </div>
@@ -343,9 +353,9 @@ export default function ResourceForm() {
           <FieldError msg={errors.file} />
         </div>
 
-        <div className="mb-6">
+        <div data-field="description" className="mb-6">
           <label className="field-label" htmlFor="description">Description</label>
-          <textarea id="description" rows={4} maxLength={DESCRIPTION_MAX} className="field-input resize-y" value={form.description} onChange={set('description')}
+          <textarea id="description" rows={4} maxLength={DESCRIPTION_MAX} aria-invalid={Boolean(errors.description)} className="field-input resize-y" value={form.description} onChange={set('description')}
             placeholder="What’s covered, how it’s organised, handwritten or typed…" />
           <div className="mt-1 flex justify-between text-[12.5px]">
             <FieldError msg={errors.description} />

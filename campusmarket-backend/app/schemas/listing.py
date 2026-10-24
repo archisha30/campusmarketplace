@@ -48,6 +48,13 @@ def _known_category(value: str | None) -> str | None:
     return value
 
 
+def _needs_description(value: str) -> str:
+    value = value.strip()
+    if not value:
+        raise ValueError("Add a description so buyers know what they're getting")
+    return value
+
+
 class ListingCreate(BaseModel):
     title: str = Field(min_length=1, max_length=120)
     category: str
@@ -55,12 +62,13 @@ class ListingCreate(BaseModel):
     price: float = Field(default=0, ge=0, le=MAX_PRICE)
     mrp: Optional[float] = Field(default=None, gt=0, le=MAX_PRICE)  # sale only
     condition: str = Field(max_length=30)
-    description: Optional[str] = Field(default=None, max_length=2000)
+    description: str = Field(max_length=2000)
     pickup_spot: str = Field(min_length=1, max_length=120)
     food_temp: Optional[Literal["hot", "cold"]] = None  # F&B only, required there
     expiry_date: Optional[date] = None  # F&B only, optional
 
     _category = field_validator("category")(classmethod(lambda cls, v: _known_category(v)))
+    _description = field_validator("description")(classmethod(lambda cls, v: _needs_description(v)))
 
 
 class ListingUpdate(BaseModel):
@@ -78,6 +86,7 @@ class ListingUpdate(BaseModel):
     images: Optional[list[str]] = None
 
     _category = field_validator("category")(classmethod(lambda cls, v: _known_category(v)))
+    _description = field_validator("description")(classmethod(lambda cls, v: v if v is None else _needs_description(v)))
 
 
 class StatusUpdate(BaseModel):

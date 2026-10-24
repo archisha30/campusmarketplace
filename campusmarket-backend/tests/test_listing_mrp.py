@@ -4,6 +4,8 @@ import json
 
 import pytest
 
+from conftest import post_listing
+
 
 def item(**overrides):
     body = {
@@ -15,7 +17,7 @@ def item(**overrides):
 
 
 def post(client, auth, body):
-    return client.post("/api/listings", json=body, headers=auth("owner"))
+    return post_listing(client, auth("owner"), body)
 
 
 def test_mrp_is_saved_and_returned(client, auth):

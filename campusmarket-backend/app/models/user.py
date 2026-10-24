@@ -37,6 +37,10 @@ class User(Base):
     # "key": <category or subject>, "ts": <epoch ms>}], newest last, capped at VIEW_HISTORY_MAX.
     view_history = Column(JSON, nullable=False, default=list, server_default="[]")
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Set when an admin suspends the account for breaking the rules: every session stops
+    # working and their listings/resources disappear. The email also goes on banned_emails.
+    suspended_at = Column(DateTime, nullable=True)
+    suspension_reason = Column(String(300), nullable=True)
 
     @property
     def has_password(self) -> bool:

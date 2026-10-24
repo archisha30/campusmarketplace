@@ -19,6 +19,8 @@
 
   .field-label { @apply mb-1.5 block text-[13.5px] font-semibold; }
   .field-input { @apply w-full rounded-[11px] border-[1.5px] border-line bg-[#fbfbf9] px-3.5 py-3 text-[14.5px] focus:border-brand focus:bg-white focus:outline-none; }
+  /* A field the last submit flagged (see lib/forms.js). */
+  .field-input[aria-invalid='true'] { @apply border-coral bg-coral/5; }
 
   .badge { @apply inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-[11px] font-semibold; }
 

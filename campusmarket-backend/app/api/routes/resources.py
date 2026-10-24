@@ -131,6 +131,8 @@ def _check_file_rules(fields: ResourceIn, has_file: bool) -> None:
         raise HTTPException(status_code=400, detail="Upload the PDF you're sharing")
     if fields.copy_type == "soft" and fields.delivery == "drive" and not has_file:
         raise HTTPException(status_code=400, detail="Drive links need a sample PDF so students can preview it")
+    if fields.copy_type == "hard" and not has_file:
+        raise HTTPException(status_code=400, detail="Add a sample PDF (a few scanned pages) so students can see the printed copy")
 
 
 # ---------- access ----------

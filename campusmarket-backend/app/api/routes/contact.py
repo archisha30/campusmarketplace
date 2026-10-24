@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.api.routes.notifications import notify
 from app.core.config import settings
 from app.core.security import require_verified
+from app.core.trash import live
 from app.db.session import get_db
 from app.models.contact_reveal import ContactReveal
 from app.models.listing import Listing
@@ -50,7 +51,7 @@ def _load_target(db: Session, payload: ContactIn, user: User):
             raise HTTPException(status_code=404, detail="That request no longer exists")
         return req.user, req.product
     model = Listing if payload.target_type == "listing" else Resource
-    target = db.query(model).filter(model.id == payload.target_id, model.deleted_at.is_(None)).first()
+    target = db.query(model).filter(model.id == payload.target_id, live(model)).first()
     if not target:
         raise HTTPException(status_code=404, detail="That item no longer exists")
     return target.owner, target.title

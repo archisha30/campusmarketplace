@@ -9,12 +9,16 @@ import { timeAgo, todayISO } from '../lib/format.js'
 import { trackEvent } from '../lib/analytics.js'
 import { shrinkToJpeg } from '../lib/images.js'
 import PriceTag from '../components/PriceTag.jsx'
+import { revealFirstError } from '../lib/forms.js'
 
 const BLANK = {
   title: '', category: CATEGORIES[0], listing_type: 'sale',
   price: '', mrp: '', condition: 'Good', description: '', pickup_spot: '',
   food_temp: '', expiry_date: '', // F&B only
 }
+
+// Error keys in the order the fields appear, for scrolling to the first problem.
+const FIELD_ORDER = ['title', 'price', 'mrp', 'food_temp', 'expiry_date', 'description', 'pickup_spot', 'photos']
 
 // A saved draft back into form state (drafts keep the fields as typed, all strings).
 function fromDraft(data) {
@@ -88,7 +92,10 @@ export default function Sell() {
     return () => urls.forEach(URL.revokeObjectURL)
   }, [files])
 
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const set = (k) => (e) => {
+    setForm((f) => ({ ...f, [k]: e.target.value }))
+    if (errors[k]) setErrors((x) => ({ ...x, [k]: undefined })) // fixed it: drop the red
+  }
   const isFood = form.category === FOOD_CATEGORY
   // Food can be sold or given away, not rented.
   const listingTypes = isFood ? LISTING_TYPES.filter((t) => t.value !== 'rent') : LISTING_TYPES
@@ -113,11 +120,20 @@ export default function Sell() {
       if (!(Number(form.mrp) > 0)) next.mrp = 'Enter the MRP in rupees, or leave it blank.'
       else if (form.price !== '' && Number(form.mrp) < Number(form.price)) next.mrp = "MRP can't be lower than your selling price."
     }
+    if (!form.description.trim()) next.description = isFood
+      ? 'Describe it: what it is, how many portions, any allergens.'
+      : "Describe the item and its condition, so buyers know what they're getting."
     if (!form.pickup_spot.trim()) next.pickup_spot = 'Name a campus spot where you can hand it over.'
     if (isFood && !form.food_temp) next.food_temp = 'Is it served hot or cold?'
     if (isFood && form.expiry_date && form.expiry_date < todayISO()) next.expiry_date = 'That date has already passed.'
+    if (existingImages.length + files.length === 0) next.photos = 'Add at least one photo of the item.'
     setErrors(next)
-    return Object.keys(next).length === 0
+    const problems = FIELD_ORDER.filter((k) => next[k])
+    if (problems.length) {
+      toast(problems.length === 1 ? next[problems[0]] : `${problems.length} things need fixing. ${next[problems[0]]}`)
+      revealFirstError(next, FIELD_ORDER)
+    }
+    return problems.length === 0
   }
 
   async function publish() {
@@ -133,14 +149,11 @@ export default function Sell() {
         food_temp: isFood ? form.food_temp : null,
         expiry_date: isFood && form.expiry_date ? form.expiry_date : null,
       }
-      const saved = isEdit
-        ? await listingsApi.update(id, { ...payload, images: existingImages })
-        : await listingsApi.create(payload)
-      if (files.length) {
-        // Shrink to JPEGs (max 1600px) first: big phone photos upload faster and stay under the server limit.
-        const photos = await Promise.all(files.map((f, i) => shrinkToJpeg(f, { maxSize: 1600, quality: 0.85, name: `photo-${i + 1}.jpg` })))
-        await listingsApi.uploadImages(saved?.id ?? id, photos)
-      }
+      // Shrink to JPEGs (max 1600px) first: big phone photos upload faster and stay under the server limit.
+      // They go up with the listing in one request, so it's never saved without its photos.
+      const photos = await Promise.all(files.map((f, i) => shrinkToJpeg(f, { maxSize: 1600, quality: 0.85, name: `photo-${i + 1}.jpg` })))
+      if (isEdit) await listingsApi.update(id, { ...payload, images: existingImages }, photos)
+      else await listingsApi.create(payload, photos)
       if (!isEdit) discardDraft()
       if (!isEdit) trackEvent('post_listing', { category: payload.category, listing_type: payload.listing_type })
       toast(isEdit ? 'Changes saved' : 'Published')
@@ -188,9 +201,9 @@ export default function Sell() {
             📝 You're working on a draft{savedAt ? `, last saved ${timeAgo(savedAt)}` : ''}. Photos aren't kept in drafts, so add them before you publish.
           </p>
         )}
-        <div className="mb-4">
+        <div className="mb-4" data-field="title">
           <label className="field-label" htmlFor="title">Title</label>
-          <input id="title" className="field-input" value={form.title} onChange={set('title')} placeholder="e.g. Casio fx-991CW" />
+          <input id="title" className="field-input" aria-invalid={Boolean(errors.title)} value={form.title} onChange={set('title')} placeholder="e.g. Casio fx-991CW" />
           {errors.title && <p className="mt-1.5 text-[13px] text-coral">{errors.title}</p>}
         </div>
 
@@ -222,15 +235,15 @@ export default function Sell() {
 
         {form.listing_type !== 'free' && (
           <div className={`mb-4 grid gap-3 ${form.listing_type === 'sale' ? 'grid-cols-2' : ''}`}>
-            <div>
+            <div data-field="price">
               <label className="field-label" htmlFor="price">{form.listing_type === 'sale' ? 'Selling price (₹)' : 'Price (₹)'}</label>
-              <input id="price" type="number" min="0" className="field-input" value={form.price} onChange={set('price')} placeholder="e.g. 900" />
+              <input id="price" type="number" min="0" className="field-input" aria-invalid={Boolean(errors.price)} value={form.price} onChange={set('price')} placeholder="e.g. 900" />
               {errors.price && <p className="mt-1.5 text-[13px] text-coral">{errors.price}</p>}
             </div>
             {form.listing_type === 'sale' && (
-              <div>
+              <div data-field="mrp">
                 <label className="field-label" htmlFor="mrp">MRP (₹) <span className="font-normal text-ink-faint">optional</span></label>
-                <input id="mrp" type="number" min="1" className="field-input" value={form.mrp} onChange={set('mrp')} placeholder="What you paid" />
+                <input id="mrp" type="number" min="1" className="field-input" aria-invalid={Boolean(errors.mrp)} value={form.mrp} onChange={set('mrp')} placeholder="What you paid" />
                 {errors.mrp && <p className="mt-1.5 text-[13px] text-coral">{errors.mrp}</p>}
               </div>
             )}
@@ -245,7 +258,7 @@ export default function Sell() {
 
         {isFood ? (
           <>
-            <fieldset className="mb-4">
+            <fieldset className="mb-4" data-field="food_temp">
               <legend className="field-label">Served</legend>
               <div className="flex gap-2">
                 {FOOD_TEMPS.map((t) => (
@@ -253,9 +266,9 @@ export default function Sell() {
                     key={t.value}
                     type="button"
                     aria-pressed={form.food_temp === t.value}
-                    onClick={() => setForm((f) => ({ ...f, food_temp: t.value }))}
+                    onClick={() => { setForm((f) => ({ ...f, food_temp: t.value })); setErrors((x) => ({ ...x, food_temp: undefined })) }}
                     className={`flex-1 rounded-[11px] border-[1.5px] px-2 py-3 text-[13.5px] font-semibold ${
-                      form.food_temp === t.value ? 'border-brand bg-brand-tint text-brand' : 'border-line bg-[#fbfbf9] text-ink-soft'
+                      form.food_temp === t.value ? 'border-brand bg-brand-tint text-brand' : errors.food_temp ? 'border-coral bg-coral/5 text-ink-soft' : 'border-line bg-[#fbfbf9] text-ink-soft'
                     }`}
                   >
                     {t.emoji} {t.label}
@@ -265,11 +278,11 @@ export default function Sell() {
               {errors.food_temp && <p className="mt-1.5 text-[13px] text-coral">{errors.food_temp}</p>}
             </fieldset>
 
-            <div className="mb-4">
+            <div className="mb-4" data-field="expiry_date">
               <label className="field-label" htmlFor="expiry">
                 Expiry date <span className="font-normal text-ink-faint">(optional)</span>
               </label>
-              <input id="expiry" type="date" min={todayISO()} className="field-input" value={form.expiry_date} onChange={set('expiry_date')} />
+              <input id="expiry" type="date" min={todayISO()} className="field-input" aria-invalid={Boolean(errors.expiry_date)} value={form.expiry_date} onChange={set('expiry_date')} />
               <p className="mt-1.5 text-[12.5px] text-ink-faint">After this date the listing is hidden from the marketplace automatically.</p>
               {errors.expiry_date && <p className="mt-1.5 text-[13px] text-coral">{errors.expiry_date}</p>}
             </div>
@@ -283,20 +296,21 @@ export default function Sell() {
           </div>
         )}
 
-        <div className="mb-4">
+        <div className="mb-4" data-field="description">
           <label className="field-label" htmlFor="description">Description</label>
-          <textarea id="description" rows={4} className="field-input resize-y" value={form.description} onChange={set('description')}
+          <textarea id="description" rows={4} maxLength={2000} className="field-input resize-y" aria-invalid={Boolean(errors.description)} value={form.description} onChange={set('description')}
             placeholder={isFood ? 'What is it, how many portions, any allergens (nuts, dairy…)?' : "Describe the item, its condition, and why you're passing it on."} />
+          {errors.description && <p className="mt-1.5 text-[13px] text-coral">{errors.description}</p>}
         </div>
 
-        <div className="mb-4">
+        <div className="mb-4" data-field="pickup_spot">
           <label className="field-label" htmlFor="pickup">Campus Pickup Spot</label>
-          <input id="pickup" className="field-input" value={form.pickup_spot} onChange={set('pickup_spot')} placeholder="e.g. Library Foyer" />
+          <input id="pickup" className="field-input" aria-invalid={Boolean(errors.pickup_spot)} value={form.pickup_spot} onChange={set('pickup_spot')} placeholder="e.g. Library Foyer" />
           {errors.pickup_spot && <p className="mt-1.5 text-[13px] text-coral">{errors.pickup_spot}</p>}
         </div>
 
-        <div className="mb-6">
-          <label className="field-label" htmlFor="photos">{isEdit ? 'Photos' : 'Upload Photos (1–3)'}</label>
+        <div className="mb-6" data-field="photos">
+          <label className="field-label" htmlFor="photos">{isEdit ? 'Photos (1–3)' : 'Upload Photos (1–3)'}</label>
           {existingImages.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2.5">
               {existingImages.map((src, i) => (
@@ -318,18 +332,22 @@ export default function Sell() {
           {photoSlots === 0 ? (
             <p className="text-[13.5px] text-ink-faint">Maximum of 3 photos reached. Remove one (✕) to add a different photo.</p>
           ) : (
-          <div className="rounded-[14px] border-[1.5px] border-dashed border-line bg-[#fbfbf9] p-6 text-center text-[13.5px] text-ink-faint">
+          <div className={`rounded-[14px] border-[1.5px] border-dashed p-6 text-center text-[13.5px] text-ink-faint ${errors.photos ? 'border-coral bg-coral/5' : 'border-line bg-[#fbfbf9]'}`}>
             <input
               id="photos"
               type="file"
               accept="image/*"
               multiple
-              onChange={(e) => setFiles(Array.from(e.target.files).slice(0, photoSlots))}
+              onChange={(e) => {
+                setFiles(Array.from(e.target.files).slice(0, photoSlots))
+                setErrors((x) => ({ ...x, photos: undefined }))
+              }}
               className="mx-auto mb-2 block"
             />
-            {isEdit ? `Add up to ${photoSlots} more image${photoSlots === 1 ? '' : 's'}` : 'PNG or JPG, up to 3 images'}
+            {isEdit ? `Add up to ${photoSlots} more image${photoSlots === 1 ? '' : 's'}` : 'At least one photo, up to 3 (PNG or JPG)'}
           </div>
           )}
+          {errors.photos && <p className="mt-1.5 text-[13px] text-coral">{errors.photos}</p>}
           {previews.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2.5">
               {previews.map((src, i) => (

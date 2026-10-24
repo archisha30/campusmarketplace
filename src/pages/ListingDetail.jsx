@@ -10,7 +10,8 @@ import ImageLightbox from '../components/ImageLightbox.jsx'
 import RecommendedForYou from '../components/RecommendedForYou.jsx'
 import { recordListingView } from '../lib/recommendations.js'
 import PriceTag from '../components/PriceTag.jsx'
-import { listedOn, titleCase, foodTempLabel, formatDay, isExpired } from '../lib/format.js'
+import ShareButton from '../components/ShareButton.jsx'
+import { formatPrice, listedOn, titleCase, foodTempLabel, formatDay, isExpired } from '../lib/format.js'
 import { openContact } from '../lib/contact.js'
 import Avatar from '../components/Avatar.jsx'
 import LinkifiedText from '../components/LinkifiedText.jsx'
@@ -115,12 +116,18 @@ export default function ListingDetail() {
             )}
             {isExpired(l) && <span className="badge bg-line/60 text-ink-faint">Expired</span>}
             <VerifiedBadge />
+            <ShareButton
+              className="ml-auto"
+              title={l.title}
+              path={`/listing/${l.id}`}
+              message={`Check out "${l.title}" (${l.listing_type === 'free' ? 'free' : formatPrice(l.price)}${l.listing_type === 'rent' ? ' to rent' : ''}) on CampusMarket`}
+            />
             {String(l.seller?.id) !== String(user?.id) && (
               <button
                 type="button"
                 aria-pressed={isSaved(l.id)}
                 onClick={() => toast(toggle(l) ? 'Saved to your wishlist' : 'Removed from your wishlist')}
-                className={`ml-auto inline-flex items-center gap-1.5 rounded-pill border-[1.5px] px-3 py-1 text-[12.5px] font-semibold transition ${
+                className={`inline-flex items-center gap-1.5 rounded-pill border-[1.5px] px-3 py-1 text-[12.5px] font-semibold transition ${
                   isSaved(l.id) ? 'border-coral bg-coral/10 text-coral' : 'border-line bg-paper text-ink-soft hover:border-ink hover:text-ink'
                 }`}
               >

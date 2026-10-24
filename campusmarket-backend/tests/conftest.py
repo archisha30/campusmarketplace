@@ -1,5 +1,6 @@
 """Test harness: in-memory SQLite + temp file dirs. Never touches Supabase or real uploads."""
 
+import io
 import json
 import os
 import sqlite3
@@ -17,6 +18,7 @@ os.environ.update(
 )
 
 import pymupdf
+from PIL import Image
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -38,6 +40,8 @@ from app.models.otp import OTPCode
 from app.models.report import Report
 from app.models.contact_reveal import ContactReveal
 from app.models.draft import Draft
+from app.models.banned_email import BannedEmail
+from app.models.wishlist import WishlistItem
 from app.models.product_request import ProductRequest
 from app.models.resource import Resource, ResourceAccess
 from app.models.user import User
@@ -56,7 +60,8 @@ sqlite3.register_adapter(list, json.dumps)
 def db_session():
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine, tables=[User.__table__, Listing.__table__, Resource.__table__, ResourceAccess.__table__, Notification.__table__, OTPCode.__table__, Report.__table__,
-        ContactReveal.__table__, ProductRequest.__table__, Draft.__table__])
+        ContactReveal.__table__, ProductRequest.__table__, Draft.__table__,
+        BannedEmail.__table__, WishlistItem.__table__])
     Session = sessionmaker(bind=engine, autocommit=False, autoflush=False)
     session = Session()
     yield session, Session
@@ -154,6 +159,21 @@ def auth(users):
         return {"Authorization": f"Bearer {create_access_token(users[name].id)}"}
 
     return headers
+
+
+def png_bytes(color=(0, 120, 200)) -> bytes:
+    buf = io.BytesIO()
+    Image.new("RGB", (30, 30), color).save(buf, "PNG")
+    return buf.getvalue()
+
+
+def post_listing(client, headers, body, photos=1, method="post", url="/api/listings"):
+    """Create (or PUT) a listing the way the Sell page does: fields as JSON in `data`, photos
+    in `files`. Fills in a description unless the body sets one (None leaves it out)."""
+    body = {"description": "Works well, collect any evening.", **body}
+    body = {k: v for k, v in body.items() if v is not None}
+    files = [("files", (f"p{i}.png", png_bytes(), "image/png")) for i in range(photos)]
+    return getattr(client, method)(url, data={"data": json.dumps(body)}, files=files or None, headers=headers)
 
 
 def make_pdf(pages=3, encrypt=False, text_lines=60) -> bytes:

@@ -113,11 +113,10 @@ def test_free_forces_price_zero(create):
     assert res.json()["price"] == 0
 
 
-def test_hard_copy_has_no_file_and_optional_sample(create):
+def test_hard_copy_needs_a_sample(create):
     res = create({"copy_type": "hard", "delivery": None, "pickup_spot": "Library foyer"}, pdf=None)
-    assert res.status_code == 201, res.text
-    body = res.json()
-    assert body["has_file"] is False and body["preview_pages"] == [] and body["delivery"] is None
+    assert res.status_code == 400
+    assert "sample PDF" in res.json()["detail"]
 
     res = create(
         {"copy_type": "hard", "delivery": "pdf", "drive_url": "https://drive.google.com/x", "pickup_spot": "Gate 2"},
@@ -134,7 +133,7 @@ def test_update_with_bad_pdf_changes_nothing(client, auth, create, file_dirs):
     before = sorted(p.name for p in _files(file_dirs))
     data = {
         "title": "Renamed", "subject": "DBMS", "year": "2", "copy_type": "soft",
-        "offer_type": "sale", "price": "70", "delivery": "pdf",
+        "offer_type": "sale", "price": "70", "delivery": "pdf", "description": "All units.",
     }
     res = client.put(
         f"/api/resources/{created['id']}", data=data,
@@ -151,7 +150,7 @@ def test_update_replaces_file_and_cleans_old_one(client, auth, create, file_dirs
     old = {p.name for p in _files(file_dirs)}
     data = {
         "title": "v2", "subject": "DBMS", "year": "any", "copy_type": "soft",
-        "offer_type": "sale", "price": "60", "delivery": "pdf",
+        "offer_type": "sale", "price": "60", "delivery": "pdf", "description": "All units.",
     }
     res = client.put(
         f"/api/resources/{created['id']}", data=data,
@@ -180,7 +179,7 @@ def test_delete_removes_files_after_restore_window(client, auth, create, db_sess
 def test_list_filters_and_facets(client, auth, create):
     create({"subject": "DBMS", "year": "2", "offer_type": "free", "price": "0"})
     create({"subject": "Operating Systems", "year": "any", "price": "120"})
-    create({"subject": "operating systems", "year": "3", "copy_type": "hard", "delivery": None, "pickup_spot": "Gate"}, pdf=None)
+    create({"subject": "operating systems", "year": "3", "copy_type": "hard", "delivery": None, "pickup_spot": "Gate"}, pdf=make_pdf(2))
 
     def ids(**params):
         return [i["subject"] for i in client.get("/api/resources", params=params, headers=auth("buyer")).json()["items"]]

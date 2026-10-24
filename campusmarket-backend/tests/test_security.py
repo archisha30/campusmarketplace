@@ -12,6 +12,7 @@ from app.api.routes import listings as listings_routes
 from app.core.pdf_preview import render_previews
 from app.core.storage import LocalStorage
 from app.models.listing import Listing
+from conftest import post_listing
 
 
 def _png():
@@ -130,7 +131,7 @@ def test_codes_per_ip_limit(client, sent, monkeypatch):
 ])
 def test_listing_fields_are_bounded(client, auth, override):
     body = {"title": "Lamp", "category": "Dorm Essentials", "condition": "Good", "pickup_spot": "Gate", "price": 100}
-    assert client.post("/api/listings", json={**body, **override}, headers=auth("owner")).status_code == 422
+    assert post_listing(client, auth("owner"), {**body, **override}).status_code == 422
 
 
 def test_profile_fields_are_bounded(client, auth):

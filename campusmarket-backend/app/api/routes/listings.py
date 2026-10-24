@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi.exceptions import RequestValidationError
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import case, or_
 from sqlalchemy.orm import Session
 
@@ -68,6 +70,62 @@ def _apply_mrp_rule(listing: Listing) -> None:
         listing.mrp = None
     elif listing.mrp is not None and listing.mrp < listing.price:
         raise HTTPException(status_code=422, detail="MRP can't be lower than the selling price")
+
+
+async def _listing_body(request: Request) -> tuple[dict, list]:
+    """The listing fields plus any new photos. Either plain JSON (no photos), or multipart
+    with the fields as JSON in `data` and the photos in `files`, which is how the Sell page
+    sends them, so a listing and its photos are saved together."""
+    try:
+        if request.headers.get("content-type", "").startswith(("multipart/form-data", "application/x-www-form-urlencoded")):
+            form = await request.form()
+            data = json.loads(form.get("data") or "{}")
+            files = [f for f in form.getlist("files") if hasattr(f, "file")]
+        else:
+            data, files = await request.json(), []
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Couldn't read the listing details. Refresh and try again.")
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=422, detail="Couldn't read the listing details. Refresh and try again.")
+    return data, files
+
+
+def _parse(schema: type[BaseModel], data: dict):
+    try:
+        return schema.model_validate(data)
+    except ValidationError as e:
+        raise RequestValidationError(e.errors(include_url=False))  # the usual 422 shape
+
+
+def _check_photos(files: list) -> list[tuple[bytes, str, str]]:
+    """Check every photo before storing any, so one bad file doesn't leave half an upload behind."""
+    checked = []
+    for f in files:
+        try:
+            data = read_upload(f.file, MAX_PHOTO_BYTES)
+            content_type, ext = check_image(data)
+        except ImageError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        checked.append((data, content_type, ext))
+    return checked
+
+
+def _store_photos(checked: list[tuple[bytes, str, str]], request: Request) -> list[str]:
+    urls = []
+    for data, content_type, ext in checked:
+        key = f"listings/{uuid.uuid4().hex}{ext}"
+        storage.put_public(key, data, content_type)
+        urls.append(storage.public_url(key, str(request.base_url)))
+    return urls
+
+
+def _commit_or_drop_photos(db: Session, urls: list[str]) -> None:
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        _delete_upload_files(urls)
+        raise
 
 
 def _get_owned_listing(listing_id: int, db: Session, user: User) -> Listing:
@@ -206,19 +264,30 @@ def get_listing(
 
 @router.post("", response_model=ListingOut)
 def create_listing(
-    payload: ListingCreate,
+    request: Request,
+    body: tuple[dict, list] = Depends(_listing_body),
     db: Session = Depends(get_db),
     user: User = Depends(require_seller),
 ):
+    """Multipart: `data` (the fields as JSON) and 1-3 `files`. Every listing needs a photo."""
     if not user.profile_completed:
         raise HTTPException(status_code=403, detail="Complete your profile before listing an item")
     if not user.phone:
         raise HTTPException(status_code=403, detail="Add your WhatsApp number in your profile so buyers can contact you")
+    data, files = body
+    payload = _parse(ListingCreate, data)
+    if not files:
+        raise HTTPException(status_code=422, detail="Add at least one photo of the item")
+    if len(files) > MAX_IMAGES:
+        raise HTTPException(status_code=400, detail=f"A listing can have at most {MAX_IMAGES} photos")
+    checked = _check_photos(files)
+
     listing = Listing(**payload.model_dump(), owner_id=user.id)
     _apply_food_rules(listing, check_expiry=True)
     _apply_mrp_rule(listing)
+    listing.images = _store_photos(checked, request)
     db.add(listing)
-    db.commit()
+    _commit_or_drop_photos(db, listing.images)
     db.refresh(listing)
     return ListingOut.from_orm_with_art(listing)
 
@@ -226,27 +295,37 @@ def create_listing(
 @router.put("/{listing_id}", response_model=ListingOut)
 def update_listing(
     listing_id: int,
-    payload: ListingUpdate,
+    request: Request,
+    body: tuple[dict, list] = Depends(_listing_body),
     db: Session = Depends(get_db),
     user: User = Depends(require_seller),
 ):
+    """JSON, or multipart with new photos in `files` (added after the kept ones)."""
+    raw, files = body
+    payload = _parse(ListingUpdate, raw)
     listing = _get_owned_listing(listing_id, db, user)
     data = payload.model_dump(exclude_unset=True)
 
     keep = data.pop("images", None)
-    removed: list[str] = []
-    if keep is not None:
-        current = listing.images or []
-        kept = [u for u in current if u in keep]  # can only keep photos it already has
-        removed = [u for u in current if u not in keep]
-        listing.images = kept
+    photos_change = keep is not None or bool(files)
+    current = list(listing.images or []) if photos_change else []
+    kept = current if keep is None else [u for u in current if u in keep]  # can only keep photos it already has
+    if len(kept) + len(files) > MAX_IMAGES:
+        raise HTTPException(status_code=400, detail=f"A listing can have at most {MAX_IMAGES} photos")
+    if current and not kept and not files:
+        raise HTTPException(status_code=422, detail="Keep at least one photo of the item")
+    checked = _check_photos(files)
+    removed = [u for u in current if u not in kept]
 
     for key, value in data.items():
         setattr(listing, key, value)
     # Only re-check the expiry date when it's being changed, so an expired item can still be edited.
     _apply_food_rules(listing, check_expiry="expiry_date" in data)
     _apply_mrp_rule(listing)
-    db.commit()
+    added = _store_photos(checked, request)
+    if photos_change:
+        listing.images = [*kept, *added]
+    _commit_or_drop_photos(db, added)
     _delete_upload_files(removed)
     db.refresh(listing)
     return ListingOut.from_orm_with_art(listing)
@@ -324,23 +403,8 @@ def upload_images(
     if room <= 0:
         raise HTTPException(status_code=400, detail=f"A listing can have at most {MAX_IMAGES} photos")
 
-    # Check every photo before storing any, so one bad file doesn't leave half an upload behind.
-    checked = []
-    for f in files[:room]:
-        try:
-            data = read_upload(f.file, MAX_PHOTO_BYTES)
-            content_type, ext = check_image(data)
-        except ImageError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-        checked.append((data, content_type, ext))
-
-    urls = []
-    for data, content_type, ext in checked:
-        key = f"listings/{uuid.uuid4().hex}{ext}"
-        storage.put_public(key, data, content_type)
-        urls.append(storage.public_url(key, str(request.base_url)))
-
+    urls = _store_photos(_check_photos(files[:room]), request)
     listing.images = [*(listing.images or []), *urls]
-    db.commit()
+    _commit_or_drop_photos(db, urls)
     db.refresh(listing)
     return ListingOut.from_orm_with_art(listing)

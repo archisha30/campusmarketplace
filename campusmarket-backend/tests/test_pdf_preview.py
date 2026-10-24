@@ -90,7 +90,7 @@ def test_single_page_sale_upload_uses_partial_preview_and_rerenders_on_offer_cha
 
     data = {
         "title": body["title"], "subject": "DBMS", "year": "2", "copy_type": "soft",
-        "offer_type": "free", "price": "0", "delivery": "pdf",
+        "offer_type": "free", "price": "0", "delivery": "pdf", "description": "All units.",
     }
     res = client.put(f"/api/resources/{body['id']}", data=data, headers=auth("owner"))
     assert res.status_code == 200, res.text

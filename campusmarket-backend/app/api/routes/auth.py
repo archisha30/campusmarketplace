@@ -8,6 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Re
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core.bans import BANNED_EMAIL_MESSAGE, SUSPENDED_MESSAGE, is_banned
 from app.core.config import settings
 from app.core.email import EmailError, send_account_exists_email, send_otp_email
 from app.core.google import GoogleTokenError, verify_google_token
@@ -61,6 +62,11 @@ def _check_domain(email: str) -> None:
     domain = email.split("@")[-1].lower()
     if domain not in settings.ALLOWED_EMAIL_DOMAINS:
         raise HTTPException(status_code=400, detail=f"{domain} is not a recognised campus email. Use your {_allowed_domains_text()} email")
+
+
+def _check_not_banned(db: Session, email: str) -> None:
+    if is_banned(db, email):
+        raise HTTPException(status_code=403, detail=BANNED_EMAIL_MESSAGE)
 
 
 def _allowed_domains_text() -> str:
@@ -144,6 +150,7 @@ def signup(payload: SignupRequest, request: Request, background: BackgroundTasks
     (an existing account gets a "you already have an account" email instead of a code), and
     the email goes out after the response, so timing gives nothing away either."""
     _check_domain(payload.email)
+    _check_not_banned(db, payload.email)
     if not _may_send_code(request, payload.email):
         raise HTTPException(status_code=429, detail=CODE_TOO_SOON)
     existing = _find_user(db, payload.email)
@@ -160,6 +167,7 @@ def signup(payload: SignupRequest, request: Request, background: BackgroundTasks
 def signup_verify(payload: SignupVerifyRequest, response: Response, db: Session = Depends(get_db)):
     """Step 2: check the code, then create the verified account with its password."""
     _check_domain(payload.email)
+    _check_not_banned(db, payload.email)
     existing = _find_user(db, payload.email)
     if existing and existing.verified:
         # No signup code is ever sent to an existing account, so answer like a bad code.
@@ -211,6 +219,9 @@ def login(payload: PasswordLoginRequest, request: Request, response: Response, d
     user.failed_logins = 0
     user.locked_until = None
     db.commit()
+    # Only told after the right password, so this can't be used to probe accounts.
+    if user.suspended_at:
+        raise HTTPException(status_code=403, detail=SUSPENDED_MESSAGE)
     db.refresh(user)
     return _login_response(user, response)
 
@@ -235,6 +246,7 @@ def google_sign_in(payload: GoogleSignInRequest, request: Request, response: Res
     # Must be a college Google Workspace account (Google's "hd" claim), apart from owners.
     if not is_owner and (domain not in settings.ALLOWED_EMAIL_DOMAINS or claims.get("hd") != domain):
         raise HTTPException(status_code=403, detail=f"Use your college Google account ({_allowed_domains_text()})")
+    _check_not_banned(db, email)
 
     user = db.query(User).filter(User.google_sub == claims["sub"]).first() or _find_user(db, email)
     created = user is None
@@ -243,6 +255,8 @@ def google_sign_in(payload: GoogleSignInRequest, request: Request, response: Res
         db.add(user)
     elif user.google_sub and user.google_sub != claims["sub"]:
         raise HTTPException(status_code=409, detail="This email is linked to a different Google account")
+    if user.suspended_at:
+        raise HTTPException(status_code=403, detail=SUSPENDED_MESSAGE)
     user.google_sub = claims["sub"]
     user.verified = True  # Google verified the email
     if not user.name and claims.get("name"):
@@ -283,7 +297,7 @@ def forgot_password(payload: ForgotPasswordRequest, request: Request, background
     so the limit can't be used to find out which emails have accounts)."""
     _check_domain(payload.email)
     user = _find_user(db, payload.email)
-    if user and user.verified and _may_send_code(request, payload.email):
+    if user and user.verified and not user.suspended_at and _may_send_code(request, payload.email):
         otp = _issue_otp(db, payload.email, "reset")
         db.commit()
         # After the response, so answering for a real account takes no longer than for a fake one.
@@ -298,6 +312,8 @@ def reset_password(payload: ResetPasswordRequest, response: Response, db: Sessio
     user = _find_user(db, payload.email)
     if not user or not user.verified:
         raise HTTPException(status_code=400, detail="Code expired, request a new one")
+    if user.suspended_at:
+        raise HTTPException(status_code=403, detail=SUSPENDED_MESSAGE)
     user.password_hash = hash_password(payload.password)
     user.password_changed_at = datetime.utcnow()  # logs out every older session
     user.failed_logins = 0

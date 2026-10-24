@@ -2,7 +2,7 @@
 
 import pytest
 
-from conftest import _user
+from conftest import _user, post_listing
 
 
 @pytest.fixture
@@ -48,7 +48,7 @@ def test_posting_needs_a_phone(client, db_session, users, auth, create):
     users["owner"].phone = None
     db.commit()
     listing = {"title": "Lamp", "category": "Dorm Essentials", "condition": "Good", "pickup_spot": "Gate", "price": 100}
-    res = client.post("/api/listings", json=listing, headers=auth("owner"))
+    res = post_listing(client, auth("owner"), listing)
     assert res.status_code == 403 and "WhatsApp number" in res.json()["detail"]
     res = create()
     assert res.status_code == 403 and "WhatsApp number" in res.json()["detail"]

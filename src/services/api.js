@@ -14,15 +14,24 @@ function pick(live, mocked) {
   return USE_MOCK ? mocked : live
 }
 
+function listingForm(payload, photos = []) {
+  const fd = new FormData()
+  fd.append('data', JSON.stringify(payload))
+  photos.forEach((f) => fd.append('files', f))
+  return fd
+}
+
 export const listingsApi = {
   // GET /api/listings?category=&campus_id=&q=&sort=&listing_type=&condition=
   list: (filters = {}) => pick(() => http.get('/listings', filters), () => mock.listListings(filters))(),
   // GET /api/listings/:id
   get: (id) => pick(() => http.get(`/listings/${id}`), () => mock.getListing(id))(),
-  // POST /api/listings
-  create: (payload) => pick(() => http.post('/listings', payload), () => mock.createListing(payload))(),
-  // PUT /api/listings/:id
-  update: (id, payload) => pick(() => http.put(`/listings/${id}`, payload), () => mock.updateListing(id, payload))(),
+  // POST /api/listings  (multipart: fields as JSON in `data`, 1-3 photos in `files`; a photo is required)
+  create: (payload, photos) =>
+    pick(() => http.postForm('/listings', listingForm(payload, photos)), () => mock.createListing(payload, photos))(),
+  // PUT /api/listings/:id  (multipart; payload.images = photo URLs to keep, new photos are added after them)
+  update: (id, payload, photos = []) =>
+    pick(() => http.putForm(`/listings/${id}`, listingForm(payload, photos)), () => mock.updateListing(id, payload, photos))(),
   // DELETE /api/listings/:id
   remove: (id) => pick(() => http.del(`/listings/${id}`), () => mock.deleteListing(id))(),
   // POST /api/listings/:id/restore  (within 24h of deleting)
@@ -207,6 +216,17 @@ export const draftsApi = {
   remove: (id) => pick(() => http.del(`/drafts/${id}`), () => mock.deleteDraft(id))(),
 }
 
+export const wishlistApi = {
+  // GET /api/wishlist -> [listing]  most recently saved first
+  list: () => pick(() => http.get('/wishlist'), () => mock.listWishlist())(),
+  // PUT /api/wishlist/:listingId
+  save: (id) => pick(() => http.put(`/wishlist/${id}`), () => mock.saveToWishlist(id))(),
+  // DELETE /api/wishlist/:listingId
+  remove: (id) => pick(() => http.del(`/wishlist/${id}`), () => mock.removeFromWishlist(id))(),
+  // POST /api/wishlist/import  body: { listing_ids }  (moves a browser's old saved list to the account)
+  importIds: (ids) => pick(() => http.post('/wishlist/import', { listing_ids: ids }), () => mock.importWishlist(ids))(),
+}
+
 export const notificationsApi = {
   // GET /api/notifications -> { items, unread }  (access requests + contact taps on your items)
   list: () => pick(() => http.get('/notifications'), () => mock.listNotifications())(),
@@ -240,6 +260,10 @@ export const adminApi = {
   // PATCH /api/admin/users/:id/admin  body: { is_admin }  (owners only)
   setAdmin: (id, isAdmin) =>
     pick(() => http.patch(`/admin/users/${id}/admin`, { is_admin: isAdmin }), () => mock.setAdmin(id, isAdmin))(),
+  // POST /api/admin/users/:id/suspend  body: { reason }  (also bans the email for good)
+  suspend: (id, reason) => pick(() => http.post(`/admin/users/${id}/suspend`, { reason }), () => mock.suspendUser(id, reason))(),
+  // POST /api/admin/users/:id/reinstate  (undo a suspension made by mistake)
+  reinstate: (id) => pick(() => http.post(`/admin/users/${id}/reinstate`), () => mock.reinstateUser(id))(),
   // GET /api/admin/listings?q=  -> every listing, including reserved and sold
   listings: (q, page = 1) => pick(() => http.get('/admin/listings', { q, page }), () => mock.adminListings(q, page))(),
   // DELETE /api/admin/listings/:id  (moderation; resources use resourcesApi.remove, which admins may call)

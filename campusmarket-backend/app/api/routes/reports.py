@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.api.routes.notifications import notify
 from app.core.security import require_verified
+from app.core.trash import live
 from app.db.session import get_db
 from app.models.listing import Listing
 from app.models.report import Report
@@ -27,7 +28,7 @@ def create_report(
     else:
         target_type, model, target_id = "resource", Resource, payload.resource_id
 
-    target = db.query(model).filter(model.id == target_id, model.deleted_at.is_(None)).first()
+    target = db.query(model).filter(model.id == target_id, live(model)).first()
     if not target:
         raise HTTPException(status_code=404, detail="That item no longer exists")
     if target.owner_id == user.id:

@@ -29,6 +29,8 @@ from app.models.notification import Notification
 from app.models.report import Report
 from app.models.contact_reveal import ContactReveal
 from app.models.draft import Draft
+from app.models.banned_email import BannedEmail
+from app.models.wishlist import WishlistItem
 
 target_metadata = Base.metadata
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)

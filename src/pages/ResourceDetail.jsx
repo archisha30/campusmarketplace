@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { useToast } from '../hooks/useToast.jsx'
 import { VerifiedBadge } from '../components/Badge.jsx'
 import ReportModal from '../components/ReportModal.jsx'
+import ShareButton from '../components/ShareButton.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import LinkifiedText from '../components/LinkifiedText.jsx'
 import ResourcePreview from '../components/ResourcePreview.jsx'
@@ -51,7 +52,15 @@ export default function ResourceDetail() {
         </div>
 
         <div className="order-1 md:order-2">
-          <ResourceBadges r={r} />
+          <div className="flex flex-wrap items-start gap-2">
+            <ResourceBadges r={r} />
+            <ShareButton
+              className="ml-auto"
+              title={r.title}
+              path={`/resources/${r.id}`}
+              message={`Check out "${r.title}" (${r.subject}, ${r.offer_type === 'free' ? 'free' : formatPrice(r.price)}) on the CampusMarket Resource Hub`}
+            />
+          </div>
           <h1 className="mt-3 text-[28px] font-bold">{r.title}</h1>
           <p className="my-3 font-display text-[32px] font-bold">{r.offer_type === 'free' ? 'Free' : formatPrice(r.price)}</p>
 

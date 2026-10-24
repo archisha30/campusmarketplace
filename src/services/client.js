@@ -51,6 +51,10 @@ async function request(path, { method = 'GET', body, params, isForm, asBlob, hea
         : Array.isArray(detail)
           ? detail.map((d) => String(d.msg).replace(/^Value error, /, '')).join(', ')
           : detail?.message || 'Something went wrong. Try again.' // { code, message } errors, e.g. password_not_set
+    // An admin suspended this account: every request now fails, so log out everywhere at once.
+    if (detail?.code === 'account_suspended') {
+      window.dispatchEvent(new CustomEvent('cm:account-suspended', { detail: message }))
+    }
     throw new ApiError(message, res.status, detail)
   }
   return payload

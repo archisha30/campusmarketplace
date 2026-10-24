@@ -3,6 +3,10 @@ from the Seller Dashboard's Deleted tab. After that it's removed for good, with 
 
 from datetime import datetime, timedelta
 
+from sqlalchemy import select
+
+from app.models.user import User
+
 RESTORE_HOURS = 24
 
 
@@ -16,5 +20,7 @@ def restore_until(deleted_at: datetime) -> datetime:
 
 
 def live(model):
-    """Filter for rows that haven't been deleted."""
-    return model.deleted_at.is_(None)
+    """Filter for rows that haven't been deleted and whose owner isn't suspended
+    (a suspended student's listings and resources disappear with the account)."""
+    suspended = select(User.id).where(User.suspended_at.is_not(None))
+    return model.deleted_at.is_(None) & model.owner_id.not_in(suspended)

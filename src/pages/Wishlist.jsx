@@ -1,31 +1,11 @@
-import { useEffect, useState } from 'react'
-import { listingsApi } from '../services/api.js'
 import { useWishlist } from '../hooks/useWishlist.jsx'
 import ListingCard from '../components/ListingCard.jsx'
 import EmptyState from '../components/EmptyState.jsx'
+import { SkeletonGrid } from '../components/SkeletonCard.jsx'
 
 export default function Wishlist() {
-  const { items } = useWishlist()
-  // Fresh copies from the API (price/status may have changed since saving),
-  // keyed by id. Falls back to the saved snapshot if a fetch fails.
-  const [fresh, setFresh] = useState({})
-
-  useEffect(() => {
-    let cancelled = false
-    Promise.allSettled(items.map((l) => listingsApi.get(l.id))).then((results) => {
-      if (cancelled) return
-      const next = {}
-      results.forEach((r, i) => {
-        if (r.status === 'fulfilled' && r.value) next[items[i].id] = r.value
-      })
-      setFresh(next)
-    })
-    return () => { cancelled = true }
-    // Only refetch when the set of saved ids changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.map((l) => l.id).join(',')])
-
-  const listings = items.map((l) => fresh[l.id] || l)
+  // Saved on the server (current price and status), so it's the same on every device.
+  const { items: listings, loading } = useWishlist()
 
   return (
     <div className="mx-auto max-w-[1180px] px-6 py-9">
@@ -38,7 +18,9 @@ export default function Wishlist() {
         )}
       </div>
 
-      {listings.length === 0 ? (
+      {loading && listings.length === 0 ? (
+        <SkeletonGrid count={4} />
+      ) : listings.length === 0 ? (
         <EmptyState
           emoji="♡"
           title="Your wishlist is empty"

@@ -90,9 +90,11 @@ class ResourceIn(BaseModel):
 
     @field_validator("description")
     @classmethod
-    def keep_paragraphs(cls, value: str | None) -> str | None:
+    def keep_paragraphs(cls, value: str | None) -> str:
         value = (value or "").strip()
-        return value or None
+        if not value:
+            raise ValueError("Add a description: what's covered and how it's organised")
+        return value
 
     @field_validator("price", mode="before")
     @classmethod

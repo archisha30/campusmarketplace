@@ -8,12 +8,12 @@ import GoogleButton from '../components/GoogleButton.jsx'
 // Email + password. Every failure gets the same message (so nobody can find out which emails
 // have accounts); accounts from before passwords existed create their first one via Forgot password.
 export default function Login() {
-  const { login } = useAuth()
+  const { login, notice } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const [error, setError] = useState(notice) // e.g. "This account has been suspended…"
   const [busy, setBusy] = useState(false)
 
   async function submit(e) {

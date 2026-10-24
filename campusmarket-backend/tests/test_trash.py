@@ -2,6 +2,8 @@
 
 import pytest
 
+from conftest import post_listing
+
 
 def listing(**overrides):
     body = {"title": "Study lamp", "category": "Dorm Essentials", "listing_type": "sale", "price": 300,
@@ -12,7 +14,7 @@ def listing(**overrides):
 
 @pytest.fixture
 def lid(client, auth):
-    res = client.post("/api/listings", json=listing(), headers=auth("owner"))
+    res = post_listing(client, auth("owner"), listing())
     assert res.status_code == 200, res.text
     return res.json()["id"]
 

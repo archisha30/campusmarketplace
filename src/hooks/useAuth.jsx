@@ -7,6 +7,18 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  // Why the user was logged out, shown on the login page (e.g. their account was suspended).
+  const [notice, setNotice] = useState('')
+
+  useEffect(() => {
+    function suspended(e) {
+      setUser(null)
+      setNotice(e.detail)
+      authApi.logout().catch(() => {}) // clear the session cookie
+    }
+    window.addEventListener('cm:account-suspended', suspended)
+    return () => window.removeEventListener('cm:account-suspended', suspended)
+  }, [])
 
   useEffect(() => {
     // Older versions kept the session in browser storage, where injected scripts could read it.
@@ -45,6 +57,7 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     loading,
+    notice,
     isVerified: Boolean(user?.verified),
     // Owners (OWNER_EMAILS on the backend) and the admins they approved.
     isAdmin: Boolean(user?.is_admin || user?.role === 'admin'),
@@ -61,6 +74,7 @@ export function AuthProvider({ children }) {
       return res
     },
     async login(email, password) {
+      setNotice('')
       return startSession(await authApi.login(email, password))
     },
     async signupVerify(payload) {

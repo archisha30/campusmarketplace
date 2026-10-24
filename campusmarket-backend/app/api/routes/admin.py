@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
@@ -13,6 +13,7 @@ from app.core.pagination import paginate
 from app.core.security import require_admin, require_owner
 from app.core.storage import delete_public_urls
 from app.db.session import get_db
+from app.models.banned_email import BannedEmail
 from app.models.listing import Listing
 from app.models.report import Report
 from app.models.resource import Resource
@@ -44,6 +45,9 @@ class AdminUserOut(BaseModel):
     created_at: datetime | None = None
     listings: int = 0
     resources: int = 0
+    suspended: bool = False
+    suspended_at: datetime | None = None
+    suspension_reason: str | None = None
 
 
 class AdminUsersOut(BaseModel):
@@ -56,10 +60,24 @@ class AdminUsersOut(BaseModel):
     verified: int
     sellers: int
     admins: int
+    suspended: int
 
 
 class AdminRoleIn(BaseModel):
     is_admin: bool
+
+
+class SuspendIn(BaseModel):
+    # Shown to other admins in the Users table, so say which rule was broken.
+    reason: str = Field(max_length=300)
+
+    @field_validator("reason")
+    @classmethod
+    def needs_reason(cls, value: str) -> str:
+        value = " ".join(value.split())
+        if len(value) < 3:
+            raise ValueError("Say why the account is being suspended")
+        return value
 
 
 class AdminListingsOut(BaseModel):
@@ -102,7 +120,21 @@ def _user_out(u: User, listings: dict, resources: dict) -> AdminUserOut:
         created_at=u.created_at,
         listings=listings.get(u.id, 0),
         resources=resources.get(u.id, 0),
+        suspended=bool(u.suspended_at),
+        suspended_at=u.suspended_at,
+        suspension_reason=u.suspension_reason,
     )
+
+
+def _target_user(db: Session, user_id: str) -> User:
+    try:
+        uid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="User not found")
+    target = db.query(User).filter(User.id == uid).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    return target
 
 
 @router.get("/users", response_model=AdminUsersOut)
@@ -126,6 +158,7 @@ def list_users(
         verified=db.query(User).filter(User.verified.is_(True)).count(),
         sellers=db.query(User).filter(User.account_type == "seller").count(),
         admins=db.query(User).filter(or_(User.role == "admin", func.lower(User.email).in_(owner_emails))).count(),
+        suspended=db.query(User).filter(User.suspended_at.is_not(None)).count(),
     )
 
 
@@ -137,18 +170,62 @@ def set_admin(
     _owner: User = Depends(require_owner),
 ):
     """Approve or remove an admin. Owners are admins through OWNER_EMAILS and can't be changed here."""
-    try:
-        uid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=404, detail="User not found")
-    target = db.query(User).filter(User.id == uid).first()
-    if not target:
-        raise HTTPException(status_code=404, detail="User not found")
+    target = _target_user(db, user_id)
     if target.is_owner:
         raise HTTPException(status_code=400, detail="Owners are always admins")
     if payload.is_admin and not target.verified:
         raise HTTPException(status_code=400, detail="Only verified students can be made admins")
+    if payload.is_admin and target.suspended_at:
+        raise HTTPException(status_code=400, detail="Suspended accounts can't be made admins")
     target.role = "admin" if payload.is_admin else "student"
+    db.commit()
+    db.refresh(target)
+    return _user_out(target, _counts(db, Listing), _counts(db, Resource))
+
+
+@router.post("/users/{user_id}/suspend", response_model=AdminUserOut)
+def suspend_user(
+    user_id: str,
+    payload: SuspendIn,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    """Suspend an account for breaking the rules. Its sessions stop working at once, its
+    listings, resources and requests disappear, and the email is banned from signing up,
+    logging in or using Google sign-in again. Only the owner can suspend another admin."""
+    target = _target_user(db, user_id)
+    if target.id == admin.id:
+        raise HTTPException(status_code=400, detail="You can't suspend your own account")
+    if target.is_owner:
+        raise HTTPException(status_code=400, detail="Owners can't be suspended")
+    if target.is_admin and not admin.is_owner:
+        raise HTTPException(status_code=403, detail="Only the owner can suspend an admin")
+    if not target.suspended_at:
+        target.suspended_at = datetime.utcnow()
+    target.suspension_reason = payload.reason
+    target.role = "student"  # loses admin access too
+    email = target.email.strip().lower()
+    ban = db.query(BannedEmail).filter(BannedEmail.email == email).first()
+    if ban:
+        ban.reason = payload.reason
+    else:
+        db.add(BannedEmail(email=email, reason=payload.reason, banned_by=admin.id))
+    db.commit()
+    db.refresh(target)
+    return _user_out(target, _counts(db, Listing), _counts(db, Resource))
+
+
+@router.post("/users/{user_id}/reinstate", response_model=AdminUserOut)
+def reinstate_user(
+    user_id: str,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
+    """Undo a suspension made by mistake: the account, its content and its email work again."""
+    target = _target_user(db, user_id)
+    target.suspended_at = None
+    target.suspension_reason = None
+    db.query(BannedEmail).filter(BannedEmail.email == target.email.strip().lower()).delete(synchronize_session=False)
     db.commit()
     db.refresh(target)
     return _user_out(target, _counts(db, Listing), _counts(db, Resource))

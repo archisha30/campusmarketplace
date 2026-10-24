@@ -17,6 +17,7 @@ from app.api.routes.reports import router as reports_router
 from app.api.routes.requests import router as requests_router
 from app.api.routes.resources import router as resources_router
 from app.api.routes.trash import router as trash_router
+from app.api.routes.wishlist import router as wishlist_router
 from app.core.config import settings
 from app.core.email import EmailError
 from app.core.storage import StorageError, storage
@@ -69,6 +70,7 @@ app.include_router(reports_router)
 app.include_router(requests_router)
 app.include_router(resources_router)
 app.include_router(trash_router)
+app.include_router(wishlist_router)
 
 # Local file storage, and files uploaded before cloud storage was turned on. See core/storage.py.
 UPLOAD_DIR = Path(__file__).resolve().parents[1] / "uploads"
