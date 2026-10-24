@@ -542,6 +542,53 @@ export function clearNotifications() {
   return delay(null, 100)
 }
 
+// Saved Sell / Post a Resource forms, like /api/drafts.
+const MAX_DRAFTS = 20
+let drafts = [] // { id, user_id, kind, data, created_at, updated_at }
+
+function ownDraft(id) {
+  const u = mockViewer()
+  return drafts.find((d) => d.id === Number(id) && u && sameId(d.user_id, u.id))
+}
+
+const draftOut = ({ user_id, ...d }) => d
+
+export function listDrafts() {
+  const u = mockViewer()
+  return delay(drafts
+    .filter((d) => u && sameId(d.user_id, u.id))
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+    .map(draftOut), 150)
+}
+
+export function getDraft(id) {
+  const d = ownDraft(id)
+  return d ? delay(draftOut(d), 150) : Promise.reject(new Error('Draft not found. It may have been published or deleted.'))
+}
+
+export function saveDraft(id, kind, data) {
+  const u = mockViewer()
+  if (!u) return Promise.reject(new Error('Log in to save drafts'))
+  if (id == null) {
+    if (drafts.filter((d) => sameId(d.user_id, u.id)).length >= MAX_DRAFTS) {
+      return Promise.reject(new Error(`You can keep up to ${MAX_DRAFTS} drafts. Publish or delete one from the Drafts tab first.`))
+    }
+    const d = { id: nextId++, user_id: u.id, kind, data: { ...data }, created_at: nowIso(), updated_at: nowIso() }
+    drafts.unshift(d)
+    return delay(draftOut(d), 150)
+  }
+  const d = ownDraft(id)
+  if (!d) return Promise.reject(new Error('Draft not found. It may have been published or deleted.'))
+  Object.assign(d, { data: { ...data }, updated_at: nowIso() })
+  return delay(draftOut(d), 150)
+}
+
+export function deleteDraft(id) {
+  const d = ownDraft(id)
+  drafts = drafts.filter((x) => x !== d)
+  return delay(null, 100)
+}
+
 // Mirrors POST /api/contact: one person's WhatsApp or email, fetched when a button is tapped.
 export function revealContact(targetType, targetId, channel) {
   const u = mockViewer()

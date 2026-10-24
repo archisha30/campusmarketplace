@@ -3,8 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { listingsApi } from '../services/api.js'
 import { useToast } from '../hooks/useToast.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
+import { useDraft } from '../hooks/useDraft.js'
 import { CATEGORIES, CONDITIONS, FOOD_CATEGORY, FOOD_TEMPS, LISTING_TYPES } from '../data/sample.js'
-import { todayISO } from '../lib/format.js'
+import { timeAgo, todayISO } from '../lib/format.js'
 import { trackEvent } from '../lib/analytics.js'
 import { shrinkToJpeg } from '../lib/images.js'
 import PriceTag from '../components/PriceTag.jsx'
@@ -14,6 +15,16 @@ const BLANK = {
   price: '', mrp: '', condition: 'Good', description: '', pickup_spot: '',
   food_temp: '', expiry_date: '', // F&B only
 }
+
+// A saved draft back into form state (drafts keep the fields as typed, all strings).
+function fromDraft(data) {
+  const form = { ...BLANK }
+  for (const k of Object.keys(BLANK)) if (data[k] != null) form[k] = String(data[k])
+  if (!CATEGORIES.includes(form.category)) form.category = BLANK.category
+  return form
+}
+
+const isBlank = (form) => Object.keys(BLANK).every((k) => String(form[k]).trim() === String(BLANK[k]))
 
 export default function Sell() {
   const { id } = useParams()
@@ -28,6 +39,11 @@ export default function Sell() {
   const [previews, setPreviews] = useState([])
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
+  const { draftId, loadingDraft, savingDraft, savedAt, saveDraft, discardDraft } = useDraft('listing', {
+    enabled: !isEdit,
+    onLoad: (data) => { setForm(fromDraft(data)); setErrors({}) },
+    onMissing: (err) => toast(err.message || 'Draft not found'),
+  })
 
   // Edit mode: load the listing and prefill the form.
   useEffect(() => {
@@ -125,6 +141,7 @@ export default function Sell() {
         const photos = await Promise.all(files.map((f, i) => shrinkToJpeg(f, { maxSize: 1600, quality: 0.85, name: `photo-${i + 1}.jpg` })))
         await listingsApi.uploadImages(saved?.id ?? id, photos)
       }
+      if (!isEdit) discardDraft()
       if (!isEdit) trackEvent('post_listing', { category: payload.category, listing_type: payload.listing_type })
       toast(isEdit ? 'Changes saved' : 'Published')
       navigate('/dashboard')
@@ -135,10 +152,25 @@ export default function Sell() {
     }
   }
 
+  async function onSaveDraft() {
+    if (isBlank(form)) {
+      toast('Fill in something first, like a title')
+      return
+    }
+    try {
+      await saveDraft(form)
+      toast(files.length
+        ? "Draft saved. Photos aren't kept in drafts, so add them again when you publish"
+        : 'Draft saved. Find it under Drafts on your dashboard')
+    } catch (err) {
+      toast(err.message || "Couldn't save the draft")
+    }
+  }
+
   const photoSlots = Math.max(0, 3 - existingImages.length)
 
-  if (loadingListing) {
-    return <div className="mx-auto max-w-[1180px] px-6 py-9 text-ink-soft">Loading listing…</div>
+  if (loadingListing || loadingDraft) {
+    return <div className="mx-auto max-w-[1180px] px-6 py-9 text-ink-soft">{loadingDraft ? 'Loading draft…' : 'Loading listing…'}</div>
   }
 
   return (
@@ -151,6 +183,11 @@ export default function Sell() {
       </p>
 
       <div className="max-w-[640px] rounded-slab border border-line bg-paper p-6 md:p-9">
+        {draftId && (
+          <p className="mb-5 rounded-[10px] bg-brand-tint px-3 py-2 text-[13px] text-brand-deep">
+            📝 You're working on a draft{savedAt ? `, last saved ${timeAgo(savedAt)}` : ''}. Photos aren't kept in drafts, so add them before you publish.
+          </p>
+        )}
         <div className="mb-4">
           <label className="field-label" htmlFor="title">Title</label>
           <input id="title" className="field-input" value={form.title} onChange={set('title')} placeholder="e.g. Casio fx-991CW" />
@@ -304,13 +341,15 @@ export default function Sell() {
         </div>
 
         <div className="flex gap-2.5">
-          <button className="btn-accent" onClick={publish} disabled={saving}>
+          <button className="btn-accent" onClick={publish} disabled={saving || savingDraft}>
             {saving ? (isEdit ? 'Saving…' : 'Publishing…') : isEdit ? 'Save Changes' : 'Publish Listing'}
           </button>
           {isEdit ? (
             <button className="btn-ghost" onClick={() => navigate('/dashboard')}>Cancel</button>
           ) : (
-            <button className="btn-ghost" onClick={() => toast('Draft saved')}>Save Draft</button>
+            <button className="btn-ghost" onClick={onSaveDraft} disabled={saving || savingDraft}>
+              {savingDraft ? 'Saving…' : draftId ? 'Update Draft' : 'Save Draft'}
+            </button>
           )}
         </div>
       </div>

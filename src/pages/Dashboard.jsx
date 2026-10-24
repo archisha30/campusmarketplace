@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { listingsApi, resourcesApi, trashApi } from '../services/api.js'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { draftsApi, listingsApi, resourcesApi, trashApi } from '../services/api.js'
 import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useToast } from '../hooks/useToast.jsx'
@@ -24,26 +24,64 @@ const TABS = [
   { label: 'Active', status: 'available' },
   { label: 'Reserved', status: 'reserved' },
   { label: 'Sold', status: 'sold' },
+  { label: 'Drafts', status: 'drafts' }, // saved from Sell / Post a Resource
   { label: 'Deleted', status: 'deleted' }, // restorable for 24 hours
 ]
+
+// Where "Continue" takes a draft, and how its row looks.
+const DRAFT_KINDS = {
+  listing: { path: '/sell', emoji: '📦', bg: '#FFF3D6', label: 'listing' },
+  resource: { path: '/resources/new', emoji: '📚', bg: '#EEF0FF', label: 'resource' },
+}
+
+function draftPrice(d) {
+  const { price, listing_type: listingType, offer_type: offerType } = d.data
+  if (listingType === 'free' || offerType === 'free') return 'Free'
+  return price !== undefined && price !== '' && !Number.isNaN(Number(price)) ? formatPrice(Number(price)) : 'No price yet'
+}
 
 export default function Dashboard() {
   const { user } = useAuth()
   const toast = useToast()
   const navigate = useNavigate()
-  const [tab, setTab] = useState(TABS[0])
+  // The tab lives in the URL (/dashboard?tab=drafts), so links and refreshes land on it.
+  const [params, setParams] = useSearchParams()
+  const tab = TABS.find((t) => t.status === params.get('tab')) || TABS[0]
+  const setTab = (t) => setParams(t === TABS[0] ? {} : { tab: t.status }, { replace: true })
   const [confirmDelete, setConfirmDelete] = useState(null) // listing waiting for "Yes, delete"
   const [deleting, setDeleting] = useState(false)
+  const [confirmDraft, setConfirmDraft] = useState(null) // draft waiting for "Yes, delete"
 
   const showingTrash = tab.status === 'deleted'
+  const showingDrafts = tab.status === 'drafts'
   const { data, loading, refetch } = useApi(
-    () => (showingTrash ? trashApi.list() : listingsApi.list({ seller_id: user?.id, status: tab.status, include_sold: true })),
+    () => {
+      if (showingTrash) return trashApi.list()
+      if (showingDrafts) return draftsApi.list().then((drafts) => ({ drafts }))
+      return listingsApi.list({ seller_id: user?.id, status: tab.status, include_sold: true })
+    },
     [user?.id, tab.status]
   )
   // Right after switching tabs, `data` still holds the previous tab's response for one
-  // render (listings come as { items }, the trash as a plain array), so check the shape.
-  const items = !showingTrash && Array.isArray(data?.items) ? data.items : []
+  // render (listings come as { items }, drafts as { drafts }, the trash as a plain array),
+  // so check the shape.
+  const items = !showingTrash && !showingDrafts && Array.isArray(data?.items) ? data.items : []
   const trashed = showingTrash && Array.isArray(data) ? data : []
+  const drafts = showingDrafts && Array.isArray(data?.drafts) ? data.drafts : []
+
+  async function removeDraft() {
+    setDeleting(true)
+    try {
+      await draftsApi.remove(confirmDraft.id)
+      toast('Draft deleted')
+      setConfirmDraft(null)
+      refetch()
+    } catch (err) {
+      toast(err.message || "Couldn't delete the draft")
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   async function restore(t) {
     try {
@@ -111,7 +149,7 @@ export default function Dashboard() {
 
       {loading && <SkeletonRows />}
 
-      {!showingTrash && !loading && items.length === 0 && (
+      {!showingTrash && !showingDrafts && !loading && items.length === 0 && (
         <EmptyState
           emoji="📭"
           title="Nothing here yet"
@@ -120,6 +158,35 @@ export default function Dashboard() {
           actionTo="/sell"
         />
       )}
+
+      {showingDrafts && !loading && drafts.length === 0 && (
+        <p className="rounded-card bg-paper px-4 py-8 text-center text-[14px] text-ink-soft">
+          No drafts. Use <strong className="text-ink">Save Draft</strong> when selling an item or posting a resource, and finish it later from here.
+        </p>
+      )}
+
+      {showingDrafts && !loading && drafts.map((d) => {
+        const k = DRAFT_KINDS[d.kind] || DRAFT_KINDS.listing
+        const title = String(d.data.title || '').trim()
+        return (
+          <div key={d.id} className="mb-3 flex flex-wrap items-center gap-4 rounded-card border border-line bg-paper p-3.5">
+            <div className="flex h-[60px] w-[60px] flex-none items-center justify-center rounded-[10px] text-[26px]" style={{ background: k.bg }}>
+              {k.emoji}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="flex flex-wrap items-center gap-2 text-[14.5px] font-semibold">
+                <span className={`break-words ${title ? '' : 'italic text-ink-faint'}`}>{title || 'Untitled draft'}</span>
+                <span className="rounded-pill bg-bg px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">{k.label}</span>
+              </p>
+              <p className="text-[13px] text-ink-soft">{draftPrice(d)} · Saved {timeAgo(d.updated_at)}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button className="btn-accent btn-sm" onClick={() => navigate(`${k.path}?draft=${d.id}`)}>Continue</button>
+              <button className="btn-danger btn-sm" onClick={() => setConfirmDraft(d)}>Delete</button>
+            </div>
+          </div>
+        )
+      })}
 
       {showingTrash && !loading && trashed.length === 0 && (
         <p className="rounded-card bg-paper px-4 py-8 text-center text-[14px] text-ink-soft">
@@ -193,6 +260,20 @@ export default function Dashboard() {
             <div className="mt-5 flex gap-2.5">
               <button className="btn-ghost flex-1" onClick={() => setConfirmDelete(null)} disabled={deleting} autoFocus>Cancel</button>
               <button className="btn-danger flex-1" onClick={remove} disabled={deleting}>{deleting ? 'Deleting…' : 'Yes, delete'}</button>
+            </div>
+          </>
+        )}
+      </Modal>
+
+      <Modal open={Boolean(confirmDraft)} onClose={() => !deleting && setConfirmDraft(null)} title="Delete this draft?">
+        {confirmDraft && (
+          <>
+            <p className="text-[14px] text-ink-soft">
+              Are you sure you want to delete the draft <strong className="text-ink">"{String(confirmDraft.data.title || '').trim() || 'Untitled draft'}"</strong>? Drafts can't be restored.
+            </p>
+            <div className="mt-5 flex gap-2.5">
+              <button className="btn-ghost flex-1" onClick={() => setConfirmDraft(null)} disabled={deleting} autoFocus>Cancel</button>
+              <button className="btn-danger flex-1" onClick={removeDraft} disabled={deleting}>{deleting ? 'Deleting…' : 'Yes, delete'}</button>
             </div>
           </>
         )}

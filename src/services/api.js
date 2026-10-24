@@ -194,6 +194,19 @@ export const trashApi = {
   list: () => pick(() => http.get('/trash'), () => mock.listTrash())(),
 }
 
+export const draftsApi = {
+  // GET /api/drafts -> [{ id, kind: "listing" | "resource", data, created_at, updated_at }]  newest first
+  list: () => pick(() => http.get('/drafts'), () => mock.listDrafts())(),
+  // GET /api/drafts/:id
+  get: (id) => pick(() => http.get(`/drafts/${id}`), () => mock.getDraft(id))(),
+  // POST /api/drafts  body: { kind, data }  (data = the form fields as typed; no files)
+  create: (kind, data) => pick(() => http.post('/drafts', { kind, data }), () => mock.saveDraft(null, kind, data))(),
+  // PUT /api/drafts/:id  body: { kind, data }
+  update: (id, kind, data) => pick(() => http.put(`/drafts/${id}`, { kind, data }), () => mock.saveDraft(id, kind, data))(),
+  // DELETE /api/drafts/:id
+  remove: (id) => pick(() => http.del(`/drafts/${id}`), () => mock.deleteDraft(id))(),
+}
+
 export const notificationsApi = {
   // GET /api/notifications -> { items, unread }  (access requests + contact taps on your items)
   list: () => pick(() => http.get('/notifications'), () => mock.listNotifications())(),

@@ -37,6 +37,7 @@ from app.models.notification import Notification
 from app.models.otp import OTPCode
 from app.models.report import Report
 from app.models.contact_reveal import ContactReveal
+from app.models.draft import Draft
 from app.models.product_request import ProductRequest
 from app.models.resource import Resource, ResourceAccess
 from app.models.user import User
@@ -55,7 +56,7 @@ sqlite3.register_adapter(list, json.dumps)
 def db_session():
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine, tables=[User.__table__, Listing.__table__, Resource.__table__, ResourceAccess.__table__, Notification.__table__, OTPCode.__table__, Report.__table__,
-        ContactReveal.__table__, ProductRequest.__table__])
+        ContactReveal.__table__, ProductRequest.__table__, Draft.__table__])
     Session = sessionmaker(bind=engine, autocommit=False, autoflush=False)
     session = Session()
     yield session, Session

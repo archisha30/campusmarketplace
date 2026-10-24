@@ -10,6 +10,7 @@ from sqlalchemy import text
 from app.api.routes.admin import router as admin_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.contact import router as contact_router
+from app.api.routes.drafts import router as drafts_router
 from app.api.routes.listings import router as listings_router
 from app.api.routes.notifications import router as notifications_router
 from app.api.routes.reports import router as reports_router
@@ -60,6 +61,7 @@ async def security_headers(request: Request, call_next):
 
 app.include_router(auth_router)
 app.include_router(contact_router)
+app.include_router(drafts_router)
 app.include_router(admin_router)
 app.include_router(listings_router)
 app.include_router(notifications_router)

@@ -4,6 +4,8 @@ import { resourcesApi } from '../services/api.js'
 import { useToast } from '../hooks/useToast.jsx'
 import { trackEvent } from '../lib/analytics.js'
 import { useAuth } from '../hooks/useAuth.jsx'
+import { useDraft } from '../hooks/useDraft.js'
+import { timeAgo } from '../lib/format.js'
 import {
   DESCRIPTION_MAX, MAX_PDF_MB, SUBJECTS, YEARS, canonicalSubject, checkPdfFile, isAllowedDriveUrl,
 } from '../lib/resources.js'
@@ -14,6 +16,16 @@ const BLANK = {
   title: '', subject: '', year: 'any', copy_type: 'soft', offer_type: 'sale', price: '',
   description: '', delivery: 'pdf', drive_url: '', pickup_spot: '', upi_id: '',
 }
+
+// A saved draft back into form state (drafts keep the fields as typed, all strings).
+function fromDraft(data) {
+  const form = { ...BLANK }
+  for (const k of Object.keys(BLANK)) if (data[k] != null) form[k] = String(data[k])
+  if (!YEARS.some((y) => y.value === form.year)) form.year = BLANK.year
+  return form
+}
+
+const isBlank = (form) => Object.keys(BLANK).every((k) => String(form[k]).trim() === String(BLANK[k]))
 
 function Segmented({ legend, value, onChange, options }) {
   return (
@@ -57,6 +69,17 @@ export default function ResourceForm() {
   const [loadingResource, setLoadingResource] = useState(isEdit)
   // Subject is a dropdown of SUBJECTS plus "Other", which reveals a text box.
   const [otherSubject, setOtherSubject] = useState(false)
+  const { draftId, loadingDraft, savingDraft, savedAt, saveDraft, discardDraft } = useDraft('resource', {
+    enabled: !isEdit,
+    onLoad: (data) => {
+      const next = fromDraft(data)
+      setForm(next)
+      setOtherSubject(Boolean(next.subject) && !SUBJECTS.includes(canonicalSubject(next.subject)))
+      setFile(null)
+      setErrors({})
+    },
+    onMissing: (err) => toast(err.message || 'Draft not found'),
+  })
 
   useEffect(() => {
     if (!isEdit) return
@@ -155,6 +178,7 @@ export default function ResourceForm() {
       const saved = isEdit
         ? await resourcesApi.update(id, payload, file, removeFile && !file)
         : await resourcesApi.create(payload, file)
+      if (!isEdit) discardDraft()
       if (!isEdit) trackEvent('post_resource', { subject: payload.subject, copy_type: payload.copy_type, offer_type: payload.offer_type })
       toast(isEdit ? 'Changes saved' : 'Resource posted')
       navigate(`/resources/${saved?.id ?? id}`)
@@ -165,8 +189,23 @@ export default function ResourceForm() {
     }
   }
 
-  if (loadingResource) {
-    return <div className="mx-auto max-w-[1180px] px-6 py-9 text-ink-soft">Loading resource…</div>
+  async function onSaveDraft() {
+    if (isBlank(form)) {
+      toast('Fill in something first, like a title')
+      return
+    }
+    try {
+      await saveDraft(form)
+      toast(file
+        ? "Draft saved. Files aren't kept in drafts, so add the PDF again when you post"
+        : 'Draft saved. Find it under Drafts on your dashboard')
+    } catch (err) {
+      toast(err.message || "Couldn't save the draft")
+    }
+  }
+
+  if (loadingResource || loadingDraft) {
+    return <div className="mx-auto max-w-[1180px] px-6 py-9 text-ink-soft">{loadingDraft ? 'Loading draft…' : 'Loading resource…'}</div>
   }
 
   const fileLabel = {
@@ -188,6 +227,11 @@ export default function ResourceForm() {
       </p>
 
       <div className="max-w-[640px] rounded-slab border border-line bg-paper p-6 md:p-9">
+        {draftId && (
+          <p className="mb-5 rounded-[10px] bg-brand-tint px-3 py-2 text-[13px] text-brand-deep">
+            📝 You're working on a draft{savedAt ? `, last saved ${timeAgo(savedAt)}` : ''}. Files aren't kept in drafts, so add the PDF before you post.
+          </p>
+        )}
         <div className="mb-4">
           <label className="field-label" htmlFor="title">Title</label>
           <input id="title" className="field-input" maxLength={120} value={form.title} onChange={set('title')} placeholder="e.g. DBMS handwritten notes, units 1–5" />
@@ -312,9 +356,14 @@ export default function ResourceForm() {
         </div>
 
         <div className="flex gap-2.5">
-          <button className="btn-accent" onClick={save} disabled={saving}>
+          <button className="btn-accent" onClick={save} disabled={saving || savingDraft}>
             {saving ? (isEdit ? 'Saving…' : 'Posting…') : isEdit ? 'Save changes' : 'Post resource'}
           </button>
+          {!isEdit && (
+            <button className="btn-ghost" onClick={onSaveDraft} disabled={saving || savingDraft}>
+              {savingDraft ? 'Saving…' : draftId ? 'Update draft' : 'Save draft'}
+            </button>
+          )}
           <button className="btn-ghost" onClick={() => navigate(isEdit ? `/resources/${id}` : '/resources')}>Cancel</button>
         </div>
       </div>
