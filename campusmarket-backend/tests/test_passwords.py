@@ -83,19 +83,19 @@ def test_signup_with_password(client, db_session, mailbox):
     ("abc12345", "abc12346", "don't match"),
 ])
 def test_signup_password_rules(client, db_session, mailbox, password, confirm, msg):
-    client.post("/api/auth/signup", json={"email": "riya@campus.edu"})
+    client.post("/api/auth/signup", json={"email": "riya@campus.edu", "account_type": "buyer"})
     res = client.post("/api/auth/signup/verify", json={
-        "email": "riya@campus.edu", "otp": mailbox["riya@campus.edu"], "password": password, "confirm_password": confirm,
+        "email": "riya@campus.edu", "otp": mailbox["riya@campus.edu"], "account_type": "buyer", "password": password, "confirm_password": confirm,
     })
     assert res.status_code == 422 and msg in str(res.json()["detail"])
     assert fetch(db_session, "riya@campus.edu") is None
 
 
 def test_signup_wrong_code_creates_nothing(client, db_session, mailbox):
-    client.post("/api/auth/signup", json={"email": "riya@campus.edu"})
+    client.post("/api/auth/signup", json={"email": "riya@campus.edu", "account_type": "buyer"})
     wrong = "000000" if mailbox["riya@campus.edu"] != "000000" else "111111"
     res = client.post("/api/auth/signup/verify", json={
-        "email": "riya@campus.edu", "otp": wrong, "password": GOOD, "confirm_password": GOOD,
+        "email": "riya@campus.edu", "otp": wrong, "account_type": "buyer", "password": GOOD, "confirm_password": GOOD,
     })
     assert res.status_code == 400 and fetch(db_session, "riya@campus.edu") is None
 
@@ -221,7 +221,7 @@ def test_reset_code_is_single_use_and_purpose_bound(client, users, mailbox):
     body = {"email": "buyer@campus.edu", "otp": mailbox["buyer@campus.edu"], "password": GOOD, "confirm_password": GOOD}
     assert client.post("/api/auth/password/reset", json=body).status_code == 200
     assert client.post("/api/auth/password/reset", json=body).status_code == 400  # used up
-    client.post("/api/auth/signup", json={"email": "riya@campus.edu"})  # a signup code can't reset a password
+    client.post("/api/auth/signup", json={"email": "riya@campus.edu", "account_type": "buyer"})  # a signup code can't reset a password
     res = client.post("/api/auth/password/reset", json={**body, "email": "riya@campus.edu", "otp": mailbox["riya@campus.edu"]})
     assert res.status_code == 400
 
@@ -284,3 +284,16 @@ def test_cookie_writes_need_the_app_header(client, users):
     assert client.get("/api/users/me").status_code == 200  # reads are fine
     client.headers["X-Requested-With"] = "CampusMarket"
     assert client.patch("/api/users/me", json={"name": "Buyer"}).status_code == 200
+
+
+@pytest.mark.parametrize("account_type", [None, ""])
+def test_signup_needs_buyer_or_seller(client, account_type, monkeypatch):
+    monkeypatch.setattr(settings, "ALLOWED_EMAIL_DOMAINS", ["campus.edu"])
+    body = {"email": "riya@campus.edu", "account_type": account_type}
+    res = client.post("/api/auth/signup", json={k: v for k, v in body.items() if v is not None})
+    assert res.status_code == 422
+    assert "Buyer or a Seller" in res.text
+    res = client.post("/api/auth/signup/verify", json={
+        **body, "otp": "123456", "password": "Campus123", "confirm_password": "Campus123",
+    })
+    assert res.status_code == 422

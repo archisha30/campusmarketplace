@@ -6,11 +6,14 @@ import { trackEvent } from '../lib/analytics.js'
 import { PASSWORD_HINT, newPasswordErrors } from '../lib/password.js'
 import PasswordInput from '../components/PasswordInput.jsx'
 import GoogleButton from '../components/GoogleButton.jsx'
+import { revealFirstError } from '../lib/forms.js'
 
 const ACCOUNT_TYPES = [
   { value: 'buyer', emoji: '🛍️', title: 'Buyer', body: 'Browse and buy from students on your campus.' },
   { value: 'seller', emoji: '🏷️', title: 'Seller', body: 'List your own items, and buy too.' },
 ]
+
+const CHOOSE_TYPE = 'Choose whether you’re joining as a Buyer or a Seller.'
 
 function FieldError({ msg }) {
   return msg ? <p className="mt-1.5 text-[13px] text-coral">{msg}</p> : null
@@ -24,7 +27,8 @@ export default function Signup() {
   const { signupVerify } = useAuth()
   const [step, setStep] = useState('details') // 'details' | 'otp'
   const [email, setEmail] = useState(location.state?.email || '')
-  const [accountType, setAccountType] = useState('buyer')
+  // Nothing chosen to start with: the student picks Buyer or Seller themselves.
+  const [accountType, setAccountType] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
@@ -32,11 +36,24 @@ export default function Signup() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
+  // Shown when they try to continue (email or Google) without picking Buyer or Seller.
+  function needAccountType() {
+    setFieldErrors((x) => ({ ...x, account_type: CHOOSE_TYPE }))
+    revealFirstError({ account_type: true }, ['account_type'])
+  }
+
+  function chooseType(value) {
+    setAccountType(value)
+    setFieldErrors((x) => ({ ...x, account_type: undefined }))
+  }
+
   async function sendCode(e) {
     e.preventDefault()
     setError('')
     const problems = newPasswordErrors(password, confirm)
+    if (!accountType) problems.account_type = CHOOSE_TYPE
     setFieldErrors(problems)
+    if (problems.account_type) revealFirstError(problems, ['account_type'])
     if (Object.keys(problems).length) return
     setBusy(true)
     try {
@@ -72,7 +89,7 @@ export default function Signup() {
           <p className="mb-6 text-sm text-ink-soft">Sign up with your college email to get verified.</p>
 
           <form onSubmit={sendCode} noValidate>
-            <fieldset className="mb-5">
+            <fieldset className="mb-5 scroll-mt-24" data-field="account_type">
               <legend className="field-label">I want to join as a</legend>
               <div className="grid grid-cols-2 gap-3">
                 {ACCOUNT_TYPES.map((t) => {
@@ -81,7 +98,7 @@ export default function Signup() {
                     <label
                       key={t.value}
                       className={`cursor-pointer rounded-card border-[1.5px] p-3.5 transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand ${
-                        active ? 'border-brand bg-brand-tint' : 'border-line hover:border-ink-faint'
+                        active ? 'border-brand bg-brand-tint' : fieldErrors.account_type ? 'border-coral bg-coral/5' : 'border-line hover:border-ink-faint'
                       }`}
                     >
                       <input
@@ -89,7 +106,7 @@ export default function Signup() {
                         name="account_type"
                         value={t.value}
                         checked={active}
-                        onChange={() => setAccountType(t.value)}
+                        onChange={() => chooseType(t.value)}
                         className="sr-only"
                       />
                       <span className="mb-1 block text-[22px]" aria-hidden>{t.emoji}</span>
@@ -99,8 +116,9 @@ export default function Signup() {
                   )
                 })}
               </div>
+              {fieldErrors.account_type && <FieldError msg={fieldErrors.account_type} />}
               {/* Friendly hint, not a warning: many students want to buy AND sell. */}
-              <p
+              {accountType && <p
                 key={accountType}
                 aria-live="polite"
                 className="mt-2.5 flex items-start gap-2 rounded-[10px] bg-brand-tint px-3 py-2 text-[12.5px] leading-snug text-brand-deep motion-safe:animate-[fadeIn_.2s_ease-out]"
@@ -111,19 +129,27 @@ export default function Signup() {
                 ) : (
                   <span>Sellers can <strong>buy too</strong>, so you get both.</span>
                 )}
-              </p>
+              </p>}
             </fieldset>
 
             {/* One tap with the college Google account: no typing the email, no code. */}
-            <GoogleButton
-              text="signup_with"
-              accountType={accountType}
-              onSuccess={({ user, created }) => {
-                trackEvent(created ? 'sign_up' : 'login', { method: 'google', account_type: accountType })
-                navigate(user.profile_completed ? '/marketplace' : '/onboarding')
-              }}
-              onError={(err) => setError(err.message)}
-            />
+            <div className="relative">
+              <GoogleButton
+                text="signup_with"
+                accountType={accountType}
+                onSuccess={({ user, created }) => {
+                  trackEvent(created ? 'sign_up' : 'login', { method: 'google', account_type: accountType })
+                  navigate(user.profile_completed ? '/marketplace' : '/onboarding')
+                }}
+                onError={(err) => setError(err.message)}
+              />
+              {/* Google draws its button in a frame we can't intercept, so until Buyer or Seller
+                  is picked a clear layer on top catches the tap and asks for the choice. */}
+              {!accountType && (
+                <button type="button" aria-label="Sign up with Google" className="absolute inset-0 z-10 cursor-pointer rounded-pill"
+                  onClick={needAccountType} />
+              )}
+            </div>
             <div className="my-5 flex items-center gap-3 text-[12.5px] text-ink-faint">
               <span className="h-px flex-1 bg-line" />or sign up with email<span className="h-px flex-1 bg-line" />
             </div>

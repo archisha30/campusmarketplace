@@ -145,3 +145,12 @@ def test_domain_message_lists_every_college(monkeypatch):
     assert auth_routes._allowed_domains_text() == "@a.edu.in or @b.com"
     monkeypatch.setattr(auth_routes.settings, "ALLOWED_EMAIL_DOMAINS", ["a.edu.in"])
     assert auth_routes._allowed_domains_text() == "@a.edu.in"
+
+
+def test_new_google_account_must_choose_buyer_or_seller(client):
+    res = client.post("/api/auth/google", json={"credential": token()})  # e.g. from the Login page
+    assert res.status_code == 400 and "Buyer or Seller" in res.json()["detail"]
+    # An existing account logs in without choosing.
+    google(client, token(), account_type="seller")
+    res = client.post("/api/auth/google", json={"credential": token()})
+    assert res.status_code == 200 and res.json()["user"]["account_type"] == "seller"

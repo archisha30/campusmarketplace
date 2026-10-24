@@ -99,8 +99,8 @@ def sent(monkeypatch):
 
 
 def test_one_code_per_address_per_minute(client, sent):
-    assert client.post("/api/auth/signup", json={"email": "riya@campus.edu"}).status_code == 200
-    again = client.post("/api/auth/signup", json={"email": "riya@campus.edu"})
+    assert client.post("/api/auth/signup", json={"email": "riya@campus.edu", "account_type": "buyer"}).status_code == 200
+    again = client.post("/api/auth/signup", json={"email": "riya@campus.edu", "account_type": "buyer"})
     assert again.status_code == 429 and "wait" in again.json()["detail"]
     assert sent == ["riya@campus.edu"]
 
@@ -115,7 +115,7 @@ def test_forgot_password_limit_is_silent(client, users, sent):
 
 def test_codes_per_ip_limit(client, sent, monkeypatch):
     monkeypatch.setattr(auth_routes._code_ip_limiter, "limit", 3)
-    codes = [client.post("/api/auth/signup", json={"email": f"s{i}@campus.edu"}).status_code for i in range(5)]
+    codes = [client.post("/api/auth/signup", json={"email": f"s{i}@campus.edu", "account_type": "buyer"}).status_code for i in range(5)]
     assert codes == [200, 200, 200, 429, 429]
 
 

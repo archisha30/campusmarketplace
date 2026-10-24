@@ -27,8 +27,9 @@ function loadGoogleScript() {
 }
 
 // "Continue with Google". Google hands us a signed token for the student's college account;
-// the backend verifies it and logs them in (or creates the account with `accountType`).
-export default function GoogleButton({ accountType = 'buyer', text = 'continue_with', onSuccess, onError }) {
+// the backend verifies it and logs them in (or creates the account with `accountType`, which
+// only the Signup page passes; a new student on the Login page is asked to sign up first).
+export default function GoogleButton({ accountType = null, text = 'continue_with', onSuccess, onError }) {
   const { googleSignIn } = useAuth()
   const holder = useRef(null)
   const latest = useRef({})

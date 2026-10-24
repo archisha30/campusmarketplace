@@ -737,7 +737,8 @@ function syncCurrentAccount() {
 }
 
 // Same answer whether or not the account exists (the real API emails existing accounts a notice).
-export function signup(email, accountType = 'buyer') {
+export function signup(email, accountType) {
+  if (!accountType) return Promise.reject(new Error("Choose whether you're joining as a Buyer or a Seller"))
   try {
     checkCampusEmail(email)
   } catch (err) {
@@ -747,6 +748,7 @@ export function signup(email, accountType = 'buyer') {
 }
 
 export function signupVerify({ email, otp, account_type, password, confirm_password }) {
+  if (!account_type) return Promise.reject(new Error("Choose whether you're joining as a Buyer or a Seller"))
   try {
     checkCampusEmail(email)
     if (mockAccounts[email]) throw mockError('Code expired, request a new one', 400)
@@ -759,7 +761,7 @@ export function signupVerify({ email, otp, account_type, password, confirm_passw
     password,
     profile: {
       id: nextId++, name: null, email, campus_id: 1, campus: 'Polaris Campus', course: null, year: null,
-      role: 'student', account_type: account_type || 'buyer', verified: true, is_admin: false, is_owner: false,
+      role: 'student', account_type, verified: true, is_admin: false, is_owner: false,
       profile_completed: false, phone: null,
     },
   }

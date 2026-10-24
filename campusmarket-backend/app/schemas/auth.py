@@ -8,11 +8,21 @@ from app.schemas.listing import CATEGORY_ART
 
 # Buyers can only buy; sellers can buy and sell.
 AccountType = Literal["buyer", "seller"]
+CHOOSE_ACCOUNT_TYPE = "Choose whether you're joining as a Buyer or a Seller"
+
+
+def _chosen(value):
+    # Signup has no default: the student must pick Buyer or Seller themselves.
+    if value in (None, ""):
+        raise ValueError(CHOOSE_ACCOUNT_TYPE)
+    return value
 
 
 class SignupRequest(BaseModel):
     email: EmailStr
-    account_type: AccountType = "buyer"
+    account_type: AccountType = Field(default=None, validate_default=True)
+
+    _account_type = field_validator("account_type", mode="before")(classmethod(lambda cls, v: _chosen(v)))
 
 
 class AccountTypeRequest(BaseModel):
@@ -56,12 +66,15 @@ class SignupVerifyRequest(NewPasswordMixin):
     account created with this password."""
     email: EmailStr
     otp: str
-    account_type: AccountType = "buyer"
+    account_type: AccountType = Field(default=None, validate_default=True)
+
+    _account_type = field_validator("account_type", mode="before")(classmethod(lambda cls, v: _chosen(v)))
 
 
 class GoogleSignInRequest(BaseModel):
     credential: str = Field(min_length=20, max_length=4096)  # Google's ID token
-    account_type: AccountType = "buyer"  # only used when this creates a new account
+    # Only used when this creates a new account, and required then (the Login page sends none).
+    account_type: AccountType | None = None
 
 
 class GoogleLoginResponse(BaseModel):

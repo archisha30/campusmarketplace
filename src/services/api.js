@@ -125,16 +125,17 @@ export const reportsApi = {
 
 export const authApi = {
   // POST /api/auth/signup  body: { email, account_type }  -> emails a code (nothing is created yet)
-  signup: (email, accountType = 'buyer') =>
+  signup: (email, accountType) =>
     pick(() => http.post('/auth/signup', { email, account_type: accountType }), () => mock.signup(email, accountType))(),
   // POST /api/auth/signup/verify  body: { email, otp, account_type, password, confirm_password } -> { user } + cookie
   signupVerify: (payload) =>
     pick(() => http.post('/auth/signup/verify', payload), () => mock.signupVerify(payload))(),
   // POST /api/auth/google  body: { credential, account_type } -> { user, created } + cookie.
-  //   One tap with the student's college Google account; account_type only used for new accounts.
-  googleSignIn: (credential, accountType = 'buyer') =>
+  //   One tap with the student's college Google account; account_type is required to create a
+  //   new account (the Signup page sends it) and ignored for existing ones (the Login page doesn't).
+  googleSignIn: (credential, accountType = null) =>
     pick(
-      () => http.post('/auth/google', { credential, account_type: accountType }),
+      () => http.post('/auth/google', { credential, account_type: accountType || null }),
       () => mock.googleSignIn(credential, accountType)
     )(),
   // POST /api/auth/login  body: { email, password } -> { user } + HttpOnly session cookie.

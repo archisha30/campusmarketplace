@@ -27,8 +27,8 @@ def test_signup_code_does_not_create_the_account(client, db_session, no_real_ema
 
 
 def test_signup_answers_the_same_for_existing_accounts(client, users, no_real_email):
-    new = client.post("/api/auth/signup", json={"email": "fresh@campus.edu"})
-    existing = client.post("/api/auth/signup", json={"email": "buyer@campus.edu"})
+    new = client.post("/api/auth/signup", json={"email": "fresh@campus.edu", "account_type": "buyer"})
+    existing = client.post("/api/auth/signup", json={"email": "buyer@campus.edu", "account_type": "buyer"})
     assert new.status_code == existing.status_code == 200
     assert new.json() == existing.json()
     # The existing account gets a heads-up email, never a code.
@@ -39,7 +39,7 @@ def test_signup_answers_the_same_for_existing_accounts(client, users, no_real_em
 
 def test_signup_verify_for_existing_account_looks_like_a_bad_code(client, users):
     res = client.post("/api/auth/signup/verify", json={
-        "email": "buyer@campus.edu", "otp": "123456", "password": "abc12345", "confirm_password": "abc12345",
+        "email": "buyer@campus.edu", "otp": "123456", "account_type": "buyer", "password": "abc12345", "confirm_password": "abc12345",
     })
     assert res.status_code == 400 and res.json()["detail"] == "Code expired, request a new one"
 
@@ -50,7 +50,7 @@ def test_code_login_endpoints_are_gone(client):
 
 
 def test_domain_check(client):
-    assert client.post("/api/auth/signup", json={"email": "x@gmail.com"}).status_code == 400
+    assert client.post("/api/auth/signup", json={"email": "x@gmail.com", "account_type": "buyer"}).status_code == 400
     assert client.post("/api/auth/password/forgot", json={"email": "x@gmail.com"}).status_code == 400
 
 
@@ -59,4 +59,4 @@ def test_owner_can_use_a_personal_email(client, monkeypatch, no_real_email):
     assert client.post("/api/auth/signup", json={"email": "boss@gmail.com", "account_type": "seller"}).status_code == 200
     assert no_real_email[-1][0] == "boss@gmail.com"
     # Any other personal address is still refused.
-    assert client.post("/api/auth/signup", json={"email": "someone@gmail.com"}).status_code == 400
+    assert client.post("/api/auth/signup", json={"email": "someone@gmail.com", "account_type": "buyer"}).status_code == 400

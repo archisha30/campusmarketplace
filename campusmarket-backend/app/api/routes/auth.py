@@ -251,6 +251,8 @@ def google_sign_in(payload: GoogleSignInRequest, request: Request, response: Res
     user = db.query(User).filter(User.google_sub == claims["sub"]).first() or _find_user(db, email)
     created = user is None
     if created:
+        if not payload.account_type:
+            raise HTTPException(status_code=400, detail="No account for this email yet. Sign up first and choose Buyer or Seller.")
         user = User(email=email, account_type=payload.account_type, name=claims.get("name"))
         db.add(user)
     elif user.google_sub and user.google_sub != claims["sub"]:
