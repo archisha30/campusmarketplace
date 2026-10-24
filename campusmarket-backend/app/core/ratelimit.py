@@ -51,12 +51,14 @@ class SlidingWindowLimiter:
 def client_ips(request: Request, proxy_hops: int) -> tuple[str, str]:
     """(edge, reported) IP addresses for per-IP limits.
 
-    In production a request goes browser -> Vercel -> Render -> us, and each proxy appends the
-    address that connected to it to X-Forwarded-For. Render only appends (it keeps whatever the
-    sender put there), so only the last `proxy_hops` entries are written by Render itself:
+    In production a request goes browser -> Vercel -> Render -> us. Render keeps whatever the
+    sender put in X-Forwarded-For and appends 3 entries of its own (seen in production logs):
+    "<sender's entries...>, <address that connected to Render>, <Cloudflare>, <Render's load
+    balancer>". Only those last `proxy_hops` entries can be trusted:
 
-    - edge: the address that connected to Render. Can't be faked, but for normal traffic it's
-      Vercel's server, shared by every student, so it gets a generous limit.
+    - edge: the address that connected to Render (the first entry Render wrote). Can't be
+      faked, but for normal traffic it's Vercel's server, shared by every student, so it gets
+      a generous limit.
     - reported: the entry just before it, which Vercel sets to the student's address. Someone
       calling Render directly can fake this one, but they're still held to the edge limit.
 

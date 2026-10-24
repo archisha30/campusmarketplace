@@ -37,8 +37,9 @@ class Settings(BaseSettings):
     # so this is high; it only stops someone calling Render directly with faked addresses.
     # See client_ips in core/ratelimit.py.
     LOGIN_EDGE_LIMIT: int = 200
-    # How many X-Forwarded-For entries Render's own proxies append (only those can be trusted).
-    PROXY_HOPS: int = 1
+    # How many X-Forwarded-For entries Render's own proxies append (only those can be trusted):
+    # the connecting address, Cloudflare, and Render's load balancer.
+    PROXY_HOPS: int = 3
 
     # --- Contact details (phone/email) shown one person at a time, per student ---
     CONTACT_REVEALS_PER_HOUR: int = 15

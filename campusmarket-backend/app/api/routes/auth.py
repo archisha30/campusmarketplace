@@ -142,7 +142,10 @@ def _ip_allowed(request: Request, edge_limiter: SlidingWindowLimiter, ip_limiter
     if edge_limiter.allow(edge) and ip_limiter.allow(reported):
         return True
     # Logged so you can check in Render's logs that these are the addresses you expect.
-    logging.getLogger("campusmarket.ratelimit").warning("Rate limit hit on %s: edge=%s reported=%s", request.url.path, edge, reported)
+    logging.getLogger("campusmarket.ratelimit").warning(
+        "Rate limit hit on %s: edge=%s reported=%s forwarded_for=%s",
+        request.url.path, edge, reported, request.headers.get("x-forwarded-for", "-"),
+    )
     return False
 
 

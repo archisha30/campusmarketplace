@@ -13,15 +13,20 @@ def _request(xff: str | None = None, peer: str = "10.0.0.1") -> Request:
     return Request({"type": "http", "headers": headers, "client": (peer, 1234)})
 
 
+# What Render appends after the sender's entries: Cloudflare, then its own load balancer.
+RENDER = "172.71.202.166, 10.196.107.79"
+
+
 @pytest.mark.parametrize("xff, expected", [
     (None, ("10.0.0.1", "10.0.0.1")),  # local development: no proxy
-    ("203.0.113.9", ("203.0.113.9", "203.0.113.9")),  # someone calling Render directly
-    ("1.2.3.4, 203.0.113.9", ("203.0.113.9", "1.2.3.4")),  # via Vercel: student, then Vercel
-    ("6.6.6.6, 1.2.3.4, 203.0.113.9", ("203.0.113.9", "1.2.3.4")),  # extra faked entries are ignored
+    (f"203.0.113.9, {RENDER}", ("203.0.113.9", "203.0.113.9")),  # someone calling Render directly
+    (f"1.2.3.4, 76.76.21.21, {RENDER}", ("76.76.21.21", "1.2.3.4")),  # via Vercel: student, then Vercel
+    (f"6.6.6.6, 1.2.3.4, 76.76.21.21, {RENDER}", ("76.76.21.21", "1.2.3.4")),  # extra faked entries are ignored
+    ("10.196.107.79", ("10.0.0.1", "10.0.0.1")),  # fewer entries than Render adds: use the peer
     (" , ", ("10.0.0.1", "10.0.0.1")),
 ])
 def test_client_ips(xff, expected):
-    assert client_ips(_request(xff), proxy_hops=1) == expected
+    assert client_ips(_request(xff), proxy_hops=3) == expected
 
 
 def _login(client, xff):
@@ -37,7 +42,7 @@ def test_faked_addresses_still_hit_the_edge_limit(client, monkeypatch):
     monkeypatch.setattr(auth_routes._unknown_email_failures, "limit", 100)
     monkeypatch.setattr(auth_routes._login_ip_limiter, "limit", 2)
     monkeypatch.setattr(auth_routes._login_edge_limiter, "limit", 4)
-    codes = [_login(client, f"6.6.6.{i}, 203.0.113.9") for i in range(6)]
+    codes = [_login(client, f"6.6.6.{i}, 203.0.113.9, {RENDER}") for i in range(6)]
     assert codes == [401, 401, 401, 401, 429, 429]
 
 
@@ -45,9 +50,9 @@ def test_students_behind_vercel_have_their_own_limits(client, monkeypatch):
     monkeypatch.setattr(auth_routes._unknown_email_failures, "limit", 100)
     monkeypatch.setattr(auth_routes._login_ip_limiter, "limit", 2)
     vercel = "76.76.21.21"
-    assert [_login(client, f"1.1.1.1, {vercel}") for _ in range(3)] == [401, 401, 429]
+    assert [_login(client, f"1.1.1.1, {vercel}, {RENDER}") for _ in range(3)] == [401, 401, 429]
     # Another student on the same Vercel server isn't affected.
-    assert _login(client, f"2.2.2.2, {vercel}") == 401
+    assert _login(client, f"2.2.2.2, {vercel}, {RENDER}") == 401
 
 
 @pytest.fixture
@@ -64,7 +69,7 @@ def test_codes_from_faked_addresses_hit_the_edge_limit(client, sent, monkeypatch
         client.post(
             "/api/auth/signup",
             json={"email": f"s{i}@campus.edu", "account_type": "buyer"},
-            headers={"X-Forwarded-For": f"6.6.6.{i}, 203.0.113.9"},
+            headers={"X-Forwarded-For": f"6.6.6.{i}, 203.0.113.9, {RENDER}"},
         ).status_code
         for i in range(3)
     ]
