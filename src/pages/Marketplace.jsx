@@ -29,11 +29,14 @@ export default function Marketplace() {
   const [condition, setCondition] = useState('any')
   const [listingType, setListingType] = useState('any')
   const [band, setBand] = useState('any')
-  const [sort, setSort] = useState('newest')
+  // 'auto' = Best match while searching, Newest otherwise.
+  const [sort, setSort] = useState('auto')
   const [scope, setScope] = useState('My Campus')
 
   const debouncedQ = useDebounced(q)
   const price = PRICE_BANDS.find((b) => b.value === band)
+  const searching = debouncedQ.trim() !== ''
+  const apiSort = sort === 'auto' ? (searching ? 'relevance' : 'newest') : sort
   // Any new search/filter/sort starts again from page 1.
   const [page, setPage] = usePage([debouncedQ, category, condition, listingType, band, sort, scope].join('|'))
   const listTop = useRef(null)
@@ -52,12 +55,12 @@ export default function Marketplace() {
         listing_type: listingType,
         min_price: price.min,
         max_price: price.max,
-        sort,
+        sort: apiSort,
         campus_id: scope === 'My Campus' ? user?.campus_id : undefined,
         page,
         page_size: PAGE_SIZE,
       }),
-    [debouncedQ, category, condition, listingType, band, sort, scope, user?.campus_id, page]
+    [debouncedQ, category, condition, listingType, band, apiSort, scope, user?.campus_id, page]
   )
 
   const items = data?.items || []
@@ -83,13 +86,15 @@ export default function Marketplace() {
       </div>
 
       <div className="mb-5 flex flex-wrap gap-2.5">
-        <SearchBar value={q} onChange={setQ} placeholder="Search textbooks, calculators, lab kits…" />
+        <SearchBar value={q} onChange={setQ} placeholder="Search shoes, calculators, lab kits…" />
         <Select
           label="Sort listings"
-          value={sort}
+          value={!searching && sort === 'newest' ? 'auto' : sort}
           onChange={setSort}
           options={[
-            { value: 'newest', label: 'Newest' },
+            ...(searching
+              ? [{ value: 'auto', label: 'Best match' }, { value: 'newest', label: 'Newest' }]
+              : [{ value: 'auto', label: 'Newest' }]),
             { value: 'price_low', label: 'Price: Low → High' },
             { value: 'price_high', label: 'Price: High → Low' },
           ]}

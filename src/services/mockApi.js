@@ -41,11 +41,19 @@ export function getRecommendations({ excludeId, campusId, categoryScores = {}, o
   return delay({ items, personalized: hasAffinity }, 300)
 }
 
+// A light version of the API's search (core/search.py): every word must start a word in the
+// title, description or category, singular or plural. No related words or typo fixes here.
+function mockSearchMatch(l, q) {
+  const text = ` ${[l.title, l.description, l.category].join(' ').toLowerCase().replace(/[^a-z0-9]+/g, ' ')}`
+  const words = q.toLowerCase().match(/[a-z0-9]+/g) || []
+  return words.every((w) => text.includes(` ${w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w}`))
+}
+
 export function listListings(f = {}) {
   // Sold listings stay visible (after the rest), like the real API.
   let out = [...listings]
   if (f.category && f.category !== 'All') out = out.filter((l) => l.category === f.category)
-  if (f.q) out = out.filter((l) => l.title.toLowerCase().includes(f.q.toLowerCase()))
+  if (f.q) out = out.filter((l) => mockSearchMatch(l, f.q))
   if (f.condition && f.condition !== 'any') out = out.filter((l) => l.condition === f.condition)
   if (f.listing_type && f.listing_type !== 'any') out = out.filter((l) => l.listing_type === f.listing_type)
   if (f.campus_id) out = out.filter((l) => l.campus_id === Number(f.campus_id))

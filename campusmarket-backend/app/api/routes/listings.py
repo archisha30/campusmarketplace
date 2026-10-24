@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.core.images import ImageError, check_image, read_upload
 from app.core.pagination import paginate
+from app.core.search import expand, relevance, search_filter, title_vocabulary
 from app.core.security import require_seller, require_verified
 from app.core.storage import delete_public_urls, storage
 from app.core.trash import live, restore_cutoff
@@ -35,6 +36,7 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 
 
 MAX_IMAGES = 3
+VOCABULARY_TITLES = 5000  # recent listing titles whose words count as "known" when fixing typos
 MAX_PHOTO_BYTES = 8 * 1024 * 1024  # the Sell page shrinks photos first, so this is generous
 
 
@@ -149,7 +151,7 @@ def list_listings(
     seller_id: Optional[str] = None,
     campus_id: Optional[int] = None,
     include_sold: bool = True,  # kept for older clients; sold listings are always included now
-    sort: str = "newest",
+    sort: str = "newest",  # newest | price_low | price_high | relevance (best match, with q)
     page: Optional[int] = None,  # 1-based; omit to get everything (seller dashboard/profile)
     page_size: int = 24,
     db: Session = Depends(get_db),
@@ -157,8 +159,12 @@ def list_listings(
 ):
     query = db.query(Listing).filter(live(Listing))
 
-    if q:
-        query = query.filter(Listing.title.ilike(f"%{q}%"))
+    groups = []
+    if q and q.strip():
+        # Title, description and category; plurals, related words and typos (core/search.py).
+        titles = (t for (t,) in db.query(Listing.title).filter(live(Listing)).order_by(Listing.created_at.desc()).limit(VOCABULARY_TITLES))
+        groups = expand(q[:100], title_vocabulary(titles))
+        query = query.filter(*search_filter(Listing, groups))
     if category and category not in ("All", "any"):
         query = query.filter(Listing.category == category)
     if condition and condition not in ("All", "any"):
@@ -187,6 +193,8 @@ def list_listings(
         query = query.order_by(sold_last, Listing.price.asc())
     elif sort == "price_high":
         query = query.order_by(sold_last, Listing.price.desc())
+    elif sort == "relevance" and groups:
+        query = query.order_by(sold_last, relevance(Listing, groups, q).desc(), Listing.created_at.desc())
     else:
         query = query.order_by(sold_last, Listing.created_at.desc())
 
