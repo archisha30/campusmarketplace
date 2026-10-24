@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     LOGIN_LOCK_MINUTES: int = 15
     LOGIN_IP_LIMIT: int = 20  # password attempts per IP address...
     LOGIN_IP_WINDOW_MINUTES: int = 15  # ...within this window
+    # Per address that connects to Render. Normal traffic all arrives from Vercel's servers,
+    # so this is high; it only stops someone calling Render directly with faked addresses.
+    # See client_ips in core/ratelimit.py.
+    LOGIN_EDGE_LIMIT: int = 200
+    # How many X-Forwarded-For entries Render's own proxies append (only those can be trusted).
+    PROXY_HOPS: int = 1
 
     # --- Contact details (phone/email) shown one person at a time, per student ---
     CONTACT_REVEALS_PER_HOUR: int = 15
@@ -42,6 +48,7 @@ class Settings(BaseSettings):
     CODE_EMAIL_COOLDOWN_SECONDS: int = 60  # one code per address per minute
     CODE_IP_LIMIT: int = 10  # codes per IP address...
     CODE_IP_WINDOW_MINUTES: int = 15  # ...within this window
+    CODE_EDGE_LIMIT: int = 100  # codes per address that connects to Render (see LOGIN_EDGE_LIMIT)
 
     # --- Allowed college domains for signup ---
     ALLOWED_EMAIL_DOMAINS: list[str] = ["medhaviskillsuniversity.edu.in"]

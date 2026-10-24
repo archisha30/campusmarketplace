@@ -1,4 +1,3 @@
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
@@ -8,6 +7,7 @@ from app.db.session import get_db
 from app.models.notification import Notification
 from app.models.user import User
 from app.schemas.notification import NotificationListOut, NotificationOut
+from app.core.timeutil import utcnow
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
@@ -71,7 +71,7 @@ def mark_all_read(
 ):
     db.query(Notification).filter(
         Notification.user_id == user.id, Notification.read_at.is_(None)
-    ).update({Notification.read_at: datetime.utcnow()}, synchronize_session=False)
+    ).update({Notification.read_at: utcnow()}, synchronize_session=False)
     db.commit()
 
 

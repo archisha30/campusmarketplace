@@ -21,6 +21,7 @@ from app.models.user import User
 from app.schemas.listing import ListingOut
 from app.schemas.report import AdminReportOut, AdminReportsOut, ReportPersonOut, ReportStatusIn
 from app.schemas.resource import ResourceOut
+from app.core.timeutil import utcnow
 
 # Admin dashboard: the owner(s) in OWNER_EMAILS plus the admins they approve.
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -201,7 +202,7 @@ def suspend_user(
     if target.is_admin and not admin.is_owner:
         raise HTTPException(status_code=403, detail="Only the owner can suspend an admin")
     if not target.suspended_at:
-        target.suspended_at = datetime.utcnow()
+        target.suspended_at = utcnow()
     target.suspension_reason = payload.reason
     target.role = "student"  # loses admin access too
     email = target.email.strip().lower()
@@ -354,5 +355,5 @@ def set_report_status(
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
     report.status = payload.status
-    report.resolved_at = datetime.utcnow() if payload.status == "resolved" else None
+    report.resolved_at = utcnow() if payload.status == "resolved" else None
     db.commit()

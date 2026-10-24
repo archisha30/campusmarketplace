@@ -1,9 +1,9 @@
-from datetime import datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.db.base import Base
+from app.core.timeutil import utcnow
 
 
 class ContactReveal(Base):
@@ -17,4 +17,4 @@ class ContactReveal(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     target_type = Column(String(10), nullable=False)  # listing | resource | request
     target_id = Column(Integer, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)

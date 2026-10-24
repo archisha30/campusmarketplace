@@ -1,10 +1,10 @@
 import uuid
-from datetime import datetime
 
 from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.db.base import Base  # <-- point this at your existing declarative Base
+from app.core.timeutil import utcnow
 
 
 class OTPCode(Base):
@@ -17,4 +17,4 @@ class OTPCode(Base):
     # What the code is for, so a signup code can't be used to reset a password, etc.
     purpose = Column(String(10), nullable=False, default="login", server_default="login")  # signup | login | reset
     attempts = Column(Integer, nullable=False, default=0, server_default="0")  # wrong guesses so far
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)

@@ -45,6 +45,7 @@ from app.models.wishlist import WishlistItem
 from app.models.product_request import ProductRequest
 from app.models.resource import Resource, ResourceAccess
 from app.models.user import User
+from app.core.timeutil import utcnow
 
 
 # users.interests is a Postgres ARRAY; store it as JSON text on SQLite.
@@ -116,8 +117,10 @@ def reset_login_limiter():
     from app.api.routes import auth as auth_routes
 
     auth_routes._login_ip_limiter.reset()
+    auth_routes._login_edge_limiter.reset()
     auth_routes._code_email_limiter.reset()
     auth_routes._code_ip_limiter.reset()
+    auth_routes._code_edge_limiter.reset()
     auth_routes._unknown_email_failures.reset()
     yield
 
@@ -233,14 +236,14 @@ def create(client, auth):
 @pytest.fixture
 def expire_trash(db_session):
     """Pretend 25 hours have passed since everything in the Deleted tab was deleted."""
-    from datetime import datetime, timedelta
+    from datetime import timedelta
 
     from app.models.listing import Listing
     from app.models.resource import Resource
 
     def run():
         db, _ = db_session
-        past = datetime.utcnow() - timedelta(hours=25)
+        past = utcnow() - timedelta(hours=25)
         for model in (Listing, Resource):
             db.query(model).filter(model.deleted_at.isnot(None)).update({model.deleted_at: past})
         db.commit()

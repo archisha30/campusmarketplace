@@ -1,6 +1,6 @@
 import time
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import logging
 
@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.core.email import EmailError, send_account_exists_email, send_otp_email
 from app.core.google import GoogleTokenError, verify_google_token
 from app.core.images import ImageError, check_image, read_upload
-from app.core.ratelimit import SlidingWindowLimiter
+from app.core.ratelimit import SlidingWindowLimiter, client_ips
 from app.core.security import (
     create_access_token,
     generate_otp,
@@ -28,6 +28,7 @@ from app.core.security import (
 )
 from app.api.routes.listings import _delete_upload_files
 from app.core.storage import storage
+from app.core.timeutil import utcnow
 from app.db.session import get_db  # <-- point this at your existing db session dependency
 from app.models.otp import OTPCode
 from app.models.user import User
@@ -78,7 +79,7 @@ def _allowed_domains_text() -> str:
 def _issue_otp(db: Session, email: str, purpose: str) -> str:
     """Invalidate any earlier unused code for this email and store a new one (caller commits)."""
     otp = generate_otp()
-    expires_at = datetime.utcnow() + timedelta(minutes=settings.OTP_EXPIRE_MINUTES)
+    expires_at = utcnow() + timedelta(minutes=settings.OTP_EXPIRE_MINUTES)
     db.query(OTPCode).filter(OTPCode.email == email).delete()
     db.add(OTPCode(email=email, code_hash=hash_otp(otp), expires_at=expires_at, purpose=purpose))
     return otp
@@ -92,7 +93,7 @@ def _consume_otp(db: Session, email: str, otp: str, purpose: str) -> None:
         .order_by(OTPCode.created_at.desc())
         .first()
     )
-    if not record or record.expires_at < datetime.utcnow():
+    if not record or record.expires_at < utcnow():
         raise HTTPException(status_code=400, detail="Code expired, request a new one")
     if record.attempts >= settings.OTP_MAX_ATTEMPTS:
         raise HTTPException(status_code=400, detail="Too many wrong codes. Request a new one.")
@@ -116,9 +117,11 @@ def _find_user(db: Session, email: str) -> User | None:
 INVALID_LOGIN = "Invalid email or password"
 LOCKED_MESSAGE = "Too many failed attempts. Try again in a few minutes, or use Forgot password."
 _login_ip_limiter = SlidingWindowLimiter(settings.LOGIN_IP_LIMIT, settings.LOGIN_IP_WINDOW_MINUTES * 60)
+_login_edge_limiter = SlidingWindowLimiter(settings.LOGIN_EDGE_LIMIT, settings.LOGIN_IP_WINDOW_MINUTES * 60)
 # Stops email bombing and protects the Brevo quota (each code is one email).
 _code_email_limiter = SlidingWindowLimiter(1, settings.CODE_EMAIL_COOLDOWN_SECONDS)
 _code_ip_limiter = SlidingWindowLimiter(settings.CODE_IP_LIMIT, settings.CODE_IP_WINDOW_MINUTES * 60)
+_code_edge_limiter = SlidingWindowLimiter(settings.CODE_EDGE_LIMIT, settings.CODE_IP_WINDOW_MINUTES * 60)
 CODE_TOO_SOON = "Please wait a minute before asking for another code."
 # Unknown emails "lock" after the same number of failures as real accounts, so a lockout
 # message doesn't reveal that an account exists.
@@ -133,12 +136,18 @@ def _send_quietly(send, *args) -> None:
         logging.getLogger("campusmarket.email").error("Background email failed: %s", e)
 
 
-def _client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
+def _ip_allowed(request: Request, edge_limiter: SlidingWindowLimiter, ip_limiter: SlidingWindowLimiter) -> bool:
+    """Per-IP limits, on both the address that reached Render and the student's own (see client_ips)."""
+    edge, reported = client_ips(request, settings.PROXY_HOPS)
+    if edge_limiter.allow(edge) and ip_limiter.allow(reported):
+        return True
+    # Logged so you can check in Render's logs that these are the addresses you expect.
+    logging.getLogger("campusmarket.ratelimit").warning("Rate limit hit on %s: edge=%s reported=%s", request.url.path, edge, reported)
+    return False
 
 
 def _may_send_code(request: Request, email: str) -> bool:
-    return _code_ip_limiter.allow(_client_ip(request)) and _code_email_limiter.allow(email.lower())
+    return _ip_allowed(request, _code_edge_limiter, _code_ip_limiter) and _code_email_limiter.allow(email.lower())
 
 
 # ---------- signup (code proves the college email; account + password created after) ----------
@@ -181,7 +190,7 @@ def signup_verify(payload: SignupVerifyRequest, response: Response, db: Session 
     user.account_type = payload.account_type
     user.verified = True
     user.password_hash = hash_password(payload.password)
-    user.password_changed_at = datetime.utcnow()  # logs out every older session
+    user.password_changed_at = utcnow()  # logs out every older session
     db.commit()
     db.refresh(user)
     return _login_response(user, response)
@@ -195,11 +204,11 @@ def login(payload: PasswordLoginRequest, request: Request, response: Response, d
     """Email + password. Unknown email, wrong password and "no password yet" all get the same
     answer, and lock out the same way, so this can't be used to find out who has an account.
     (Accounts from before passwords use Forgot password to set their first one.)"""
-    if not _login_ip_limiter.allow(_client_ip(request)):
+    if not _ip_allowed(request, _login_edge_limiter, _login_ip_limiter):
         raise HTTPException(status_code=429, detail="Too many login attempts. Wait a few minutes and try again.")
 
     user = _find_user(db, payload.email)
-    now = datetime.utcnow()
+    now = utcnow()
     if not user or not user.verified:
         verify_password(payload.password, None)  # same work as a real check, so timing gives nothing away
         if not _unknown_email_failures.allow(payload.email.lower()):
@@ -233,7 +242,7 @@ def login(payload: PasswordLoginRequest, request: Request, response: Response, d
 def google_sign_in(payload: GoogleSignInRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     """One tap: Google proves the student owns their college email, so no code step. Signs up a
     new account (with the chosen buyer/seller type) or logs into the existing one for that email."""
-    if not _login_ip_limiter.allow(_client_ip(request)):
+    if not _ip_allowed(request, _login_edge_limiter, _login_ip_limiter):
         raise HTTPException(status_code=429, detail="Too many login attempts. Wait a few minutes and try again.")
     try:
         claims = verify_google_token(payload.credential)
@@ -286,7 +295,7 @@ def set_password(
     if user.password_hash:
         raise HTTPException(status_code=409, detail="You already have a password. Use Forgot password to change it.")
     user.password_hash = hash_password(payload.password)
-    user.password_changed_at = datetime.utcnow()  # logs out every older session
+    user.password_changed_at = utcnow()  # logs out every older session
     db.commit()
     db.refresh(user)
     # The change logs out older sessions, including this one, so hand back a fresh one.
@@ -317,7 +326,7 @@ def reset_password(payload: ResetPasswordRequest, response: Response, db: Sessio
     if user.suspended_at:
         raise HTTPException(status_code=403, detail=SUSPENDED_MESSAGE)
     user.password_hash = hash_password(payload.password)
-    user.password_changed_at = datetime.utcnow()  # logs out every older session
+    user.password_changed_at = utcnow()  # logs out every older session
     user.failed_logins = 0
     user.locked_until = None
     db.commit()

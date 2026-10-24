@@ -1,11 +1,11 @@
 import uuid
-from datetime import datetime
 
 from sqlalchemy import Column, Date, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
+from app.core.timeutil import utcnow
 
 
 class Listing(Base):
@@ -35,7 +35,7 @@ class Listing(Base):
     # Single-campus for now — see ALLOWED_EMAIL_DOMAINS in core/config.py.
     campus_id = Column(Integer, nullable=False, default=1)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
     # Set when the owner deletes it; restorable for 24h from the Deleted tab (see core/trash.py).
     deleted_at = Column(DateTime, nullable=True, index=True)
 

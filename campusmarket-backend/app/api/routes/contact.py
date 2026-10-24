@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -16,6 +16,7 @@ from app.models.notification import Notification
 from app.models.product_request import ProductRequest
 from app.models.resource import Resource
 from app.models.user import User
+from app.core.timeutil import utcnow
 
 # Phone numbers and emails are never sent in lists or detail pages. A student gets ONE person's
 # contact here, when they tap Contact Seller (or Reply on a "Looking for" request), and each
@@ -59,7 +60,7 @@ def _load_target(db: Session, payload: ContactIn, user: User):
 
 def _check_limits(db: Session, user: User, payload: ContactIn) -> bool:
     """True if this is a new reveal that should be logged; raises 429 when over the limits."""
-    now = datetime.utcnow()
+    now = utcnow()
     already = (
         db.query(ContactReveal)
         .filter(
@@ -104,7 +105,7 @@ def reveal_contact(
                 Notification.target_type == payload.target_type,
                 Notification.target_id == payload.target_id,
                 Notification.channel == payload.channel,
-                Notification.created_at >= datetime.utcnow() - NOTIFY_DEDUPE,
+                Notification.created_at >= utcnow() - NOTIFY_DEDUPE,
             )
             .first()
         )

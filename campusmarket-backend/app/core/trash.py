@@ -6,13 +6,14 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 
 from app.models.user import User
+from app.core.timeutil import utcnow
 
 RESTORE_HOURS = 24
 
 
 def restore_cutoff() -> datetime:
     """Items deleted before this moment can no longer be restored."""
-    return datetime.utcnow() - timedelta(hours=RESTORE_HOURS)
+    return utcnow() - timedelta(hours=RESTORE_HOURS)
 
 
 def restore_until(deleted_at: datetime) -> datetime:

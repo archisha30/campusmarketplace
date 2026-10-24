@@ -1,10 +1,10 @@
-from datetime import datetime
 
 from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
+from app.core.timeutil import utcnow
 
 
 class Resource(Base):
@@ -37,8 +37,8 @@ class Resource(Base):
     # Public preview JPEG names under uploads/, e.g. [{"name": "...jpg", "kind": "sharp"}]
     preview_pages = Column(JSON, nullable=False, default=list)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
     # Set when the owner deletes it; restorable for 24h from the Deleted tab (see core/trash.py).
     deleted_at = Column(DateTime, nullable=True, index=True)
 
@@ -59,8 +59,8 @@ class ResourceAccess(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     status = Column(String(8), nullable=False, default="pending")  # pending | approved | denied
     note = Column(String(200), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
     decided_at = Column(DateTime, nullable=True)
 
     resource = relationship("Resource", back_populates="access_requests")

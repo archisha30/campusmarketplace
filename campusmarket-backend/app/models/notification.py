@@ -1,10 +1,10 @@
-from datetime import datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
+from app.core.timeutil import utcnow
 
 
 class Notification(Base):
@@ -28,7 +28,7 @@ class Notification(Base):
     target_id = Column(Integer, nullable=False)
     target_title = Column(String(120), nullable=False)  # snapshot, so it still reads well if the item is deleted
     note = Column(String(200), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
     read_at = Column(DateTime, nullable=True)
 
     actor = relationship("User", foreign_keys=[actor_id])

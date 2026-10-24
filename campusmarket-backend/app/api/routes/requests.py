@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
@@ -8,6 +8,7 @@ from app.db.session import get_db
 from app.models.product_request import ProductRequest
 from app.models.user import User
 from app.schemas.product_request import ProductRequestCreate, ProductRequestOut
+from app.core.timeutil import utcnow
 
 router = APIRouter(prefix="/api/requests", tags=["requests"])
 
@@ -24,7 +25,7 @@ def create_request(
 ):
     if not user.verified:
         raise HTTPException(status_code=403, detail="Verify your college email first")
-    since = datetime.utcnow() - timedelta(days=1)
+    since = utcnow() - timedelta(days=1)
     recent = (
         db.query(ProductRequest)
         .filter(ProductRequest.user_id == user.id, ProductRequest.created_at >= since)
@@ -50,7 +51,7 @@ def list_requests(
         db.query(ProductRequest)
         .options(joinedload(ProductRequest.user))
         .filter(
-            ProductRequest.created_at >= datetime.utcnow() - VISIBLE_FOR,
+            ProductRequest.created_at >= utcnow() - VISIBLE_FOR,
             ProductRequest.user_id != user.id,
             ProductRequest.user.has(User.suspended_at.is_(None)),  # suspended students' requests disappear
         )

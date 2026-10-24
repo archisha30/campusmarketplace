@@ -1,6 +1,6 @@
 import json
 import uuid
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 from typing import Optional
 
@@ -16,6 +16,7 @@ from app.core.search import expand, relevance, search_filter, title_vocabulary
 from app.core.security import require_seller, require_verified
 from app.core.storage import delete_public_urls, storage
 from app.core.trash import live, restore_cutoff
+from app.core.timeutil import utcnow
 from app.db.session import get_db
 from app.models.listing import Listing
 from app.models.user import User
@@ -361,7 +362,7 @@ def delete_listing(
 ):
     """Moves the listing to the owner's Deleted tab; it can be restored for 24 hours."""
     listing = _get_owned_listing(listing_id, db, user)
-    listing.deleted_at = datetime.utcnow()
+    listing.deleted_at = utcnow()
     db.commit()
     purge_deleted_listings(db)
 

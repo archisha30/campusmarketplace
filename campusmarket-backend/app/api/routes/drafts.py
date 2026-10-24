@@ -4,7 +4,6 @@ Drafts live on the server so a student can start on their phone and finish on a 
 Publishing goes through the normal create endpoints; the frontend deletes the draft after.
 """
 
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -14,6 +13,7 @@ from app.db.session import get_db
 from app.models.draft import Draft
 from app.models.user import User
 from app.schemas.draft import DraftIn, DraftOut
+from app.core.timeutil import utcnow
 
 router = APIRouter(prefix="/api/drafts", tags=["drafts"])
 
@@ -61,7 +61,7 @@ def create_draft(
             status_code=409,
             detail=f"You can keep up to {MAX_DRAFTS} drafts. Publish or delete one from the Drafts tab first.",
         )
-    now = datetime.utcnow()
+    now = utcnow()
     draft = Draft(user_id=user.id, kind=payload.kind, data=payload.clean_data(), created_at=now, updated_at=now)
     db.add(draft)
     db.commit()
@@ -80,7 +80,7 @@ def update_draft(
     if payload.kind != draft.kind:
         raise HTTPException(status_code=422, detail="A listing draft can't become a resource draft, or the other way round.")
     draft.data = payload.clean_data()
-    draft.updated_at = datetime.utcnow()
+    draft.updated_at = utcnow()
     db.commit()
     db.refresh(draft)
     return DraftOut.from_model(draft)

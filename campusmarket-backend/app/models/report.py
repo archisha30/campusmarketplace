@@ -1,10 +1,10 @@
-from datetime import datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
+from app.core.timeutil import utcnow
 
 
 class Report(Base):
@@ -25,7 +25,7 @@ class Report(Base):
     reason = Column(String(40), nullable=False)
     details = Column(String(300), nullable=True)
     status = Column(String(10), nullable=False, default="open")  # open | resolved
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=utcnow, nullable=False, index=True)
     resolved_at = Column(DateTime, nullable=True)
 
     reporter = relationship("User", foreign_keys=[reporter_id])

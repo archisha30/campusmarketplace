@@ -2,7 +2,6 @@ import json
 import re
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Optional
 
 import pymupdf as fitz
@@ -20,6 +19,7 @@ from app.core.pagination import paginate
 from app.core.pdf_preview import PdfError, open_pdf, read_limited, render_previews
 from app.core.security import get_current_user, require_seller, require_verified
 from app.core.storage import storage
+from app.core.timeutil import utcnow
 from app.db.session import get_db
 from app.models.resource import Resource, ResourceAccess
 from app.models.user import User
@@ -470,7 +470,7 @@ def update_resource(
                     _write_previews(r, doc, written)
                 finally:
                     doc.close()
-        r.updated_at = datetime.utcnow()
+        r.updated_at = utcnow()
         db.commit()
     except Exception:
         db.rollback()
@@ -507,7 +507,7 @@ def delete_resource(
     r = _get_owned_resource(resource_id, db, user, allow_admin=True)
     if r.owner_id == user.id:
         # The owner's own delete goes to their Deleted tab, restorable for 24 hours.
-        r.deleted_at = datetime.utcnow()
+        r.deleted_at = utcnow()
         db.commit()
         purge_deleted_resources(db)
         return
@@ -574,7 +574,7 @@ def request_access(
     if req and req.status == "pending":
         raise HTTPException(status_code=409, detail="Your request is already waiting for the owner")
 
-    now = datetime.utcnow()
+    now = utcnow()
     if req:  # re-request after a denial
         req.status = "pending"
         req.note = payload.note
@@ -636,7 +636,7 @@ def decide_access_request(
     )
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    now = datetime.utcnow()
+    now = utcnow()
     req.status = payload.status
     req.decided_at = now
     req.updated_at = now

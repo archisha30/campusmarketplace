@@ -1,11 +1,11 @@
 import uuid
-from datetime import datetime
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 
 from app.core.config import settings
 from app.db.base import Base  # <-- point this at your existing declarative Base
+from app.core.timeutil import utcnow
 
 
 class User(Base):
@@ -36,7 +36,7 @@ class User(Base):
     # Recent things this user opened, for recommendations: [{"kind": "listing"|"resource",
     # "key": <category or subject>, "ts": <epoch ms>}], newest last, capped at VIEW_HISTORY_MAX.
     view_history = Column(JSON, nullable=False, default=list, server_default="[]")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
     # Set when an admin suspends the account for breaking the rules: every session stops
     # working and their listings/resources disappear. The email also goes on banned_emails.
     suspended_at = Column(DateTime, nullable=True)
