@@ -20,7 +20,7 @@ COOKIE = settings.SESSION_COOKIE_NAME
 def mailbox(monkeypatch):
     """Capture sent codes instead of emailing them: {email: latest code}."""
     box = {}
-    monkeypatch.setattr(auth_routes, "send_otp_email", lambda email, otp: box.__setitem__(email, otp))
+    monkeypatch.setattr(auth_routes, "send_otp_email", lambda email, otp, *purpose: box.__setitem__(email, otp))
     monkeypatch.setattr(auth_routes.settings, "ALLOWED_EMAIL_DOMAINS", ["campus.edu"])
     return box
 

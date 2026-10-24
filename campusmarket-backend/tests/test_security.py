@@ -92,7 +92,7 @@ def test_avatar_must_be_a_real_image(client, auth, tmp_path, monkeypatch):
 @pytest.fixture
 def sent(monkeypatch):
     box = []
-    monkeypatch.setattr(auth_routes, "send_otp_email", lambda email, otp: box.append(email))
+    monkeypatch.setattr(auth_routes, "send_otp_email", lambda email, otp, *purpose: box.append(email))
     monkeypatch.setattr(auth_routes.settings, "ALLOWED_EMAIL_DOMAINS", ["campus.edu"])
     return box
 

@@ -56,6 +56,8 @@ class Settings(BaseSettings):
     # e.g. Render's free plan). SMTP_FROM must be a sender verified in Brevo.
     BREVO_API_KEY: str | None = None
     EMAIL_FROM_NAME: str = "CampusMarket"
+    # Linked from emails (footer, "Log in" button).
+    SITE_URL: str = "https://campusmarketplace-nine.vercel.app"
 
     # --- File storage (listing photos, avatars, resource previews + PDFs) ---
     # "auto" uses Supabase Storage when SUPABASE_SERVICE_ROLE_KEY is set, otherwise local disk.

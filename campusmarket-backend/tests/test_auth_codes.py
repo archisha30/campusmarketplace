@@ -21,7 +21,8 @@ def _user(db_session, email):
 def test_signup_code_does_not_create_the_account(client, db_session, no_real_email):
     res = client.post("/api/auth/signup", json={"email": "new@campus.edu", "account_type": "seller"})
     assert res.status_code == 200
-    assert [(to, subject) for to, subject, _ in no_real_email] == [("new@campus.edu", "Your CampusMarket verification code")]
+    [(to, subject, _)] = no_real_email
+    assert to == "new@campus.edu" and subject.endswith("is your CampusMarket code")
     assert _user(db_session, "new@campus.edu") is None  # created only after the code is verified
 
 

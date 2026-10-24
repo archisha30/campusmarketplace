@@ -287,7 +287,7 @@ def forgot_password(payload: ForgotPasswordRequest, request: Request, background
         otp = _issue_otp(db, payload.email, "reset")
         db.commit()
         # After the response, so answering for a real account takes no longer than for a fake one.
-        background.add_task(_send_quietly, send_otp_email, payload.email, otp)
+        background.add_task(_send_quietly, send_otp_email, payload.email, otp, "reset")
     return {"message": "If an account exists for this email, we've sent it a code."}
 
 

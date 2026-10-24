@@ -101,7 +101,7 @@ def no_real_email(monkeypatch):
     from app.core import email as email_module
 
     outbox = []
-    monkeypatch.setattr(email_module, "_deliver", lambda to, subject, body: outbox.append((to, subject, body)))
+    monkeypatch.setattr(email_module, "_deliver", lambda to, subject, body, html=None: outbox.append((to, subject, body)))
     return outbox
 
 

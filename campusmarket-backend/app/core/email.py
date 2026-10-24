@@ -1,4 +1,4 @@
-"""OTP emails.
+"""OTP and account emails (branded HTML from email_templates, plus a plain-text version).
 
 Two ways to send, picked by settings:
 
@@ -12,11 +12,13 @@ instead of a request that hangs.
 
 import logging
 import smtplib
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import httpx
 
 from app.core.config import settings
+from app.core.email_templates import account_exists_email, otp_email
 
 log = logging.getLogger("campusmarket.email")
 
@@ -28,17 +30,7 @@ class EmailError(RuntimeError):
     """The code couldn't be sent. The message is logged; users get a generic one."""
 
 
-def _content(otp: str) -> tuple[str, str]:
-    subject = "Your CampusMarket verification code"
-    body = (
-        f"Your verification code is {otp}.\n"
-        f"It expires in {settings.OTP_EXPIRE_MINUTES} minutes.\n\n"
-        f"If you didn't request this, you can ignore this email."
-    )
-    return subject, body
-
-
-def _send_brevo(to_email: str, subject: str, body: str) -> None:
+def _send_brevo(to_email: str, subject: str, body: str, html: str | None = None) -> None:
     try:
         res = httpx.post(
             BREVO_URL,
@@ -48,6 +40,7 @@ def _send_brevo(to_email: str, subject: str, body: str) -> None:
                 "to": [{"email": to_email}],
                 "subject": subject,
                 "textContent": body,
+                **({"htmlContent": html} if html else {}),
             },
             timeout=SEND_TIMEOUT,
         )
@@ -57,8 +50,14 @@ def _send_brevo(to_email: str, subject: str, body: str) -> None:
         raise EmailError(f"Brevo rejected the email: {res.status_code} {res.text}")
 
 
-def _send_smtp(to_email: str, subject: str, body: str) -> None:
-    msg = MIMEText(body)
+def _send_smtp(to_email: str, subject: str, body: str, html: str | None = None) -> None:
+    if html:
+        # Mail apps show the last part they can display: HTML where possible, text otherwise.
+        msg = MIMEMultipart("alternative")
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+        msg.attach(MIMEText(html, "html", "utf-8"))
+    else:
+        msg = MIMEText(body, "plain", "utf-8")
     msg["Subject"] = subject
     msg["From"] = settings.SMTP_FROM
     msg["To"] = to_email
@@ -71,25 +70,21 @@ def _send_smtp(to_email: str, subject: str, body: str) -> None:
         raise EmailError(f"SMTP send via {settings.SMTP_HOST}:{settings.SMTP_PORT} failed: {e!r}") from e
 
 
-def _deliver(to_email: str, subject: str, body: str) -> None:
+def _deliver(to_email: str, subject: str, body: str, html: str | None = None) -> None:
     if settings.BREVO_API_KEY:
-        _send_brevo(to_email, subject, body)
+        _send_brevo(to_email, subject, body, html)
     else:
-        _send_smtp(to_email, subject, body)
+        _send_smtp(to_email, subject, body, html)
 
 
-def send_otp_email(to_email: str, otp: str) -> None:
-    _deliver(to_email, *_content(otp))
+def send_otp_email(to_email: str, otp: str, purpose: str = "signup") -> None:
+    """purpose: "signup" (verify a new account) or "reset" (forgot password)."""
+    subject, text, html = otp_email(otp, purpose)
+    _deliver(to_email, subject, text, html)
 
 
 def send_account_exists_email(to_email: str) -> None:
     """Sent instead of a signup code when the email already has an account, so the signup
     form gives the same answer either way (nobody can probe which emails are registered)."""
-    _deliver(
-        to_email,
-        "You already have a CampusMarket account",
-        "Someone (hopefully you) just tried to sign up to CampusMarket with this email.\n\n"
-        "You already have an account, so just log in. If you don't remember your password, "
-        "use \"Forgot password?\" on the login page.\n\n"
-        "If this wasn't you, you can ignore this email.",
-    )
+    subject, text, html = account_exists_email()
+    _deliver(to_email, subject, text, html)

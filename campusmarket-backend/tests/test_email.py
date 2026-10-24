@@ -43,6 +43,8 @@ def test_brevo_used_when_key_set(settings, monkeypatch):
     assert body["sender"]["email"] == "sender@gmail.com"
     assert body["to"] == [{"email": "student@campus.edu"}]
     assert "123456" in body["textContent"]
+    assert "123456" in body["htmlContent"] and "<table" in body["htmlContent"]
+    assert body["subject"] == "123456 is your CampusMarket code"
     assert timeout == email_module.SEND_TIMEOUT
 
 
@@ -93,3 +95,29 @@ def test_signup_email_failure_is_logged_not_leaked(client, monkeypatch, caplog):
     res = client.post("/api/auth/signup", json={"email": "new@campus.edu", "account_type": "buyer"})
     assert res.status_code == 200
     assert "SMTP blocked" in caplog.text
+
+
+def test_reset_email_says_reset_and_signup_says_verify():
+    from app.core.email_templates import otp_email
+
+    _, text, html = otp_email("654321", "reset")
+    assert "Reset your password" in html and "654321" in text
+    _, _, html = otp_email("654321", "signup")
+    assert "Verify your email" in html
+
+
+def test_smtp_sends_html_and_text_parts(settings, monkeypatch):
+    sent = {}
+
+    class FakeSMTP:
+        def __init__(self, *a, **k): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def starttls(self): pass
+        def login(self, *a): pass
+        def sendmail(self, frm, to, raw): sent["raw"] = raw
+
+    monkeypatch.setattr(email_module.smtplib, "SMTP", FakeSMTP)
+    send_otp_email("student@campus.edu", "123456")
+    assert "multipart/alternative" in sent["raw"]
+    assert "text/plain" in sent["raw"] and "text/html" in sent["raw"]
