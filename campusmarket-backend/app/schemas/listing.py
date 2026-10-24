@@ -48,6 +48,13 @@ def _known_category(value: str | None) -> str | None:
     return value
 
 
+def _whole_rupees(value: float | None) -> float | None:
+    # Prices are whole rupees: 450 is fine, 450.5 isn't.
+    if value is not None and not float(value).is_integer():
+        raise ValueError("Use a whole number of rupees, without paise (e.g. 450)")
+    return value
+
+
 def _needs_description(value: str) -> str:
     value = value.strip()
     if not value:
@@ -69,6 +76,7 @@ class ListingCreate(BaseModel):
 
     _category = field_validator("category")(classmethod(lambda cls, v: _known_category(v)))
     _description = field_validator("description")(classmethod(lambda cls, v: _needs_description(v)))
+    _prices = field_validator("price", "mrp")(classmethod(lambda cls, v: _whole_rupees(v)))
 
 
 class ListingUpdate(BaseModel):
@@ -87,6 +95,7 @@ class ListingUpdate(BaseModel):
 
     _category = field_validator("category")(classmethod(lambda cls, v: _known_category(v)))
     _description = field_validator("description")(classmethod(lambda cls, v: v if v is None else _needs_description(v)))
+    _prices = field_validator("price", "mrp")(classmethod(lambda cls, v: _whole_rupees(v)))
 
 
 class StatusUpdate(BaseModel):

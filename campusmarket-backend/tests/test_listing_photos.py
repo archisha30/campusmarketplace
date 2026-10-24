@@ -1,4 +1,4 @@
-"""Every listing needs at least one photo and a description."""
+"""Every listing needs at least one photo and a description, and whole-rupee prices."""
 
 import json
 
@@ -55,3 +55,13 @@ def test_edit_cannot_remove_the_last_photo(client, auth):
 def test_resource_needs_description(create):
     res = create({"description": "  "})
     assert res.status_code == 422
+
+
+def test_prices_are_whole_rupees(client, auth):
+    assert post_listing(client, auth("owner"), {**LAMP, "price": 99.5}).status_code == 422
+    assert post_listing(client, auth("owner"), {**LAMP, "price": 900, "mrp": 1299.99}).status_code == 422
+    res = post_listing(client, auth("owner"), {**LAMP, "price": 900.0, "mrp": 1300})
+    assert res.status_code == 200, res.text
+    lid = res.json()["id"]
+    assert client.put(f"/api/listings/{lid}", json={"price": 850.25}, headers=auth("owner")).status_code == 422
+    assert client.put(f"/api/listings/{lid}", json={"price": 850}, headers=auth("owner")).status_code == 200

@@ -17,6 +17,10 @@ const BLANK = {
   food_temp: '', expiry_date: '', // F&B only
 }
 
+const WHOLE = /^\d+$/ // prices are whole rupees, no paise
+// Typing "." or "," into a price box does nothing.
+const blockDecimals = (e) => { if (['.', ',', 'e', 'E', '-', '+'].includes(e.key)) e.preventDefault() }
+
 // Error keys in the order the fields appear, for scrolling to the first problem.
 const FIELD_ORDER = ['title', 'price', 'mrp', 'food_temp', 'expiry_date', 'description', 'pickup_spot', 'photos']
 
@@ -115,9 +119,12 @@ export default function Sell() {
     if (!form.title.trim()) next.title = 'Give the item a title students would search for.'
     if (form.listing_type !== 'free' && (form.price === '' || Number(form.price) < 0)) {
       next.price = 'Enter a price, or switch the listing type to Free.'
+    } else if (form.listing_type !== 'free' && !WHOLE.test(String(form.price).trim())) {
+      next.price = 'Use a whole number of rupees, without paise (e.g. 450).'
     }
     if (form.listing_type === 'sale' && form.mrp !== '') {
       if (!(Number(form.mrp) > 0)) next.mrp = 'Enter the MRP in rupees, or leave it blank.'
+      else if (!WHOLE.test(String(form.mrp).trim())) next.mrp = 'Use a whole number of rupees, without paise.'
       else if (form.price !== '' && Number(form.mrp) < Number(form.price)) next.mrp = "MRP can't be lower than your selling price."
     }
     if (!form.description.trim()) next.description = isFood
@@ -237,13 +244,13 @@ export default function Sell() {
           <div className={`mb-4 grid gap-3 ${form.listing_type === 'sale' ? 'grid-cols-2' : ''}`}>
             <div data-field="price">
               <label className="field-label" htmlFor="price">{form.listing_type === 'sale' ? 'Selling price (₹)' : 'Price (₹)'}</label>
-              <input id="price" type="number" min="0" className="field-input" aria-invalid={Boolean(errors.price)} value={form.price} onChange={set('price')} placeholder="e.g. 900" />
+              <input id="price" type="number" min="0" step="1" inputMode="numeric" onKeyDown={blockDecimals} className="field-input" aria-invalid={Boolean(errors.price)} value={form.price} onChange={set('price')} placeholder="e.g. 900" />
               {errors.price && <p className="mt-1.5 text-[13px] text-coral">{errors.price}</p>}
             </div>
             {form.listing_type === 'sale' && (
               <div data-field="mrp">
                 <label className="field-label" htmlFor="mrp">MRP (₹) <span className="font-normal text-ink-faint">optional</span></label>
-                <input id="mrp" type="number" min="1" className="field-input" aria-invalid={Boolean(errors.mrp)} value={form.mrp} onChange={set('mrp')} placeholder="What you paid" />
+                <input id="mrp" type="number" min="1" step="1" inputMode="numeric" onKeyDown={blockDecimals} className="field-input" aria-invalid={Boolean(errors.mrp)} value={form.mrp} onChange={set('mrp')} placeholder="What you paid" />
                 {errors.mrp && <p className="mt-1.5 text-[13px] text-coral">{errors.mrp}</p>}
               </div>
             )}
