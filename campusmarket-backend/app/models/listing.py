@@ -20,6 +20,10 @@ class Listing(Base):
     price = Column(Float, nullable=False, default=0)
     # Optional original price (MRP) for sale items; shown slashed next to the selling price.
     mrp = Column(Float, nullable=True)
+    # Rentals only: how long it's lent out for (one of RENT_PERIODS days; price is the rent for
+    # the whole period), and an optional refundable security deposit.
+    rent_days = Column(Integer, nullable=True)
+    security_deposit = Column(Float, nullable=True)
     condition = Column(String, nullable=False)
     description = Column(String, nullable=True)
     pickup_spot = Column(String, nullable=False)

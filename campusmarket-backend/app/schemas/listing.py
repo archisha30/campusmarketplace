@@ -55,6 +55,11 @@ def _whole_rupees(value: float | None) -> float | None:
     return value
 
 
+# How long something can be rented out for, in days (the Sell page's dropdown).
+RENT_PERIODS = (7, 15, 30, 90, 180)
+RentDays = Literal[7, 15, 30, 90, 180]
+
+
 def _needs_description(value: str) -> str:
     value = value.strip()
     if not value:
@@ -67,7 +72,9 @@ class ListingCreate(BaseModel):
     category: str
     listing_type: Literal["sale", "rent", "free"] = "sale"
     price: float = Field(default=0, ge=0, le=MAX_PRICE)
-    mrp: Optional[float] = Field(default=None, gt=0, le=MAX_PRICE)  # sale only
+    mrp: Optional[float] = Field(default=None, gt=0, le=MAX_PRICE)  # sale and rent
+    rent_days: Optional[RentDays] = None  # rent only, required there
+    security_deposit: Optional[float] = Field(default=None, ge=0, le=MAX_PRICE)  # rent only, optional
     condition: str = Field(max_length=30)
     description: str = Field(max_length=2000)
     pickup_spot: str = Field(min_length=1, max_length=120)
@@ -76,7 +83,7 @@ class ListingCreate(BaseModel):
 
     _category = field_validator("category")(classmethod(lambda cls, v: _known_category(v)))
     _description = field_validator("description")(classmethod(lambda cls, v: _needs_description(v)))
-    _prices = field_validator("price", "mrp")(classmethod(lambda cls, v: _whole_rupees(v)))
+    _prices = field_validator("price", "mrp", "security_deposit")(classmethod(lambda cls, v: _whole_rupees(v)))
 
 
 class ListingUpdate(BaseModel):
@@ -85,6 +92,8 @@ class ListingUpdate(BaseModel):
     listing_type: Optional[Literal["sale", "rent", "free"]] = None
     price: Optional[float] = Field(default=None, ge=0, le=MAX_PRICE)
     mrp: Optional[float] = Field(default=None, gt=0, le=MAX_PRICE)
+    rent_days: Optional[RentDays] = None
+    security_deposit: Optional[float] = Field(default=None, ge=0, le=MAX_PRICE)
     condition: Optional[str] = Field(default=None, max_length=30)
     description: Optional[str] = Field(default=None, max_length=2000)
     pickup_spot: Optional[str] = Field(default=None, min_length=1, max_length=120)
@@ -95,7 +104,7 @@ class ListingUpdate(BaseModel):
 
     _category = field_validator("category")(classmethod(lambda cls, v: _known_category(v)))
     _description = field_validator("description")(classmethod(lambda cls, v: v if v is None else _needs_description(v)))
-    _prices = field_validator("price", "mrp")(classmethod(lambda cls, v: _whole_rupees(v)))
+    _prices = field_validator("price", "mrp", "security_deposit")(classmethod(lambda cls, v: _whole_rupees(v)))
 
 
 class StatusUpdate(BaseModel):
@@ -109,6 +118,8 @@ class ListingOut(BaseModel):
     listing_type: str
     price: float
     mrp: float | None = None
+    rent_days: int | None = None
+    security_deposit: float | None = None
     condition: str
     description: str | None = None
     pickup_spot: str
@@ -135,6 +146,8 @@ class ListingOut(BaseModel):
             listing_type=listing.listing_type,
             price=listing.price,
             mrp=listing.mrp,
+            rent_days=listing.rent_days,
+            security_deposit=listing.security_deposit,
             condition=listing.condition,
             description=listing.description,
             pickup_spot=listing.pickup_spot,

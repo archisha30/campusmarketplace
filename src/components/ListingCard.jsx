@@ -53,7 +53,7 @@ export default function ListingCard({ listing, compact = false }) {
 
       <div className={compact ? 'p-3' : 'p-3.5'}>
         <h3 className={`font-semibold leading-snug ${compact ? 'truncate text-[13.5px]' : 'text-[14.5px]'}`}>{title}</h3>
-        <PriceTag price={price} mrp={listing.mrp} size={compact ? 'sm' : 'md'} className="mt-1" />
+        <PriceTag price={price} mrp={listing.mrp} listingType={listing_type} rentDays={listing.rent_days} size={compact ? 'sm' : 'md'} className="mt-1" />
         <p className={`mt-1 text-ink-faint ${compact ? 'truncate text-[12px]' : 'text-[12.5px]'}`}>
           {(listing.food_temp
             ? [foodTempLabel(listing), listing.expiry_date && (isExpired(listing) ? 'Expired' : `Best before ${formatDay(listing.expiry_date)}`)]

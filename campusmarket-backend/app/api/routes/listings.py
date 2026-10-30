@@ -68,11 +68,25 @@ def _apply_food_rules(listing: Listing, check_expiry: bool) -> None:
 
 
 def _apply_mrp_rule(listing: Listing) -> None:
-    """MRP only means something for a sale, and can't be below the selling price."""
-    if listing.listing_type != "sale":
+    """MRP is for sales and rentals (a giveaway has no price to compare). For a sale it can't
+    be below the selling price; a rental's MRP just tells renters what the item is worth."""
+    if listing.listing_type == "free":
         listing.mrp = None
-    elif listing.mrp is not None and listing.mrp < listing.price:
+    elif listing.listing_type == "sale" and listing.mrp is not None and listing.mrp < listing.price:
         raise HTTPException(status_code=422, detail="MRP can't be lower than the selling price")
+
+
+def _apply_rent_rules(listing: Listing) -> None:
+    """A rental needs a period (the price covers all of it); the deposit is optional.
+    Sales and giveaways never carry either."""
+    if listing.listing_type == "rent":
+        if not listing.rent_days:
+            raise HTTPException(status_code=422, detail="Choose how long you're renting it out for")
+        if listing.security_deposit == 0:
+            listing.security_deposit = None
+    else:
+        listing.rent_days = None
+        listing.security_deposit = None
 
 
 async def _listing_body(request: Request) -> tuple[dict, list]:
@@ -294,6 +308,7 @@ def create_listing(
     listing = Listing(**payload.model_dump(), owner_id=user.id)
     _apply_food_rules(listing, check_expiry=True)
     _apply_mrp_rule(listing)
+    _apply_rent_rules(listing)
     listing.images = _store_photos(checked, request)
     db.add(listing)
     _commit_or_drop_photos(db, listing.images)
@@ -331,6 +346,7 @@ def update_listing(
     # Only re-check the expiry date when it's being changed, so an expired item can still be edited.
     _apply_food_rules(listing, check_expiry="expiry_date" in data)
     _apply_mrp_rule(listing)
+    _apply_rent_rules(listing)
     added = _store_photos(checked, request)
     if photos_change:
         listing.images = [*kept, *added]

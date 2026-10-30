@@ -6,7 +6,7 @@ from pydantic import BaseModel, field_validator
 # Form fields a draft may hold, per kind. Anything else is dropped.
 DRAFT_FIELDS = {
     "listing": {
-        "title", "category", "listing_type", "price", "mrp", "condition", "description",
+        "title", "category", "listing_type", "price", "mrp", "rent_days", "security_deposit", "condition", "description",
         "pickup_spot", "food_temp", "expiry_date",
     },
     "resource": {

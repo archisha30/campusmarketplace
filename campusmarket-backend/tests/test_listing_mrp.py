@@ -41,10 +41,14 @@ def test_mrp_below_price_or_not_positive_is_rejected(client, auth, mrp):
     assert post(client, auth, item(mrp=mrp)).status_code == 422
 
 
-@pytest.mark.parametrize("listing_type,price", [("rent", 50), ("free", 0)])
-def test_mrp_dropped_for_rent_and_free(client, auth, listing_type, price):
-    res = post(client, auth, item(listing_type=listing_type, price=price, mrp=1500))
+def test_mrp_dropped_for_giveaways(client, auth):
+    res = post(client, auth, item(listing_type="free", price=0, mrp=1500))
     assert res.status_code == 200 and res.json()["mrp"] is None
+
+
+def test_rentals_keep_mrp_even_above_rent(client, auth):
+    res = post(client, auth, item(listing_type="rent", price=50, mrp=1500, rent_days=30))
+    assert res.status_code == 200 and res.json()["mrp"] == 1500
 
 
 def test_edit_checks_mrp_against_new_price(client, auth):

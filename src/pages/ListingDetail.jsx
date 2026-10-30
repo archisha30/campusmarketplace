@@ -11,6 +11,7 @@ import RecommendedForYou from '../components/RecommendedForYou.jsx'
 import { recordListingView } from '../lib/recommendations.js'
 import PriceTag from '../components/PriceTag.jsx'
 import ShareButton from '../components/ShareButton.jsx'
+import { RENT_PERIODS } from '../data/sample.js'
 import { formatPrice, listedOn, titleCase, foodTempLabel, formatDay, isExpired } from '../lib/format.js'
 import { openContact } from '../lib/contact.js'
 import Avatar from '../components/Avatar.jsx'
@@ -18,6 +19,9 @@ import LinkifiedText from '../components/LinkifiedText.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useWishlist } from '../hooks/useWishlist.jsx'
 import { useToast } from '../hooks/useToast.jsx'
+
+
+const rentPeriodLabel = (days) => RENT_PERIODS.find((p) => p.days === Number(days))?.label.replace(/ \(.*\)$/, '')
 
 export default function ListingDetail() {
   const { id } = useParams()
@@ -120,7 +124,7 @@ export default function ListingDetail() {
               className="ml-auto"
               title={l.title}
               path={`/listing/${l.id}`}
-              message={`Check out "${l.title}" (${l.listing_type === 'free' ? 'free' : formatPrice(l.price)}${l.listing_type === 'rent' ? ' to rent' : ''}) on CampusMarket`}
+              message={`Check out "${l.title}" (${l.listing_type === 'free' ? 'free' : formatPrice(l.price)}${l.listing_type === 'rent' ? ` to rent for ${rentPeriodLabel(l.rent_days) || 'a while'}` : ''}) on CampusMarket`}
             />
             {String(l.seller?.id) !== String(user?.id) && (
               <button
@@ -137,7 +141,7 @@ export default function ListingDetail() {
             )}
           </div>
           <h1 className="text-[28px] font-bold">{l.title}</h1>
-          <PriceTag price={l.price} mrp={l.mrp} size="lg" className="my-3" />
+          <PriceTag price={l.price} mrp={l.mrp} listingType={l.listing_type} rentDays={l.rent_days} size="lg" className="my-3" />
 
           <dl className="my-5 flex flex-wrap gap-5 border-y border-line py-4 text-[13.5px] text-ink-soft">
             {l.food_temp ? (
@@ -155,6 +159,15 @@ export default function ListingDetail() {
             )}
             <div><dt className="inline font-semibold text-ink">Category: </dt><dd className="inline">{l.category}</dd></div>
             <div><dt className="inline font-semibold text-ink">Listing type: </dt><dd className="inline">{titleCase(l.listing_type)}</dd></div>
+            {l.listing_type === 'rent' && l.rent_days && (
+              <div><dt className="inline font-semibold text-ink">Rented for: </dt><dd className="inline">{rentPeriodLabel(l.rent_days)}</dd></div>
+            )}
+            {l.listing_type === 'rent' && (
+              <div>
+                <dt className="inline font-semibold text-ink">Security deposit: </dt>
+                <dd className="inline">{l.security_deposit ? `${formatPrice(l.security_deposit)} (refunded when you return it)` : 'None'}</dd>
+              </div>
+            )}
           </dl>
 
           <p className="my-4 text-[15px] leading-relaxed text-ink-soft whitespace-pre-line"><LinkifiedText text={l.description} /></p>

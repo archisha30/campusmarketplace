@@ -16,6 +16,15 @@ export const COLLEGES = ['Polaris School Of Technology']
 export const SEMESTERS = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6', 'Sem 7', 'Sem 8']
 
 export const CONDITIONS = ['New', 'Like New', 'Good', 'Fair']
+// How long something can be rented out for. Mirrors RENT_PERIODS in the API's schemas/listing.py.
+export const RENT_PERIODS = [
+  { days: 7, label: '1 week', short: 'week' },
+  { days: 15, label: '15 days', short: '15 days' },
+  { days: 30, label: '1 month', short: 'month' },
+  { days: 90, label: '3 months', short: '3 months' },
+  { days: 180, label: '6 months (a semester)', short: '6 months' },
+]
+
 export const LISTING_TYPES = [
   { value: 'sale', label: 'Sell' },
   { value: 'rent', label: 'Rent' },
@@ -61,7 +70,7 @@ export const listings = [
     condition: 'Like New', status: 'available', pickup_spot: 'Hostel Gate B', campus_id: 2,
     seller: seller(3, 'Dev S.', 2), art: { emoji: '💡', bg: '#FFECEA' }, created_at: '2026-09-09',
     description: 'USB-powered LED desk lamp with three brightness modes. Moving out, barely used.' },
-  { id: 4, title: 'Arduino Starter Kit', category: 'Project Kits', listing_type: 'rent', price: 150,
+  { id: 4, title: 'Arduino Starter Kit', category: 'Project Kits', listing_type: 'rent', price: 150, rent_days: 15, security_deposit: 500,
     condition: 'Good', status: 'available', pickup_spot: 'CS Block Lobby', campus_id: 1,
     seller: seller(4, 'Wren T.', 1), art: { emoji: '🔌', bg: '#EAFBF0' }, created_at: '2026-09-12',
     description: 'Breadboard, sensors, jumper wires, the lot. Weekly rent during project season.' },
@@ -77,7 +86,7 @@ export const listings = [
     condition: 'Like New', status: 'available', pickup_spot: 'Sports Complex', campus_id: 2,
     seller: seller(7, 'Meher L.', 2), art: { emoji: '🏸', bg: '#FFF0F5' }, created_at: '2026-09-06',
     description: 'Pair of rackets plus three shuttlecocks. Played with twice.' },
-  { id: 8, title: 'Farewell Blazer (M)', category: 'Clothing & Event Wear', listing_type: 'rent', price: 200,
+  { id: 8, title: 'Farewell Blazer (M)', category: 'Clothing & Event Wear', listing_type: 'rent', price: 200, rent_days: 7,
     condition: 'Good', status: 'sold', pickup_spot: 'Girls Hostel Lobby', campus_id: 1,
     seller: seller(1, 'Aashi K.', 1), art: { emoji: '🧥', bg: '#FFF6E0' }, created_at: '2026-09-05',
     description: 'Navy blazer, size M. Good for farewell or a first interview.' },

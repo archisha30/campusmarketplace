@@ -4,7 +4,7 @@ import { listingsApi } from '../services/api.js'
 import { useToast } from '../hooks/useToast.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useDraft } from '../hooks/useDraft.js'
-import { CATEGORIES, CONDITIONS, FOOD_CATEGORY, FOOD_TEMPS, LISTING_TYPES } from '../data/sample.js'
+import { CATEGORIES, CONDITIONS, FOOD_CATEGORY, FOOD_TEMPS, LISTING_TYPES, RENT_PERIODS } from '../data/sample.js'
 import { timeAgo, todayISO } from '../lib/format.js'
 import { trackEvent } from '../lib/analytics.js'
 import { shrinkToJpeg } from '../lib/images.js'
@@ -14,15 +14,17 @@ import { revealFirstError } from '../lib/forms.js'
 const BLANK = {
   title: '', category: CATEGORIES[0], listing_type: 'sale',
   price: '', mrp: '', condition: 'Good', description: '', pickup_spot: '',
+  rent_days: '', security_deposit: '', // rentals only
   food_temp: '', expiry_date: '', // F&B only
 }
 
 const WHOLE = /^\d+$/ // prices are whole rupees, no paise
-// Typing "." or "," into a price box does nothing.
-const blockDecimals = (e) => { if (['.', ',', 'e', 'E', '-', '+'].includes(e.key)) e.preventDefault() }
+// Rupee boxes take digits only: a text box (number boxes still allow "e", "." and "-")
+// with the number keypad on phones; anything else typed or pasted is dropped.
+const RUPEES = { type: 'text', inputMode: 'numeric', pattern: '[0-9]*', autoComplete: 'off', maxLength: 7 }
 
 // Error keys in the order the fields appear, for scrolling to the first problem.
-const FIELD_ORDER = ['title', 'price', 'mrp', 'food_temp', 'expiry_date', 'description', 'pickup_spot', 'photos']
+const FIELD_ORDER = ['title', 'price', 'rent_days', 'mrp', 'security_deposit', 'food_temp', 'expiry_date', 'description', 'pickup_spot', 'photos']
 
 // A saved draft back into form state (drafts keep the fields as typed, all strings).
 function fromDraft(data) {
@@ -72,6 +74,8 @@ export default function Sell() {
           listing_type: l.listing_type || 'sale',
           price: l.listing_type === 'free' ? '' : String(l.price ?? ''),
           mrp: l.mrp ? String(l.mrp) : '',
+          rent_days: l.rent_days ? String(l.rent_days) : '',
+          security_deposit: l.security_deposit ? String(l.security_deposit) : '',
           condition: l.condition || 'Good',
           description: l.description || '',
           pickup_spot: l.pickup_spot || '',
@@ -100,7 +104,10 @@ export default function Sell() {
     setForm((f) => ({ ...f, [k]: e.target.value }))
     if (errors[k]) setErrors((x) => ({ ...x, [k]: undefined })) // fixed it: drop the red
   }
+  // Rupee boxes: keep the digits only, whatever was typed or pasted.
+  const setDigits = (k) => (e) => set(k)({ target: { value: e.target.value.replace(/\D/g, '') } })
   const isFood = form.category === FOOD_CATEGORY
+  const isRent = form.listing_type === 'rent'
   // Food can be sold or given away, not rented.
   const listingTypes = isFood ? LISTING_TYPES.filter((t) => t.value !== 'rent') : LISTING_TYPES
 
@@ -122,10 +129,14 @@ export default function Sell() {
     } else if (form.listing_type !== 'free' && !WHOLE.test(String(form.price).trim())) {
       next.price = 'Use a whole number of rupees, without paise (e.g. 450).'
     }
-    if (form.listing_type === 'sale' && form.mrp !== '') {
+    if (isRent && !form.rent_days) next.rent_days = "Choose how long you're renting it out for."
+    if (isRent && form.security_deposit !== '' && !WHOLE.test(String(form.security_deposit).trim())) {
+      next.security_deposit = 'Use a whole number of rupees, or leave it blank.'
+    }
+    if (form.listing_type !== 'free' && form.mrp !== '') {
       if (!(Number(form.mrp) > 0)) next.mrp = 'Enter the MRP in rupees, or leave it blank.'
       else if (!WHOLE.test(String(form.mrp).trim())) next.mrp = 'Use a whole number of rupees, without paise.'
-      else if (form.price !== '' && Number(form.mrp) < Number(form.price)) next.mrp = "MRP can't be lower than your selling price."
+      else if (!isRent && form.price !== '' && Number(form.mrp) < Number(form.price)) next.mrp = "MRP can't be lower than your selling price."
     }
     if (!form.description.trim()) next.description = isFood
       ? 'Describe it: what it is, how many portions, any allergens.'
@@ -150,7 +161,9 @@ export default function Sell() {
       const payload = {
         ...form,
         price: form.listing_type === 'free' ? 0 : Number(form.price),
-        mrp: form.listing_type === 'sale' && form.mrp !== '' ? Number(form.mrp) : null,
+        mrp: form.listing_type !== 'free' && form.mrp !== '' ? Number(form.mrp) : null,
+        rent_days: isRent ? Number(form.rent_days) : null,
+        security_deposit: isRent && Number(form.security_deposit) > 0 ? Number(form.security_deposit) : null,
         // F&B has no wear-and-tear condition; the server stores "Fresh".
         condition: isFood ? 'Fresh' : form.condition,
         food_temp: isFood ? form.food_temp : null,
@@ -241,23 +254,39 @@ export default function Sell() {
         </fieldset>
 
         {form.listing_type !== 'free' && (
-          <div className={`mb-4 grid gap-3 ${form.listing_type === 'sale' ? 'grid-cols-2' : ''}`}>
+          <div className="mb-4 grid grid-cols-2 gap-3">
             <div data-field="price">
-              <label className="field-label" htmlFor="price">{form.listing_type === 'sale' ? 'Selling price (₹)' : 'Price (₹)'}</label>
-              <input id="price" type="number" min="0" step="1" inputMode="numeric" onKeyDown={blockDecimals} className="field-input" aria-invalid={Boolean(errors.price)} value={form.price} onChange={set('price')} placeholder="e.g. 900" />
+              <label className="field-label" htmlFor="price">{isRent ? 'Rent (₹)' : 'Selling price (₹)'}</label>
+              <input id="price" {...RUPEES} className="field-input" aria-invalid={Boolean(errors.price)} value={form.price} onChange={setDigits('price')} placeholder={isRent ? 'e.g. 300' : 'e.g. 900'} />
               {errors.price && <p className="mt-1.5 text-[13px] text-coral">{errors.price}</p>}
             </div>
-            {form.listing_type === 'sale' && (
-              <div data-field="mrp">
-                <label className="field-label" htmlFor="mrp">MRP (₹) <span className="font-normal text-ink-faint">optional</span></label>
-                <input id="mrp" type="number" min="1" step="1" inputMode="numeric" onKeyDown={blockDecimals} className="field-input" aria-invalid={Boolean(errors.mrp)} value={form.mrp} onChange={set('mrp')} placeholder="What you paid" />
-                {errors.mrp && <p className="mt-1.5 text-[13px] text-coral">{errors.mrp}</p>}
+            {isRent && (
+              <div data-field="rent_days">
+                <label className="field-label" htmlFor="rent_days">Rented for</label>
+                <select id="rent_days" className="field-input" aria-invalid={Boolean(errors.rent_days)} value={form.rent_days} onChange={set('rent_days')}>
+                  <option value="" disabled>Select</option>
+                  {RENT_PERIODS.map((p) => <option key={p.days} value={p.days}>{p.label}</option>)}
+                </select>
+                {errors.rent_days && <p className="mt-1.5 text-[13px] text-coral">{errors.rent_days}</p>}
               </div>
             )}
-            {form.listing_type === 'sale' && Number(form.mrp) > Number(form.price) && Number(form.price) > 0 && (
-              <div className="col-span-2 flex items-baseline gap-2 rounded-[10px] bg-brand-tint px-3 py-2 text-[12.5px] text-brand-deep">
-                <span>Buyers will see:</span>
-                <PriceTag price={Number(form.price)} mrp={Number(form.mrp)} size="sm" />
+            <div data-field="mrp">
+              <label className="field-label" htmlFor="mrp">MRP (₹) <span className="font-normal text-ink-faint">optional</span></label>
+              <input id="mrp" {...RUPEES} className="field-input" aria-invalid={Boolean(errors.mrp)} value={form.mrp} onChange={setDigits('mrp')} placeholder="What you paid" />
+              {errors.mrp && <p className="mt-1.5 text-[13px] text-coral">{errors.mrp}</p>}
+            </div>
+            {isRent && (
+              <div data-field="security_deposit">
+                <label className="field-label" htmlFor="deposit">Security deposit (₹)</label>
+                <input id="deposit" {...RUPEES} className="field-input" aria-invalid={Boolean(errors.security_deposit)} value={form.security_deposit} onChange={setDigits('security_deposit')} placeholder="Optional" />
+                {errors.security_deposit && <p className="mt-1.5 text-[13px] text-coral">{errors.security_deposit}</p>}
+              </div>
+            )}
+            {Number(form.price) > 0 && (isRent ? form.rent_days : Number(form.mrp) > Number(form.price)) && (
+              <div className="col-span-2 flex flex-wrap items-baseline gap-x-2 rounded-[10px] bg-brand-tint px-3 py-2 text-[12.5px] text-brand-deep">
+                <span>{isRent ? 'Renters will see:' : 'Buyers will see:'}</span>
+                <PriceTag price={Number(form.price)} mrp={Number(form.mrp) || null} listingType={form.listing_type}
+                  rentDays={Number(form.rent_days) || null} deposit={Number(form.security_deposit) || null} size="sm" />
               </div>
             )}
           </div>
