@@ -11,6 +11,7 @@ import { Stat, Table, Td, formatDate } from './AdminLayout.jsx'
 import Pagination from '../../components/Pagination.jsx'
 import { usePage } from '../../hooks/usePage.js'
 import RemoveItemModal from '../../components/RemoveItemModal.jsx'
+import { useReportSummary } from '../../hooks/useReportSummary.jsx'
 
 const VIEWS = ['Listings', 'Resources']
 
@@ -36,6 +37,7 @@ function Owner({ person }) {
 
 export default function AdminContent() {
   const toast = useToast()
+  const { refresh: refreshSummary } = useReportSummary()
   const [view, setView] = useState('Listings')
   const [q, setQ] = useState('')
   const debouncedQ = useDebounced(q)
@@ -60,6 +62,7 @@ export default function AdminContent() {
     toast(`${titleCase(kind)} removed. The seller has been told why`)
     setRemoving(null)
     current.refetch()
+    refreshSummary() // its open reports were resolved
   }
 
   return (
@@ -109,7 +112,7 @@ export default function AdminContent() {
               </Td>
               <Td><Owner person={l.seller} /></Td>
               <Td className="whitespace-nowrap">{formatPrice(l.price)}</Td>
-              <Td><StatusBadge status={l.status} /></Td>
+              <Td><StatusBadge status={l.status} />{l.held && <span className="badge ml-1 bg-coral/12 text-coral">Held for review</span>}</Td>
               <Td className="whitespace-nowrap text-ink-soft">{formatDate(l.created_at)}</Td>
               <Td><button className="btn-danger btn-sm" onClick={() => setRemoving({ kind: 'listing', id: l.id, title: l.title })}>Remove</button></Td>
             </tr>
@@ -136,7 +139,7 @@ export default function AdminContent() {
               <Td><Owner person={r.owner} /></Td>
               <Td className="whitespace-nowrap">{r.offer_type === 'free' ? 'Free' : formatPrice(r.price)}</Td>
               <Td className="whitespace-nowrap">{r.copy_type === 'hard' ? 'Hard copy' : `Soft · ${deliveryLabel(r)}`}</Td>
-              <Td><StatusBadge status={r.status} /></Td>
+              <Td><StatusBadge status={r.status} />{r.held && <span className="badge ml-1 bg-coral/12 text-coral">Held for review</span>}</Td>
               <Td className="whitespace-nowrap text-ink-soft">{formatDate(r.created_at)}</Td>
               <Td><button className="btn-danger btn-sm" onClick={() => setRemoving({ kind: 'resource', id: r.id, title: r.title })}>Remove</button></Td>
             </tr>

@@ -49,6 +49,7 @@ class AdminReportOut(BaseModel):
     target_id: int
     target_title: str
     target_exists: bool
+    target_held: bool = False  # hidden for review after a pile-up of reports (core/moderation.py)
     reason: str
     details: str | None = None
     status: str

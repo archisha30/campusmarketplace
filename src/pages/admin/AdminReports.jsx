@@ -9,6 +9,7 @@ import { Stat, Table, Td, formatDate } from './AdminLayout.jsx'
 import Pagination from '../../components/Pagination.jsx'
 import { usePage } from '../../hooks/usePage.js'
 import RemoveItemModal from '../../components/RemoveItemModal.jsx'
+import { useReportSummary } from '../../hooks/useReportSummary.jsx'
 
 const FILTERS = [
   { value: 'open', label: 'Open' },
@@ -19,6 +20,7 @@ const FILTERS = [
 // Every report, with who reported it (sellers only ever see "A student").
 export default function AdminReports() {
   const toast = useToast()
+  const { refresh: refreshSummary } = useReportSummary()
   const [status, setStatus] = useState('open')
   const [page, setPage] = usePage(status) // switching Open/Resolved/All starts from page 1
   const { data, loading, error, refetch } = useApi(() => adminApi.reports(status || undefined, page), [status, page])
@@ -36,6 +38,7 @@ export default function AdminReports() {
       // Clearing the last open report on an item tells the seller it was reviewed and stays up.
       toast(next === 'resolved' ? (r.reports_on_item > 1 ? 'Marked resolved' : 'Resolved. The seller is told it stays up') : 'Reopened')
       refetch()
+      refreshSummary()
     } catch (err) {
       toast(err.message)
     }
@@ -48,6 +51,7 @@ export default function AdminReports() {
     toast(`${titleCase(r.target_type)} removed. The seller has been told why`)
     setRemoving(null)
     refetch()
+    refreshSummary()
   }
 
   return (
@@ -87,6 +91,7 @@ export default function AdminReports() {
                   <span className="font-semibold text-ink-faint line-through">{r.target_title}</span>
                 )}
                 <p className="text-[12.5px] text-ink-soft">
+                  {r.target_held && <span className="badge mr-1.5 bg-coral/12 text-coral">Held for review</span>}
                   {titleCase(r.target_type)}{!r.target_exists && ' · deleted'}
                   {r.reports_on_item > 1 && <span className="ml-1 font-semibold text-coral">· reported {r.reports_on_item}×</span>}
                 </p>

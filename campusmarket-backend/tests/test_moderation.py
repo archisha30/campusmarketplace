@@ -42,7 +42,8 @@ def test_repeat_reports_update_one_notification(client, auth, listing_id):
     # Once read, a later report starts a new one.
     client.post("/api/notifications/read-all", headers=auth("owner"))
     report(client, auth, listing_id, who="admin", reason="Spam")
-    assert [x["count"] for x in notes(client, auth)] == [3, 2]
+    # (The third report also holds the item, which is its own notification: test_held_items.py.)
+    assert [x["count"] for x in notes(client, auth) if x["type"] == "report"] == [3, 2]
 
 
 def test_clearing_the_last_report_tells_the_seller(client, auth, listing_id):

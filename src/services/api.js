@@ -275,6 +275,8 @@ export const adminApi = {
     pick(() => http.post(`/admin/resources/${id}/remove`, { reason }), () => mock.adminRemove('resource', id, reason))(),
   // GET /api/admin/resources?q=  -> every resource, including closed, with owner contact
   resources: (q, page = 1) => pick(() => http.get('/admin/resources', { q, page }), () => mock.adminResources(q, page))(),
+  // GET /api/admin/reports/summary -> { open, serious_open, held }  (the Admin badge and pop-up)
+  reportSummary: () => pick(() => http.get('/admin/reports/summary'), () => mock.adminReportSummary())(),
   // GET /api/admin/reports?status=open|resolved  -> { items, open }  (includes who reported)
   reports: (status, page = 1) => pick(() => http.get('/admin/reports', { status, page }), () => mock.adminReports(status, page))(),
   // PATCH /api/admin/reports/:id  body: { status: "open" | "resolved" }

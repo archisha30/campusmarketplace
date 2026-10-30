@@ -9,9 +9,10 @@ sign up, and every handover happens on campus with cash or UPI.
 | **Marketplace** | Listings for sale, rent or free, each with 1–3 photos, a condition, a pickup spot and a status (available / reserved / sold). Recommendations are based on the categories you browse. |
 | **Resource Hub** | Study material for sale or free, as a soft copy (a PDF we host, or a drive link) or a hard copy (picked up on campus). Previews are rendered on the server, and paid access is granted by the seller. |
 | **Looking For** | Students post what they need ("Casio fx-991CW for tomorrow"). Sellers see these requests in their dashboard. |
-| **Notifications** | The seller dashboard and navbar bell show access requests on your resources and students tapping WhatsApp / Email on your items, plus Looking For posts. |
+| **Notifications** | Every student has the navbar bell. Buyers hear when a seller approves or declines their access request (at `/notifications`). Sellers also get access requests, WhatsApp / Email taps and reports on their items, plus Looking For posts, on their dashboard. |
+| **Moderation** | Students report items; admins are alerted in-app only (a red count on the Admin link and a pop-up on `/admin`; reports never send email). Three open reports from different students hide an item ("Held for review") until an admin resolves the reports or removes it. |
 | **Accounts** | Sign up with a college email and password (a one-time emailed code verifies the email), log in with email + password, forgot password, onboarding, interests, profile with avatar and phone, and buyer → seller upgrade. |
-| **Wishlist** | Saved listings, stored in the browser (per user). |
+| **Wishlist** | Saved listings, stored on the server so they're the same on every device. |
 
 ## Tech stack
 
@@ -177,19 +178,20 @@ All paths are under `/api`. In this table, *seller* means `account_type = "selle
 | GET | `/resources/facets` | – | `{ subjects }` |
 | GET | `/resources/{id}` | optional | Includes `access`. Sensitive fields depend on the viewer |
 | POST / PUT | `/resources`, `/resources/{id}` | seller (owner) | Multipart form plus optional `file`; a bad PDF saves nothing |
-| DELETE | `/resources/{id}` | owner or admin | Also deletes its files |
+| DELETE | `/resources/{id}` | owner | Moves it to the Deleted tab for 24 hours (admins use `/admin/resources/{id}/remove`) |
 | PATCH | `/resources/{id}/status` | seller (owner) | available / closed |
 | POST | `/resources/{id}/access` | verified user | `{ note }`: request access to a paid resource |
 | GET | `/resources/{id}/access` | owner or admin | List requests |
-| PATCH | `/resources/{id}/access/{request_id}` | owner or admin | `{ status: "approved" \| "denied" }` |
+| PATCH | `/resources/{id}/access/{request_id}` | owner or admin | `{ status: "approved" \| "denied" }`; the requester gets a notification |
 | GET | `/resources/{id}/file` | full access | Streams the PDF |
-| POST | `/reports` | verified user | `{ listing_id \| resource_id, reason, details? }`: one per person per item; the seller is notified anonymously |
-| GET / PATCH | `/admin/reports`, `/admin/reports/{id}` | admin | All reports with reporter and seller; `{ status: "open" \| "resolved" }` |
+| POST | `/reports` | verified user | `{ listing_id \| resource_id, reason, details? }`: one per person per item, 10 a day. The seller is notified anonymously ("Scam / suspicious" and "Prohibited item" wait for an admin). The 3rd open report from different students holds the item: hidden from lists, search, recommendations, wishlists and contact, still visible to its owner and admins. No email is sent |
+| GET | `/admin/reports/summary` | admin | `{ open, serious_open, held }`: cheap counts behind the Admin badge and the `/admin` pop-up (polled every 60 s) |
+| GET / PATCH | `/admin/reports`, `/admin/reports/{id}` | admin | All reports with reporter and seller, held items first (`target_held`); `{ status: "open" \| "resolved" }`. Resolving the last open report on an item lifts its hold and tells the seller it stays up |
 | GET | `/admin/users` | admin | Every user with listing/resource counts; `q` searches name/email |
 | PATCH | `/admin/users/{id}/admin` | owner | `{ is_admin }`: approve or remove an admin |
 | GET | `/admin/listings`, `/admin/resources` | admin | Everything, including sold/closed; `q` searches |
-| DELETE | `/admin/listings/{id}` | admin | Moderation (resources: `DELETE /resources/{id}`, which admins may call) |
-| GET | `/notifications` | user | Your notifications → `{ items, unread }`: access requests on your resources, and WhatsApp / Email taps on your items |
+| POST | `/admin/listings/{id}/remove`, `/admin/resources/{id}/remove` | admin | `{ reason }` (required): moderation removal; the seller is told why |
+| GET | `/notifications` | user | Your notifications → `{ items, unread }`: access requests and answers to them (`access_approved` / `access_denied`), WhatsApp / Email taps, reports, holds and removals |
 | POST | `/notifications/read-all` | user | |
 | POST | `/contact` | verified user | `{ target_type, target_id, channel }`: sent when a student taps WhatsApp / Email; repeat taps within 1 hour are ignored |
 

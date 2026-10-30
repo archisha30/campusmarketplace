@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { adminApi, resourcesApi } from '../services/api.js'
+import { useReportSummary } from '../hooks/useReportSummary.jsx'
 import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useToast } from '../hooks/useToast.jsx'
@@ -376,6 +377,7 @@ function OwnerPanel({ r, onChange, refetch }) {
   const { user } = useAuth()
   const [busy, setBusy] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const { refresh: refreshSummary } = useReportSummary()
   const isOwner = r.access?.reason === 'owner'
   const requests = useApi(
     () => (r.offer_type === 'sale' ? resourcesApi.accessRequests(r.id) : Promise.resolve([])),
@@ -409,6 +411,7 @@ function OwnerPanel({ r, onChange, refetch }) {
   // An admin removing someone else's resource: gone for good, and the owner is told why.
   async function adminRemove(reason) {
     await adminApi.removeResource(r.id, reason)
+    refreshSummary() // its open reports were resolved
     toast('Resource removed. The owner has been told why')
     navigate('/resources', { replace: true })
   }
@@ -440,6 +443,15 @@ function OwnerPanel({ r, onChange, refetch }) {
         )}
         <button className="btn-danger btn-sm" onClick={() => setConfirmDelete(true)} disabled={busy}>{isOwner ? 'Delete' : 'Remove'}</button>
       </div>
+      {r.held && (
+        <p className="mb-4 rounded-[10px] bg-coral/10 px-3 py-2 text-[13px] text-coral">
+          ⏸️ <strong>Held for review.</strong> Several students reported this resource, so it's hidden from everyone else until
+          the CampusMarket team reviews it.
+          {isOwner
+            ? " You can still edit it; you'll get a notification with the outcome."
+            : <> Resolve or remove it from <Link to="/admin/reports" className="font-semibold underline">Admin → Reports</Link>.</>}
+        </p>
+      )}
       <p className="mb-4 text-[13px] text-ink-soft">
         Status: <span className="font-semibold text-ink">{r.status === 'available' ? 'Available' : 'Closed'}</span>
         {r.status === 'closed' && ' · hidden from the Resource Hub, approved buyers keep access'}

@@ -14,6 +14,7 @@ class ActorOut(BaseModel):
 
 class NotificationOut(BaseModel):
     id: int
+    # access_request | access_approved | access_denied | contact | report | removed | report_cleared | held
     type: str
     channel: str | None = None
     target_type: str
@@ -27,7 +28,6 @@ class NotificationOut(BaseModel):
 
     @classmethod
     def from_model(cls, n) -> "NotificationOut":
-        a = n.actor
         return cls(
             id=n.id,
             type=n.type,
@@ -39,20 +39,27 @@ class NotificationOut(BaseModel):
             count=n.count or 1,
             created_at=n.created_at,
             read=n.read_at is not None,
-            # Reports are anonymous to the seller, so people aren't afraid to flag things, and
-            # moderation comes from the team, not a named admin.
-            actor=ActorOut(id="", name="A student", email="")
-            if n.type == "report"
-            else ActorOut(id="", name="CampusMarket team", email="")
-            if n.type in ("removed", "report_cleared")
-            else ActorOut(
-                id=str(a.id),
-                name=a.name or a.email.split("@")[0],
-                avatar_url=a.avatar_url,
-                email=a.email,
-                phone=a.phone,
-            ),
+            actor=_actor_out(n),
         )
+
+
+# Sent by the team, so they never show the admin who acted.
+TEAM_TYPES = ("removed", "report_cleared", "held")
+# The owner answering a buyer: name and photo only. Contact details go through /api/contact.
+NO_CONTACT_TYPES = ("access_approved", "access_denied")
+
+
+def _actor_out(n) -> ActorOut:
+    a = n.actor
+    if n.type == "report":
+        # Reports are anonymous to the seller, so people aren't afraid to flag things.
+        return ActorOut(id="", name="A student", email="")
+    if n.type in TEAM_TYPES:
+        return ActorOut(id="", name="CampusMarket team", email="")
+    name = a.name or a.email.split("@")[0]
+    if n.type in NO_CONTACT_TYPES:
+        return ActorOut(id=str(a.id), name=name, avatar_url=a.avatar_url, email="")
+    return ActorOut(id=str(a.id), name=name, avatar_url=a.avatar_url, email=a.email, phone=a.phone)
 
 
 class NotificationListOut(BaseModel):

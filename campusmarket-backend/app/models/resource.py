@@ -41,6 +41,9 @@ class Resource(Base):
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
     # Set when the owner deletes it; restorable for 24h from the Deleted tab (see core/trash.py).
     deleted_at = Column(DateTime, nullable=True, index=True)
+    # Set when HOLD_AFTER_REPORTS students have open reports on it: hidden from everyone but the
+    # owner and admins until an admin reviews it (see core/moderation.py).
+    held_at = Column(DateTime, nullable=True, index=True)
 
     owner = relationship("User")
     access_requests = relationship(

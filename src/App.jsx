@@ -31,6 +31,7 @@ import AdminContent from './pages/admin/AdminContent.jsx'
 import AdminReports from './pages/admin/AdminReports.jsx'
 import Wishlist from './pages/Wishlist.jsx'
 import Profile from './pages/Profile.jsx'
+import Notifications from './pages/Notifications.jsx'
 import NotFound from './pages/NotFound.jsx'
 
 export default function App() {
@@ -67,6 +68,7 @@ export default function App() {
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/interests" element={<Interests />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/notifications" element={<Notifications />} />
           </Route>
 
           {/* Seller accounts only */}

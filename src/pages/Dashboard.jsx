@@ -8,8 +8,8 @@ import { SkeletonRows } from '../components/SkeletonCard.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import Avatar from '../components/Avatar.jsx'
 import Modal from '../components/Modal.jsx'
+import NotificationsPanel from '../components/NotificationsPanel.jsx'
 import { useRequestNotifications } from '../hooks/useRequestNotifications.js'
-import { useNotifications } from '../hooks/useNotifications.js'
 import { openContact } from '../lib/contact.js'
 import { formatPrice, isExpired, titleCase, timeAgo } from '../lib/format.js'
 
@@ -127,7 +127,10 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <Notifications />
+      <NotificationsPanel
+        blurb="Access requests, students reaching out, reports on your items, and updates from the CampusMarket team"
+        empty="Nothing yet. You'll see it here when someone requests access or contacts you about a listing or resource."
+      />
       <BuyerRequests />
 
       <h1 className="mb-6 text-[30px] font-bold">My Listings</h1>
@@ -226,6 +229,7 @@ export default function Dashboard() {
             <p className="text-[13px] text-ink-soft">
               {formatPrice(l.price)} · {titleCase(l.status)}
               {isExpired(l) && <span className="ml-1.5 font-semibold text-coral">· Expired, hidden from the marketplace</span>}
+              {l.held && <span className="ml-1.5 font-semibold text-coral">· Held for review, hidden until our team checks the reports</span>}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -278,180 +282,6 @@ export default function Dashboard() {
           </>
         )}
       </Modal>
-    </div>
-  )
-}
-
-const PREVIEW_COUNT = 2
-
-function Notifications() {
-  const { items, loading, markAllRead, dismiss, clearAll } = useNotifications({ freeze: true })
-  const toast = useToast()
-  const [showAll, setShowAll] = useState(false)
-  const [confirmClear, setConfirmClear] = useState(false)
-  const [clearing, setClearing] = useState(false)
-  const fresh = items.filter((n) => !n.read).length
-
-  async function onDismiss(id) {
-    try {
-      await dismiss(id)
-    } catch (err) {
-      toast(err.message || "Couldn't dismiss that notification")
-    }
-  }
-
-  async function onClearAll() {
-    setClearing(true)
-    try {
-      await clearAll()
-      setConfirmClear(false)
-      setShowAll(false)
-      toast('Notifications cleared')
-    } catch (err) {
-      toast(err.message || "Couldn't clear notifications")
-    } finally {
-      setClearing(false)
-    }
-  }
-
-  // Opening the dashboard marks everything read (clearing the navbar badge); the
-  // "New" markers stay for this visit because the list keeps its load-time snapshot.
-  useEffect(() => {
-    if (!loading && fresh > 0) markAllRead()
-  }, [loading, fresh, markAllRead])
-
-  const shown = showAll ? items : items.slice(0, PREVIEW_COUNT)
-  const hidden = items.length - PREVIEW_COUNT
-
-  return (
-    <section id="notifications" className="mb-6 scroll-mt-24 rounded-slab border border-line bg-paper p-5 md:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-[19px] font-semibold">
-          Notifications
-          {fresh > 0 && (
-            <span className="rounded-pill bg-coral px-2 py-0.5 text-[11.5px] font-bold text-white">{fresh} new</span>
-          )}
-        </h2>
-        {!loading && items.length > 0 && (
-          <button className="btn-ghost btn-sm" onClick={() => setConfirmClear(true)}>Clear all</button>
-        )}
-      </div>
-      <p className="-mt-2 mb-4 text-[13px] text-ink-faint">Access requests, students reaching out, reports on your items, and updates from the CampusMarket team</p>
-
-      {loading && <div className="skeleton h-20" />}
-
-      {!loading && items.length === 0 && (
-        <p className="rounded-card bg-bg px-4 py-6 text-center text-[14px] text-ink-soft">
-          Nothing yet. You'll see it here when someone requests access or contacts you about a listing or resource.
-        </p>
-      )}
-
-      {!loading && shown.map((n) => <NotificationRow key={n.id} n={n} onDismiss={() => onDismiss(n.id)} />)}
-
-      {!loading && hidden > 0 && (
-        <button
-          className="mt-1 text-[13.5px] font-semibold text-brand hover:underline"
-          aria-expanded={showAll}
-          onClick={() => setShowAll((v) => !v)}
-        >
-          {showAll ? 'Show less ▲' : `Show ${hidden} more ▼`}
-        </button>
-      )}
-
-      <Modal open={confirmClear} onClose={() => !clearing && setConfirmClear(false)} title="Clear all notifications?">
-        <p className="text-[14px] text-ink-soft">This removes all {items.length} notifications. It can't be undone.</p>
-        <div className="mt-5 flex gap-2.5">
-          <button className="btn-ghost flex-1" onClick={() => setConfirmClear(false)} disabled={clearing} autoFocus>Cancel</button>
-          <button className="btn-danger flex-1" onClick={onClearAll} disabled={clearing}>{clearing ? 'Clearing…' : 'Clear all'}</button>
-        </div>
-      </Modal>
-    </section>
-  )
-}
-
-function NotificationRow({ n, onDismiss }) {
-  const { actor } = n
-  const fresh = !n.read
-  const href = n.target_type === 'listing' ? `/listing/${n.target_id}` : `/resources/${n.target_id}`
-  const item = <Link to={href} className="font-semibold text-ink hover:underline">{n.target_title}</Link>
-  const greeting = `Hi ${actor.name}! Following up on "${n.target_title}" from CampusMarket.`
-  const reply = actor.phone
-    ? `https://wa.me/${actor.phone}?text=${encodeURIComponent(greeting)}`
-    : `https://mail.google.com/mail/?${new URLSearchParams({
-        view: 'cm', fs: '1', to: actor.email, su: `CampusMarket — ${n.target_title}`, body: greeting,
-      })}`
-
-  const isReport = n.type === 'report'
-  const fromTeam = n.type === 'removed' || n.type === 'report_cleared'
-  let icon
-  let text
-  if (isReport) {
-    icon = '⚠️'
-    text = <>reported your {n.target_type} {item}{n.count > 1 && <span className="font-semibold text-coral"> ({n.count} reports)</span>}</>
-  } else if (n.type === 'removed') {
-    icon = '🛑'
-    // The item is gone, so its title isn't a link any more.
-    text = <>removed your {n.target_type} <span className="font-semibold text-ink">{n.target_title}</span></>
-  } else if (n.type === 'report_cleared') {
-    icon = '✅'
-    text = <>reviewed the reports on your {n.target_type} {item}. No rules were broken, so it stays up.</>
-  } else if (n.type === 'access_request') {
-    icon = '🔑'
-    text = <>requested access to {item}</>
-  } else {
-    icon = n.channel === 'whatsapp' ? '💬' : '✉️'
-    text = <>opened {n.channel === 'whatsapp' ? 'WhatsApp' : 'email'} to message you about {item}</>
-  }
-
-  return (
-    <div className={`mb-2.5 flex flex-wrap items-start gap-3.5 rounded-card border p-3.5 ${fresh ? 'border-brand/30 bg-brand-tint/50' : 'border-line'}`}>
-      <div className="relative flex-none">
-        {isReport ? (
-          <div className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-coral/15 text-[16px]" aria-hidden>🚩</div>
-        ) : fromTeam ? (
-          <div className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-brand text-[13px] font-bold text-white" aria-hidden>CM</div>
-        ) : (
-          <Avatar user={actor} size={38} className="bg-sun font-display text-ink" />
-        )}
-        <span className="absolute -bottom-1 -right-1 text-[14px]" aria-hidden>{icon}</span>
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="break-words text-[14px] text-ink-soft">
-          <span className="font-semibold text-ink">{actor.name}</span> {text}
-        </p>
-        {n.note && (
-          isReport
-            ? <p className="mt-1 text-[13.5px]"><span className="font-semibold">Reason:</span> {n.note}. Our team will review it; if something's wrong, edit or remove the item.</p>
-            : n.type === 'removed'
-              ? <p className="mt-1 break-words text-[13.5px]"><span className="font-semibold">Reason:</span> {n.note}. Please follow the rules when you post again; repeated problems can get an account suspended.</p>
-              : <p className="mt-1 break-words text-[13.5px]">“{n.note}”</p>
-        )}
-        <p className="mt-1 text-[12px] text-ink-faint">
-          {timeAgo(n.created_at)}
-          {fresh && <span className="ml-2 rounded-pill bg-brand px-1.5 py-px text-[10.5px] font-bold text-white">New</span>}
-          {n.type === 'contact' && <span className="ml-2">· check your {n.channel === 'whatsapp' ? 'WhatsApp' : 'inbox'}</span>}
-        </p>
-      </div>
-      <div className="flex flex-none flex-wrap gap-2">
-        {n.type === 'removed' ? null : isReport || n.type === 'report_cleared' ? (
-          <Link to={href} className="btn-ghost btn-sm">View item</Link>
-        ) : n.type === 'access_request' ? (
-          <Link to={`${href}#manage`} className="btn-accent btn-sm">Review request</Link>
-        ) : (
-          <a className="btn-ghost btn-sm" href={reply} target="_blank" rel="noopener noreferrer">
-            {actor.phone ? 'Reply on WhatsApp' : 'Reply by Email'}
-          </a>
-        )}
-        <button
-          type="button"
-          onClick={onDismiss}
-          aria-label={`Dismiss notification about ${n.target_title}`}
-          title="Dismiss"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-[18px] leading-none text-ink-faint hover:bg-bg hover:text-ink"
-        >
-          ×
-        </button>
-      </div>
     </div>
   )
 }

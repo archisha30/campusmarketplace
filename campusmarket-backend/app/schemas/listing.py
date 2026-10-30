@@ -124,6 +124,7 @@ class ListingOut(BaseModel):
     description: str | None = None
     pickup_spot: str
     status: str
+    held: bool = False  # held for review after a pile-up of reports; only the owner and admins see it
     campus_id: int
     images: list[str] = []
     food_temp: str | None = None
@@ -152,6 +153,7 @@ class ListingOut(BaseModel):
             description=listing.description,
             pickup_spot=listing.pickup_spot,
             status=listing.status,
+            held=listing.held_at is not None,
             campus_id=listing.campus_id,
             images=listing.images or [],
             food_temp=listing.food_temp,

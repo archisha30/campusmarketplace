@@ -11,11 +11,15 @@ class Notification(Base):
     """Something another student did that the recipient should know about.
 
     type "access_request": actor asked for access to the recipient's resource.
+    type "access_approved" / "access_denied": the resource owner (actor) answered the recipient's
+      access request (note "revoked" when access they had was taken away).
     type "contact": actor tapped WhatsApp / Email on the recipient's listing or resource.
     type "report": actor reported the recipient's item (shown anonymously; note = reason).
       Repeat reports on the same item update one unread notification (count = open reports).
     type "removed": an admin removed the recipient's item (note = the reason they gave).
     type "report_cleared": an admin reviewed the reports on the item and it stays up.
+    type "held": enough students reported the item that it's hidden until an admin reviews it
+      (note = the report reasons; never who reported it).
     (The app can't see whether a message was actually sent, only that they opened it.)
     """
 
@@ -25,7 +29,8 @@ class Notification(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     actor_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    type = Column(String(20), nullable=False)  # access_request | contact | report | removed | report_cleared
+    # access_request | access_approved | access_denied | contact | report | removed | report_cleared | held
+    type = Column(String(20), nullable=False)
     channel = Column(String(10), nullable=True)  # whatsapp | email (contact only)
     target_type = Column(String(10), nullable=False)  # listing | resource
     target_id = Column(Integer, nullable=False)

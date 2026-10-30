@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.routes.notifications import notify
-from app.core.trash import live, restore_cutoff
+from app.core.trash import can_see_held, existing, live, restore_cutoff
 from app.core.pagination import paginate
 from app.core.pdf_preview import PdfError, open_pdf, read_limited, render_previews
 from app.core.security import get_current_user, require_seller, require_verified
@@ -206,6 +206,7 @@ def _resource_out(
         price=r.price,
         description=r.description,
         status=r.status,
+        held=r.held_at is not None,
         delivery=r.delivery,
         pickup_spot=r.pickup_spot,
         has_file=bool(r.file_name),
@@ -270,15 +271,16 @@ def _form_fields(
         raise RequestValidationError(e.errors(include_url=False, include_context=False))
 
 
-def _get_resource(resource_id: int, db: Session) -> Resource:
-    r = db.query(Resource).options(joinedload(Resource.owner)).filter(Resource.id == resource_id, live(Resource)).first()
-    if not r:
+def _get_resource(resource_id: int, db: Session, viewer: User | None) -> Resource:
+    """A resource `viewer` may open. One held for review only opens for its owner and admins."""
+    r = db.query(Resource).options(joinedload(Resource.owner)).filter(Resource.id == resource_id, existing(Resource)).first()
+    if not r or (r.held_at and not can_see_held(r, viewer)):
         raise HTTPException(status_code=404, detail="Resource not found")
     return r
 
 
 def _get_owned_resource(resource_id: int, db: Session, user: User, allow_admin: bool = False) -> Resource:
-    r = _get_resource(resource_id, db)
+    r = _get_resource(resource_id, db, user)
     if r.owner_id != user.id and not (allow_admin and user.is_admin):
         raise HTTPException(status_code=403, detail="You don't own this resource")
     return r
@@ -302,12 +304,12 @@ def list_resources(
     db: Session = Depends(get_db),
     viewer: User = Depends(require_verified),  # the Resource Hub is for verified students only
 ):
-    query = db.query(Resource).options(joinedload(Resource.owner)).filter(live(Resource))
+    query = db.query(Resource).options(joinedload(Resource.owner))
 
-    if mine:
-        query = query.filter(Resource.owner_id == viewer.id)
+    if mine:  # your own include closed ones and ones held for review
+        query = query.filter(existing(Resource), Resource.owner_id == viewer.id)
     else:
-        query = query.filter(Resource.status == "available")
+        query = query.filter(live(Resource), Resource.status == "available")
 
     if q and q.strip():
         like = f"%{q.strip()}%"
@@ -397,7 +399,7 @@ def get_resource(
     db: Session = Depends(get_db),
     viewer: User = Depends(require_verified),  # the Resource Hub is for verified students only
 ):
-    return _resource_out(_get_resource(resource_id, db), request, viewer, db, detail=True)
+    return _resource_out(_get_resource(resource_id, db, viewer), request, viewer, db, detail=True)
 
 
 @router.post("", response_model=ResourceOut, status_code=201)
@@ -429,7 +431,7 @@ def create_resource(
     finally:
         if pdf:
             pdf.doc.close()
-    return _resource_out(_get_resource(r.id, db), request, user, db, detail=True)
+    return _resource_out(_get_resource(r.id, db, user), request, user, db, detail=True)
 
 
 @router.put("/{resource_id}", response_model=ResourceOut)
@@ -481,7 +483,7 @@ def update_resource(
             pdf.doc.close()
 
     _remove_files(stale)
-    return _resource_out(_get_resource(r.id, db), request, user, db, detail=True)
+    return _resource_out(_get_resource(r.id, db, user), request, user, db, detail=True)
 
 
 @router.patch("/{resource_id}/status", response_model=ResourceOut)
@@ -495,7 +497,7 @@ def set_resource_status(
     r = _get_owned_resource(resource_id, db, user)
     r.status = payload.status
     db.commit()
-    return _resource_out(_get_resource(r.id, db), request, user, db, detail=True)
+    return _resource_out(_get_resource(r.id, db, user), request, user, db, detail=True)
 
 
 @router.delete("/{resource_id}", status_code=204)
@@ -552,7 +554,7 @@ def request_access(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    r = _get_resource(resource_id, db)
+    r = _get_resource(resource_id, db, user)
     if not user.verified:
         raise HTTPException(status_code=403, detail="Verify your college email first")
     if r.owner_id == user.id:
@@ -634,10 +636,24 @@ def decide_access_request(
     )
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
+    previous = req.status
     now = utcnow()
     req.status = payload.status
     req.decided_at = now
     req.updated_at = now
+    if payload.status != previous:
+        # The buyer hears the answer. It comes from the owner even when an admin decided on
+        # their behalf, and never carries the owner's phone or email (see NotificationOut).
+        notify(
+            db,
+            recipient_id=req.user_id,
+            actor=r.owner,
+            type="access_approved" if payload.status == "approved" else "access_denied",
+            target_type="resource",
+            target_id=r.id,
+            target_title=r.title,
+            note="revoked" if previous == "approved" else None,
+        )
     db.commit()
     db.refresh(req)
     return _request_out(req, with_requester=True)
@@ -649,7 +665,7 @@ def download_resource_file(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    r = _get_resource(resource_id, db)
+    r = _get_resource(resource_id, db, user)
     if not _access(r, user, db).full:
         raise HTTPException(status_code=403, detail="You don't have access to this file yet")
     key = _pdf_key(r)

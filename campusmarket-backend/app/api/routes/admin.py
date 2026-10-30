@@ -4,11 +4,12 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import func, or_
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.routes.resources import _owner_out, _remove_files, _resource_files, _resource_out
-from app.core.moderation import item_removed, reports_cleared
+from app.core.moderation import SERIOUS_REASONS, item_removed, reports_cleared
+from app.core.trash import existing
 from app.core.config import settings
 from app.core.pagination import paginate
 from app.core.security import require_admin, require_owner
@@ -336,6 +337,34 @@ def _person(u: User) -> ReportPersonOut:
     return ReportPersonOut(id=str(u.id), name=u.name or u.email.split("@")[0], email=u.email)
 
 
+class ReportSummaryOut(BaseModel):
+    open: int  # open reports
+    serious_open: int  # open reports for a SERIOUS_REASONS reason (the seller hasn't been told yet)
+    held: int  # listings + resources hidden for review after a pile-up of reports
+
+
+@router.get("/reports/summary", response_model=ReportSummaryOut)
+def report_summary(
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
+    """Three counts for the Admin badge and the pop-up on /admin, polled every minute, so they
+    stay cheap. This is how admins hear about reports: in-app only, never by email."""
+    open_reports = db.query(func.count(Report.id)).filter(Report.status == "open")
+    return ReportSummaryOut(
+        open=open_reports.scalar(),
+        serious_open=open_reports.filter(Report.reason.in_(SERIOUS_REASONS)).scalar(),
+        held=sum(
+            db.query(func.count(model.id)).filter(model.held_at.is_not(None), existing(model)).scalar()
+            for model in (Listing, Resource)
+        ),
+    )
+
+
+def _held_ids(model):
+    return select(model.id).where(model.held_at.is_not(None), model.deleted_at.is_(None))
+
+
 @router.get("/reports", response_model=AdminReportsOut)
 def list_reports(
     status: Optional[str] = None,  # "open" | "resolved"; omit for all
@@ -344,11 +373,17 @@ def list_reports(
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
-    """Every report, newest first, with who reported what (admins only)."""
+    """Every report, newest first, with who reported what (admins only). Reports on items held
+    for review come first: they're hidden from students until someone decides."""
     query = db.query(Report).options(joinedload(Report.reporter), joinedload(Report.owner))
     if status in ("open", "resolved"):
         query = query.filter(Report.status == status)
-    rows, total, page, page_size, pages = paginate(query.order_by(Report.created_at.desc(), Report.id.desc()), page, page_size)
+    on_held = or_(
+        and_(Report.target_type == "listing", Report.target_id.in_(_held_ids(Listing))),
+        and_(Report.target_type == "resource", Report.target_id.in_(_held_ids(Resource))),
+    )
+    held_first = case((on_held, 0), else_=1)
+    rows, total, page, page_size, pages = paginate(query.order_by(held_first, Report.created_at.desc(), Report.id.desc()), page, page_size)
 
     per_item = dict(
         ((t, i), n)
@@ -356,8 +391,11 @@ def list_reports(
         .group_by(Report.target_type, Report.target_id)
         .all()
     )
-    listing_ids = {id_ for (id_,) in db.query(Listing.id).filter(Listing.deleted_at.is_(None), Listing.id.in_([r.target_id for r in rows if r.target_type == "listing"])).all()}
-    resource_ids = {id_ for (id_,) in db.query(Resource.id).filter(Resource.deleted_at.is_(None), Resource.id.in_([r.target_id for r in rows if r.target_type == "resource"])).all()}
+    targets = {}  # (type, id) -> held? for items that still exist
+    for target_type, model in (("listing", Listing), ("resource", Resource)):
+        ids = [r.target_id for r in rows if r.target_type == target_type]
+        for id_, held_at in db.query(model.id, model.held_at).filter(model.deleted_at.is_(None), model.id.in_(ids)):
+            targets[(target_type, id_)] = held_at is not None
 
     items = [
         AdminReportOut(
@@ -365,7 +403,8 @@ def list_reports(
             target_type=r.target_type,
             target_id=r.target_id,
             target_title=r.target_title,
-            target_exists=r.target_id in (listing_ids if r.target_type == "listing" else resource_ids),
+            target_exists=(r.target_type, r.target_id) in targets,
+            target_held=targets.get((r.target_type, r.target_id), False),
             reason=r.reason,
             details=r.details,
             status=r.status,

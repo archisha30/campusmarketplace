@@ -25,7 +25,7 @@ function paged(all, f, defaultSize) {
 
 export function getRecommendations({ excludeId, campusId, categoryScores = {}, onlyCategories = [] } = {}) {
   const hasAffinity = Object.keys(categoryScores).length > 0
-  let pool = listings.filter((l) => l.status === 'available' && l.id !== Number(excludeId))
+  let pool = listings.filter((l) => l.status === 'available' && !l.held && l.id !== Number(excludeId))
   if (onlyCategories.length) pool = pool.filter((l) => onlyCategories.includes(l.category))
 
   const scored = pool.map((l) => {
@@ -61,9 +61,9 @@ export function listListings(f = {}) {
   if (f.min_price) out = out.filter((l) => l.price >= Number(f.min_price))
   if (f.seller_id) out = out.filter((l) => l.seller.id === Number(f.seller_id))
   if (f.status) out = out.filter((l) => l.status === f.status)
-  // Expired food leaves the marketplace; the seller's own view still shows it.
+  // Expired food and held items leave the marketplace; the seller's own view still shows them.
   const today = new Date().toISOString().slice(0, 10)
-  if (!f.seller_id) out = out.filter((l) => !l.expiry_date || l.expiry_date >= today)
+  if (!f.seller_id) out = out.filter((l) => (!l.expiry_date || l.expiry_date >= today) && !l.held)
 
   if (f.sort === 'price_low' || f.sort === 'price_asc') out.sort((a, b) => a.price - b.price)
   else if (f.sort === 'price_high' || f.sort === 'price_desc') out.sort((a, b) => b.price - a.price)
@@ -75,7 +75,13 @@ export function listListings(f = {}) {
 
 export function getListing(id) {
   const found = listings.find((l) => l.id === Number(id))
-  return found ? delay(found) : Promise.reject(new Error('Listing not found'))
+  return found && canSeeHeld(found, found.seller) ? delay(found) : Promise.reject(new Error('Listing not found'))
+}
+
+// Like core/trash.py: an item held for review only opens for its owner and admins.
+function canSeeHeld(item, owner) {
+  const u = mockViewer()
+  return !item.held || Boolean(u && (sameId(owner?.id, u.id) || u.role === 'admin' || u.is_admin))
 }
 
 export function createListing(payload, photos = []) {
@@ -116,7 +122,7 @@ export function updateListing(id, payload, photos = []) {
 let wishlist = [] // listing ids, most recently saved first
 
 export function listWishlist() {
-  return delay(wishlist.map((id) => listings.find((l) => l.id === id)).filter(Boolean), 150)
+  return delay(wishlist.map((id) => listings.find((l) => l.id === id)).filter((l) => l && !l.held), 150)
 }
 
 export function saveToWishlist(id) {
@@ -257,7 +263,7 @@ function resourceOut(r, detail = false) {
   const { phone, email, ...publicOwner } = r.owner
   const out = {
     id: r.id, title: r.title, subject: r.subject, year: r.year, copy_type: r.copy_type,
-    offer_type: r.offer_type, price: r.price, description: r.description || null, status: r.status,
+    offer_type: r.offer_type, price: r.price, description: r.description || null, status: r.status, held: Boolean(r.held),
     delivery: r.delivery || null, pickup_spot: r.pickup_spot || null, has_file: Boolean(r.has_file),
     page_count: r.page_count ?? null, preview_pages, thumbnail_url: preview_pages[0]?.url || null,
     created_at: r.created_at, updated_at: r.updated_at,
@@ -283,7 +289,7 @@ function resourceOut(r, detail = false) {
 
 function findResource(id) {
   const r = resources.find((x) => x.id === Number(id))
-  if (!r) throw new Error('Resource not found')
+  if (!r || !canSeeHeld(r, r.owner)) throw new Error('Resource not found')
   return r
 }
 
@@ -342,7 +348,7 @@ export function listResources(f = {}) {
   const u = mockViewer()
   let out = f.mine
     ? resources.filter((r) => u && sameId(r.owner.id, u.id))
-    : resources.filter((r) => r.status === 'available')
+    : resources.filter((r) => r.status === 'available' && !r.held)
   if (f.q) {
     const q = f.q.toLowerCase()
     out = out.filter((r) => `${r.title} ${r.subject} ${r.description || ''}`.toLowerCase().includes(q))
@@ -362,7 +368,7 @@ export function listResources(f = {}) {
 export function recommendedResources({ excludeId, year, subjectScores = {} } = {}) {
   const scores = Object.fromEntries(Object.entries(subjectScores).map(([k, v]) => [k.toLowerCase(), v]))
   const pool = resources
-    .filter((r) => r.status === 'available' && r.id !== Number(excludeId))
+    .filter((r) => r.status === 'available' && !r.held && r.id !== Number(excludeId))
     .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
   const score = (r) => (scores[r.subject.toLowerCase()] || 0) + (year && r.year === year ? 0.5 : 0)
   const items = [...pool].sort((a, b) => score(b) - score(a)).slice(0, 8).map((r) => resourceOut(r))
@@ -486,7 +492,16 @@ export function decideResourceAccess(id, requestId, status) {
     const r = ownResource(id)
     const req = resourceAccess.find((a) => a.id === Number(requestId) && a.resource_id === r.id)
     if (!req) throw new Error('Request not found')
+    const previous = req.status
     Object.assign(req, { status, decided_at: nowIso(), updated_at: nowIso() })
+    // Like the API: the buyer hears the answer, from the owner, without their contact details.
+    if (status !== previous) {
+      pushNotification({
+        user_id: req.requester.id, actor: { ...r.owner, email: '', phone: null },
+        type: status === 'approved' ? 'access_approved' : 'access_denied',
+        target_type: 'resource', target_id: r.id, target_title: r.title, note: previous === 'approved' ? 'revoked' : null,
+      })
+    }
     return delay(req)
   } catch (err) {
     return Promise.reject(err)
@@ -643,7 +658,7 @@ export function revealContact(targetType, targetId, channel) {
     const target = targetType === 'listing'
       ? listings.find((l) => l.id === Number(targetId))
       : resources.find((r) => r.id === Number(targetId))
-    owner = target && (targetType === 'listing' ? target.seller : target.owner)
+    owner = target && !target.held && (targetType === 'listing' ? target.seller : target.owner)
     title = target?.title
   }
   if (!owner) return Promise.reject(mockError('That item no longer exists', 404))
@@ -663,7 +678,7 @@ export function createReport({ listing_id, resource_id, reason, details }) {
   const target = isListing
     ? listings.find((l) => l.id === Number(listing_id))
     : resources.find((r) => r.id === Number(resource_id))
-  if (!target) return Promise.reject(new Error('That item no longer exists'))
+  if (!target || target.held) return Promise.reject(new Error('That item no longer exists'))
   const owner = isListing ? target.seller : target.owner
   if (sameId(owner.id, u.id)) return Promise.reject(new Error("You can't report your own item"))
   const targetType = isListing ? 'listing' : 'resource'
@@ -677,10 +692,34 @@ export function createReport({ listing_id, resource_id, reason, details }) {
     owner: { id: String(owner.id), name: owner.name, email: owner.email || '' },
   })
   // Like the API: serious reasons wait for an admin before the seller hears (core/moderation.py).
-  if (!['Scam / suspicious', 'Prohibited item'].includes(reason)) {
+  if (!SERIOUS_REASONS.includes(reason)) {
     pushNotification({ user_id: owner.id, actor: u, type: 'report', target_type: targetType, target_id: target.id, target_title: target.title, note: reason })
   }
+  // HOLD_AFTER_REPORTS open reports hide the item until an admin reviews it.
+  const open = reports.filter((r) => r.status === 'open' && r.target_type === targetType && r.target_id === target.id)
+  if (open.length >= HOLD_AFTER_REPORTS) {
+    target.held = true
+    pushNotification({
+      user_id: owner.id, actor: { id: 'team', name: 'CampusMarket team', email: '' }, type: 'held',
+      target_type: targetType, target_id: target.id, target_title: target.title,
+      note: [...new Set(open.map((r) => r.reason))].sort().join(', '),
+    })
+  }
   return delay({ ok: true })
+}
+
+const SERIOUS_REASONS = ['Scam / suspicious', 'Prohibited item']
+const HOLD_AFTER_REPORTS = 3
+const reportTarget = (r) => (r.target_type === 'listing' ? listings : resources).find((x) => x.id === r.target_id)
+
+// Mirrors GET /api/admin/reports/summary (the Admin badge and pop-up).
+export function adminReportSummary() {
+  const open = reports.filter((r) => r.status === 'open')
+  return delay({
+    open: open.length,
+    serious_open: open.filter((r) => SERIOUS_REASONS.includes(r.reason)).length,
+    held: [...listings, ...resources].filter((x) => x.held).length,
+  }, 100)
 }
 
 export function adminReports(status, page = 1) {
@@ -688,7 +727,8 @@ export function adminReports(status, page = 1) {
   reports.forEach((r) => { counts[`${r.target_type}:${r.target_id}`] = (counts[`${r.target_type}:${r.target_id}`] || 0) + 1 })
   const items = reports
     .filter((r) => !status || r.status === status)
-    .map((r) => ({ ...r, reports_on_item: counts[`${r.target_type}:${r.target_id}`] }))
+    .map((r) => ({ ...r, reports_on_item: counts[`${r.target_type}:${r.target_id}`], target_held: Boolean(reportTarget(r)?.held) }))
+    .sort((a, b) => b.target_held - a.target_held) // held items first; stable, so newest first after that
   return delay({ ...paged(items, { page }, 25), open: reports.filter((r) => r.status === 'open').length })
 }
 
@@ -714,8 +754,10 @@ export function setReportStatus(id, status) {
   const report = reports.find((r) => r.id === Number(id))
   const resolving = report?.status === 'open' && status === 'resolved'
   reports = reports.map((r) => (r.id === Number(id) ? { ...r, status, resolved_at: status === 'resolved' ? nowIso() : null } : r))
-  // Clearing the last open report on an item tells the seller it stays up.
+  // Clearing the last open report on an item lifts any hold and tells the seller it stays up.
   if (resolving && !reports.some((r) => r.status === 'open' && r.target_type === report.target_type && r.target_id === report.target_id)) {
+    const target = reportTarget(report)
+    if (target) target.held = false
     pushNotification({
       user_id: report.owner?.id ?? report.owner_id, actor: { id: 'team', name: 'CampusMarket team', email: '' }, type: 'report_cleared',
       target_type: report.target_type, target_id: report.target_id, target_title: report.target_title,

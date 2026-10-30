@@ -6,6 +6,7 @@ import { useWishlist } from '../hooks/useWishlist.jsx'
 import Avatar from './Avatar.jsx'
 import { useRequestNotifications } from '../hooks/useRequestNotifications.js'
 import { useNotifications } from '../hooks/useNotifications.js'
+import { useReportSummary } from '../hooks/useReportSummary.jsx'
 
 // Logged-out visitors only see "How It Works"; the marketplace and Resource Hub links
 // appear once they've logged in or signed up.
@@ -19,6 +20,8 @@ export default function Navbar() {
   const [open, setOpen] = useState(false)
   const { user, isSeller, isAdmin } = useAuth()
   const { count } = useWishlist()
+  const { summary } = useReportSummary() // admins only; zeros for everyone else
+  const badge = (l) => (l.to === '/admin' && summary.open > 0 ? <CountBadge n={summary.open} label="open reports" /> : null)
   const links = user ? [...MEMBER_LINKS, ...(isAdmin ? [{ to: '/admin', label: 'Admin' }] : [])] : GUEST_LINKS
 
   return (
@@ -38,6 +41,7 @@ export default function Navbar() {
               }
             >
               {l.label}
+              {badge(l)}
             </NavLink>
           ))}
         </nav>
@@ -59,7 +63,7 @@ export default function Navbar() {
           )}
           {user ? (
             <>
-              {isSeller && <RequestBell />}
+              <RequestBell />
               {isSeller && <Link to="/sell" className="btn-ghost btn-sm hidden md:inline-flex">Sell</Link>}
               <Link
                 to="/profile"
@@ -99,9 +103,10 @@ export default function Navbar() {
               key={l.to}
               to={l.to}
               onClick={() => setOpen(false)}
-              className="block rounded-xl px-3 py-3 text-base font-medium text-ink-soft"
+              className="flex items-center rounded-xl px-3 py-3 text-base font-medium text-ink-soft"
             >
               {l.label}
+              {badge(l)}
             </Link>
           ))}
           {user && (
@@ -122,13 +127,17 @@ export default function Navbar() {
   )
 }
 
+// Everyone gets the bell. Sellers' badge also counts new Looking For requests and opens their
+// dashboard; buyers' opens /notifications (the dashboard is seller-only).
 function RequestBell() {
-  const { unread: requests } = useRequestNotifications({ poll: true })
+  const { isSeller } = useAuth()
+  const { unread: requests } = useRequestNotifications({ poll: true }) // always 0 for buyers
   const { unread: personal } = useNotifications({ poll: true })
   const unread = requests + personal
+  const to = !isSeller ? '/notifications' : personal > 0 || requests === 0 ? '/dashboard#notifications' : '/dashboard#requests'
   return (
     <Link
-      to={personal > 0 || requests === 0 ? '/dashboard#notifications' : '/dashboard#requests'}
+      to={to}
       aria-label={unread ? `${unread} new notifications` : 'Notifications'}
       className="relative flex h-9 w-9 items-center justify-center rounded-full text-ink-soft transition hover:bg-black/5 hover:text-ink"
     >
@@ -141,5 +150,17 @@ function RequestBell() {
         </span>
       )}
     </Link>
+  )
+}
+
+// The bell's red count, inline after a link's label (Admin → open reports).
+export function CountBadge({ n, label }) {
+  return (
+    <span
+      aria-label={`${n} ${label}`}
+      className="ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-pill bg-coral px-1 align-middle text-[10.5px] font-bold text-white"
+    >
+      {n > 9 ? '9+' : n}
+    </span>
   )
 }

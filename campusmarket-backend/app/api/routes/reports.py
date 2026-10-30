@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.moderation import REPORTS_PER_DAY, notify_report
+from app.core.moderation import REPORTS_PER_DAY, hold_if_piled_up, notify_report
 from app.core.timeutil import utcnow
 from app.core.security import require_verified
 from app.core.trash import live
@@ -61,6 +61,7 @@ def create_report(
     try:
         # The seller sees the reason but not who reported it (see NotificationOut).
         notify_report(db, report, user)
+        hold_if_piled_up(db, report, target)
         db.commit()
     except IntegrityError:
         db.rollback()

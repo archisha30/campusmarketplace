@@ -7,8 +7,7 @@ import { SkeletonGrid } from '../components/SkeletonCard.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import PostRequestBanner from '../components/PostRequestBanner.jsx'
 import SearchBar from '../components/SearchBar.jsx'
-import { ChipRow, Select, Toggle } from '../components/FilterBar.jsx'
-import { useAuth } from '../hooks/useAuth.jsx'
+import { ChipRow, Select } from '../components/FilterBar.jsx'
 import RecommendationBar from '../components/RecommendationBar.jsx'
 import Pagination from '../components/Pagination.jsx'
 import { usePage } from '../hooks/usePage.js'
@@ -23,7 +22,6 @@ const PRICE_BANDS = [
 ]
 
 export default function Marketplace() {
-  const { user } = useAuth()
   const [q, setQ] = useState('')
   const [category, setCategory] = useState('All')
   const [condition, setCondition] = useState('any')
@@ -31,14 +29,13 @@ export default function Marketplace() {
   const [band, setBand] = useState('any')
   // 'auto' = Best match while searching, Newest otherwise.
   const [sort, setSort] = useState('auto')
-  const [scope, setScope] = useState('My Campus')
 
   const debouncedQ = useDebounced(q)
   const price = PRICE_BANDS.find((b) => b.value === band)
   const searching = debouncedQ.trim() !== ''
   const apiSort = sort === 'auto' ? (searching ? 'relevance' : 'newest') : sort
   // Any new search/filter/sort starts again from page 1.
-  const [page, setPage] = usePage([debouncedQ, category, condition, listingType, band, sort, scope].join('|'))
+  const [page, setPage] = usePage([debouncedQ, category, condition, listingType, band, sort].join('|'))
   const listTop = useRef(null)
 
   function goToPage(p) {
@@ -56,11 +53,10 @@ export default function Marketplace() {
         min_price: price.min,
         max_price: price.max,
         sort: apiSort,
-        campus_id: scope === 'My Campus' ? user?.campus_id : undefined,
         page,
         page_size: PAGE_SIZE,
       }),
-    [debouncedQ, category, condition, listingType, band, apiSort, scope, user?.campus_id, page]
+    [debouncedQ, category, condition, listingType, band, apiSort, page]
   )
 
   const items = data?.items || []
@@ -68,12 +64,9 @@ export default function Marketplace() {
 
   return (
     <div className="mx-auto max-w-[1180px] px-6 py-9">
-      <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[30px] font-bold">Marketplace</h1>
-          <p className="mt-1.5 text-ink-soft">Find useful stuff from students around you.</p>
-        </div>
-        <Toggle options={['My Campus', 'Nearby Campuses']} value={scope} onChange={setScope} />
+      <div className="mb-7">
+        <h1 className="text-[30px] font-bold">Marketplace</h1>
+        <p className="mt-1.5 text-ink-soft">Find useful stuff from students around you.</p>
       </div>
 
       <RecommendationBar />
@@ -141,7 +134,7 @@ export default function Marketplace() {
           <EmptyState
             emoji="🔍"
             title="No items found"
-            body="Try another keyword or expand your search to nearby campuses."
+            body="Try another keyword, or clear some filters to see more listings."
             actionLabel="Sell an Item"
             actionTo="/sell"
           />

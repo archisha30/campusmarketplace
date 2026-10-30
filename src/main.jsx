@@ -5,6 +5,7 @@ import App from './App.jsx'
 import { AuthProvider } from './hooks/useAuth.jsx'
 import { ToastProvider } from './hooks/useToast.jsx'
 import { WishlistProvider } from './hooks/useWishlist.jsx'
+import { ReportSummaryProvider } from './hooks/useReportSummary.jsx'
 import './index.css'
 import { initAnalytics } from './lib/analytics.js'
 
@@ -16,7 +17,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <AuthProvider>
         <ToastProvider>
           <WishlistProvider>
-            <App />
+            <ReportSummaryProvider>
+              <App />
+            </ReportSummaryProvider>
           </WishlistProvider>
         </ToastProvider>
       </AuthProvider>

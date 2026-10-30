@@ -5,20 +5,23 @@ import { usePolling } from './usePolling.js'
 
 const POLL_MS = 60_000
 
-// Personal notifications for item owners: access requests on their resources and
-// WhatsApp / Email taps on their listings and resources. Read state lives on the
-// server, so it's the same on every device.
+// Personal notifications for every logged-in student: for buyers, answers to their access
+// requests; for sellers also access requests, WhatsApp / Email taps and reports on their
+// items; and updates from the CampusMarket team. Read state lives on the server, so it's
+// the same on every device.
 //
 // `freeze` keeps each item's read flag from when the page loaded, so the dashboard
 // can mark everything read (clearing the navbar badge) and still highlight what was new.
 export function useNotifications({ poll = false, freeze = false } = {}) {
-  const { user, isSeller } = useAuth()
+  const { user, needsPassword } = useAuth()
+  // Accounts that still have to create a password get 403 from everything, so don't ask.
+  const active = Boolean(user) && !needsPassword
   const [items, setItems] = useState([])
   const [unread, setUnread] = useState(0)
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(() => {
-    if (!user || !isSeller) {
+    if (!active) {
       setItems([])
       setUnread(0)
       setLoading(false)
@@ -32,12 +35,12 @@ export function useNotifications({ poll = false, freeze = false } = {}) {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [user, isSeller])
+  }, [active])
 
   useEffect(() => {
     load()
   }, [load])
-  usePolling(load, POLL_MS, poll && !!user && isSeller)
+  usePolling(load, POLL_MS, poll && active)
 
   // The navbar badge listens for this so it clears as soon as the dashboard marks things read.
   useEffect(() => {

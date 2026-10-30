@@ -209,6 +209,7 @@ class ResourceOut(BaseModel):
     price: int
     description: str | None = None
     status: str
+    held: bool = False  # held for review after a pile-up of reports; only the owner and admins see it
     delivery: str | None = None
     pickup_spot: str | None = None
     has_file: bool

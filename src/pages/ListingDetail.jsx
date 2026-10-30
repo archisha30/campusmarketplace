@@ -140,6 +140,15 @@ export default function ListingDetail() {
               </button>
             )}
           </div>
+          {l.held && (
+            <p className="mb-4 rounded-[10px] bg-coral/10 px-3 py-2 text-[13px] text-coral">
+            ⏸️ <strong>Held for review.</strong> Several students reported this listing, so it's hidden from everyone else until
+            the CampusMarket team reviews it.
+            {String(l.seller?.id) === String(user?.id)
+              ? " You can still edit it; you'll get a notification with the outcome."
+              : <> Resolve or remove it from <Link to="/admin/reports" className="font-semibold underline">Admin → Reports</Link>.</>}
+          </p>
+          )}
           <h1 className="text-[28px] font-bold">{l.title}</h1>
           <PriceTag price={l.price} mrp={l.mrp} listingType={l.listing_type} rentDays={l.rent_days} size="lg" className="my-3" />
 

@@ -15,7 +15,7 @@ from app.core.pagination import paginate
 from app.core.search import expand, relevance, search_filter, title_vocabulary
 from app.core.security import require_seller, require_verified
 from app.core.storage import delete_public_urls, storage
-from app.core.trash import live, restore_cutoff
+from app.core.trash import can_see_held, existing, live, restore_cutoff
 from app.core.timeutil import utcnow
 from app.db.session import get_db
 from app.models.listing import Listing
@@ -146,7 +146,8 @@ def _commit_or_drop_photos(db: Session, urls: list[str]) -> None:
 
 
 def _get_owned_listing(listing_id: int, db: Session, user: User) -> Listing:
-    listing = db.query(Listing).filter(Listing.id == listing_id, live(Listing)).first()
+    # Owners can still edit, delete or mark sold a listing that's held for review.
+    listing = db.query(Listing).filter(Listing.id == listing_id, existing(Listing)).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     if listing.owner_id != user.id:
@@ -170,9 +171,11 @@ def list_listings(
     page: Optional[int] = None,  # 1-based; omit to get everything (seller dashboard/profile)
     page_size: int = 24,
     db: Session = Depends(get_db),
-    _viewer: User = Depends(require_verified),  # the marketplace is for verified students only
+    viewer: User = Depends(require_verified),  # the marketplace is for verified students only
 ):
-    query = db.query(Listing).filter(live(Listing))
+    # Your own listings (the Seller Dashboard) include ones held for review; everyone else's don't.
+    own = bool(seller_id) and (seller_id == str(viewer.id) or viewer.is_admin)
+    query = db.query(Listing).filter(existing(Listing) if own else live(Listing))
 
     groups = []
     if q and q.strip():
@@ -277,9 +280,11 @@ def recommended_listings(
 def get_listing(
     listing_id: int,
     db: Session = Depends(get_db),
-    _viewer: User = Depends(require_verified),
+    viewer: User = Depends(require_verified),
 ):
-    listing = db.query(Listing).filter(Listing.id == listing_id, live(Listing)).first()
+    listing = db.query(Listing).filter(Listing.id == listing_id, existing(Listing)).first()
+    if listing and listing.held_at and not can_see_held(listing, viewer):
+        listing = None  # held for review: hidden from everyone but the owner and admins
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     return ListingOut.from_orm_with_art(listing)
