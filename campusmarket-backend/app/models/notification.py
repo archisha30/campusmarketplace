@@ -13,6 +13,9 @@ class Notification(Base):
     type "access_request": actor asked for access to the recipient's resource.
     type "contact": actor tapped WhatsApp / Email on the recipient's listing or resource.
     type "report": actor reported the recipient's item (shown anonymously; note = reason).
+      Repeat reports on the same item update one unread notification (count = open reports).
+    type "removed": an admin removed the recipient's item (note = the reason they gave).
+    type "report_cleared": an admin reviewed the reports on the item and it stays up.
     (The app can't see whether a message was actually sent, only that they opened it.)
     """
 
@@ -22,12 +25,13 @@ class Notification(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     actor_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    type = Column(String(20), nullable=False)  # access_request | contact | report
+    type = Column(String(20), nullable=False)  # access_request | contact | report | removed | report_cleared
     channel = Column(String(10), nullable=True)  # whatsapp | email (contact only)
     target_type = Column(String(10), nullable=False)  # listing | resource
     target_id = Column(Integer, nullable=False)
     target_title = Column(String(120), nullable=False)  # snapshot, so it still reads well if the item is deleted
-    note = Column(String(200), nullable=True)
+    note = Column(String(300), nullable=True)
+    count = Column(Integer, nullable=False, default=1, server_default="1")  # reports this notification stands for
     created_at = Column(DateTime, default=utcnow, nullable=False)
     read_at = Column(DateTime, nullable=True)
 

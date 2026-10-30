@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { adminApi, resourcesApi } from '../../services/api.js'
+import { adminApi } from '../../services/api.js'
 import { useApi, useDebounced } from '../../hooks/useApi.js'
 import { useToast } from '../../hooks/useToast.jsx'
 import SearchBar from '../../components/SearchBar.jsx'
@@ -10,6 +10,7 @@ import { deliveryLabel, yearLabel } from '../../lib/resources.js'
 import { Stat, Table, Td, formatDate } from './AdminLayout.jsx'
 import Pagination from '../../components/Pagination.jsx'
 import { usePage } from '../../hooks/usePage.js'
+import RemoveItemModal from '../../components/RemoveItemModal.jsx'
 
 const VIEWS = ['Listings', 'Resources']
 
@@ -51,17 +52,14 @@ export default function AdminContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   const items = current.data?.items || []
+  const [removing, setRemoving] = useState(null) // { kind, id, title } waiting for a reason
 
-  async function remove(kind, item) {
-    if (!window.confirm(`Delete the ${kind} "${item.title}"? This can't be undone, and its files are removed too.`)) return
-    try {
-      if (kind === 'listing') await adminApi.deleteListing(item.id)
-      else await resourcesApi.remove(item.id)
-      toast(`${titleCase(kind)} deleted`)
-      current.refetch()
-    } catch (err) {
-      toast(err.message)
-    }
+  async function remove(reason) {
+    const { kind, id } = removing
+    await (kind === 'listing' ? adminApi.removeListing(id, reason) : adminApi.removeResource(id, reason))
+    toast(`${titleCase(kind)} removed. The seller has been told why`)
+    setRemoving(null)
+    current.refetch()
   }
 
   return (
@@ -113,7 +111,7 @@ export default function AdminContent() {
               <Td className="whitespace-nowrap">{formatPrice(l.price)}</Td>
               <Td><StatusBadge status={l.status} /></Td>
               <Td className="whitespace-nowrap text-ink-soft">{formatDate(l.created_at)}</Td>
-              <Td><button className="btn-danger btn-sm" onClick={() => remove('listing', l)}>Delete</button></Td>
+              <Td><button className="btn-danger btn-sm" onClick={() => setRemoving({ kind: 'listing', id: l.id, title: l.title })}>Remove</button></Td>
             </tr>
           ))}
           {items.length === 0 && <tr><Td className="text-ink-soft">No listings{debouncedQ ? ` match “${debouncedQ}”` : ' yet'}.</Td></tr>}
@@ -140,7 +138,7 @@ export default function AdminContent() {
               <Td className="whitespace-nowrap">{r.copy_type === 'hard' ? 'Hard copy' : `Soft · ${deliveryLabel(r)}`}</Td>
               <Td><StatusBadge status={r.status} /></Td>
               <Td className="whitespace-nowrap text-ink-soft">{formatDate(r.created_at)}</Td>
-              <Td><button className="btn-danger btn-sm" onClick={() => remove('resource', r)}>Delete</button></Td>
+              <Td><button className="btn-danger btn-sm" onClick={() => setRemoving({ kind: 'resource', id: r.id, title: r.title })}>Remove</button></Td>
             </tr>
           ))}
           {items.length === 0 && <tr><Td className="text-ink-soft">No resources{debouncedQ ? ` match “${debouncedQ}”` : ' yet'}.</Td></tr>}
@@ -157,6 +155,8 @@ export default function AdminContent() {
           noun={view === 'Listings' ? 'listings' : 'resources'}
         />
       )}
+
+      <RemoveItemModal item={removing} onRemove={remove} onClose={() => setRemoving(null)} />
     </>
   )
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { adminApi, resourcesApi } from '../../services/api.js'
+import { adminApi } from '../../services/api.js'
 import { useApi } from '../../hooks/useApi.js'
 import { useToast } from '../../hooks/useToast.jsx'
 import { SkeletonRows } from '../../components/SkeletonCard.jsx'
@@ -8,6 +8,7 @@ import { titleCase } from '../../lib/format.js'
 import { Stat, Table, Td, formatDate } from './AdminLayout.jsx'
 import Pagination from '../../components/Pagination.jsx'
 import { usePage } from '../../hooks/usePage.js'
+import RemoveItemModal from '../../components/RemoveItemModal.jsx'
 
 const FILTERS = [
   { value: 'open', label: 'Open' },
@@ -27,28 +28,26 @@ export default function AdminReports() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   const items = data?.items || []
+  const [removing, setRemoving] = useState(null) // report whose item waits for a removal reason
 
   async function setReport(r, next) {
     try {
       await adminApi.setReportStatus(r.id, next)
-      toast(next === 'resolved' ? 'Marked resolved' : 'Reopened')
+      // Clearing the last open report on an item tells the seller it was reviewed and stays up.
+      toast(next === 'resolved' ? (r.reports_on_item > 1 ? 'Marked resolved' : 'Resolved. The seller is told it stays up') : 'Reopened')
       refetch()
     } catch (err) {
       toast(err.message)
     }
   }
 
-  async function removeItem(r) {
-    if (!window.confirm(`Delete the ${r.target_type} "${r.target_title}"? This can't be undone.`)) return
-    try {
-      if (r.target_type === 'listing') await adminApi.deleteListing(r.target_id)
-      else await resourcesApi.remove(r.target_id)
-      await adminApi.setReportStatus(r.id, 'resolved')
-      toast(`${titleCase(r.target_type)} deleted and report resolved`)
-      refetch()
-    } catch (err) {
-      toast(err.message)
-    }
+  // Removing resolves every open report on the item and sends the seller the reason.
+  async function removeItem(reason) {
+    const r = removing
+    await (r.target_type === 'listing' ? adminApi.removeListing(r.target_id, reason) : adminApi.removeResource(r.target_id, reason))
+    toast(`${titleCase(r.target_type)} removed. The seller has been told why`)
+    setRemoving(null)
+    refetch()
   }
 
   return (
@@ -109,8 +108,8 @@ export default function AdminReports() {
                 <div className="flex flex-col gap-1.5">
                   {r.status === 'open' ? (
                     <>
-                      <button className="btn-ghost btn-sm" onClick={() => setReport(r, 'resolved')}>Mark resolved</button>
-                      {r.target_exists && <button className="btn-danger btn-sm" onClick={() => removeItem(r)}>Delete item</button>}
+                      <button className="btn-ghost btn-sm" onClick={() => setReport(r, 'resolved')} title="No rules broken: the item stays up">Mark resolved</button>
+                      {r.target_exists && <button className="btn-danger btn-sm" onClick={() => setRemoving(r)}>Remove item</button>}
                     </>
                   ) : (
                     <button className="btn-ghost btn-sm" onClick={() => setReport(r, 'open')}>Reopen</button>
@@ -127,6 +126,12 @@ export default function AdminReports() {
       {!loading && !error && data?.pages > 1 && (
         <Pagination page={data.page} pages={data.pages} total={data.total} pageSize={data.page_size} onChange={goToPage} noun="reports" />
       )}
+
+      <RemoveItemModal
+        item={removing && { kind: removing.target_type, title: removing.target_title }}
+        onRemove={removeItem}
+        onClose={() => setRemoving(null)}
+      />
     </>
   )
 }

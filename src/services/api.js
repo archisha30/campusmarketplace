@@ -267,8 +267,12 @@ export const adminApi = {
   reinstate: (id) => pick(() => http.post(`/admin/users/${id}/reinstate`), () => mock.reinstateUser(id))(),
   // GET /api/admin/listings?q=  -> every listing, including reserved and sold
   listings: (q, page = 1) => pick(() => http.get('/admin/listings', { q, page }), () => mock.adminListings(q, page))(),
-  // DELETE /api/admin/listings/:id  (moderation; resources use resourcesApi.remove, which admins may call)
-  deleteListing: (id) => pick(() => http.del(`/admin/listings/${id}`), () => mock.deleteListing(id))(),
+  // POST /api/admin/listings/:id/remove  body: { reason }  (moderation: deleted for good, the seller is told why)
+  removeListing: (id, reason) =>
+    pick(() => http.post(`/admin/listings/${id}/remove`, { reason }), () => mock.adminRemove('listing', id, reason))(),
+  // POST /api/admin/resources/:id/remove  body: { reason }  (same, for resources)
+  removeResource: (id, reason) =>
+    pick(() => http.post(`/admin/resources/${id}/remove`, { reason }), () => mock.adminRemove('resource', id, reason))(),
   // GET /api/admin/resources?q=  -> every resource, including closed, with owner contact
   resources: (q, page = 1) => pick(() => http.get('/admin/resources', { q, page }), () => mock.adminResources(q, page))(),
   // GET /api/admin/reports?status=open|resolved  -> { items, open }  (includes who reported)

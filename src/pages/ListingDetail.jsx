@@ -21,7 +21,7 @@ import { useWishlist } from '../hooks/useWishlist.jsx'
 import { useToast } from '../hooks/useToast.jsx'
 
 
-const rentPeriodLabel = (days) => RENT_PERIODS.find((p) => p.days === Number(days))?.label.replace(/ \(.*\)$/, '')
+const rentPeriodLabel = (days) => RENT_PERIODS.find((p) => p.days === Number(days))?.label
 
 export default function ListingDetail() {
   const { id } = useParams()

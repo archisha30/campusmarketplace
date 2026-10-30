@@ -7,7 +7,8 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.routes.resources import _owner_out, _resource_out
+from app.api.routes.resources import _owner_out, _remove_files, _resource_files, _resource_out
+from app.core.moderation import item_removed, reports_cleared
 from app.core.config import settings
 from app.core.pagination import paginate
 from app.core.security import require_admin, require_owner
@@ -66,6 +67,19 @@ class AdminUsersOut(BaseModel):
 
 class AdminRoleIn(BaseModel):
     is_admin: bool
+
+
+class RemoveIn(BaseModel):
+    # Sent to the seller in their notification, so they know what to fix next time.
+    reason: str = Field(max_length=300)
+
+    @field_validator("reason")
+    @classmethod
+    def needs_reason(cls, value: str) -> str:
+        value = " ".join(value.split())
+        if len(value) < 3:
+            raise ValueError("Tell the seller why it's being removed")
+        return value
 
 
 class SuspendIn(BaseModel):
@@ -252,20 +266,43 @@ def list_all_listings(
     )
 
 
-@router.delete("/listings/{listing_id}", status_code=204)
-def delete_any_listing(
+@router.post("/listings/{listing_id}/remove", status_code=204)
+def remove_listing(
     listing_id: int,
+    payload: RemoveIn,
     db: Session = Depends(get_db),
-    _admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin),
 ):
-    """Moderation: remove someone's listing, with its photos."""
+    """Moderation: remove someone's listing for good, with its photos. The seller is told why,
+    and the item's open reports are resolved."""
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     photos = list(listing.images or [])
+    item_removed(db, owner_id=listing.owner_id, target_type="listing", target_id=listing.id,
+                 title=listing.title, reason=payload.reason, admin=admin)
     db.delete(listing)
     db.commit()
     delete_public_urls(photos)
+
+
+@router.post("/resources/{resource_id}/remove", status_code=204)
+def remove_resource(
+    resource_id: int,
+    payload: RemoveIn,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    """Moderation: remove someone's resource for good, with its files. The owner is told why."""
+    r = db.query(Resource).filter(Resource.id == resource_id).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Resource not found")
+    files = _resource_files(r)
+    item_removed(db, owner_id=r.owner_id, target_type="resource", target_id=r.id,
+                 title=r.title, reason=payload.reason, admin=admin)
+    db.delete(r)
+    db.commit()
+    _remove_files(files)
 
 
 @router.get("/resources", response_model=AdminResourcesOut)
@@ -349,11 +386,17 @@ def set_report_status(
     report_id: int,
     payload: ReportStatusIn,
     db: Session = Depends(get_db),
-    _admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin),
 ):
+    """Resolve (no action needed) or reopen a report. Resolving the last open report on an
+    item that's still up tells the seller it was reviewed and stays."""
     report = db.query(Report).filter(Report.id == report_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+    resolving = report.status == "open" and payload.status == "resolved"
     report.status = payload.status
     report.resolved_at = utcnow() if payload.status == "resolved" else None
+    model = Listing if report.target_type == "listing" else Resource
+    if resolving and db.query(model.id).filter(model.id == report.target_id, model.deleted_at.is_(None)).first():
+        reports_cleared(db, report, admin)
     db.commit()

@@ -19,7 +19,7 @@ def listing_id(db_session, users):
 
 
 def report(client, auth, who="buyer", **body):
-    body.setdefault("reason", "Scam / suspicious")
+    body.setdefault("reason", "Incorrect information")  # serious reasons wait for an admin (test_moderation.py)
     return client.post("/api/reports", json=body, headers=auth(who))
 
 
@@ -30,7 +30,7 @@ def test_report_notifies_seller_anonymously(client, auth, listing_id):
     notes = client.get("/api/notifications", headers=auth("owner")).json()
     n = notes["items"][0]
     assert notes["unread"] == 1
-    assert n["type"] == "report" and n["note"] == "Scam / suspicious"
+    assert n["type"] == "report" and n["note"] == "Incorrect information"
     assert n["target_type"] == "listing" and n["target_id"] == listing_id
     assert n["target_title"] == "Too-good-to-be-true iPhone"
     # The seller must not learn who reported them.
@@ -50,7 +50,8 @@ def test_one_report_per_person_per_item(client, auth, listing_id):
     assert again.status_code == 409 and "already reported" in again.json()["detail"]
     # A different student can still report it.
     assert report(client, auth, who="other", listing_id=listing_id).status_code == 201
-    assert client.get("/api/notifications", headers=auth("owner")).json()["unread"] == 2
+    notes = client.get("/api/notifications", headers=auth("owner")).json()
+    assert notes["unread"] == 1 and notes["items"][0]["count"] == 2  # one notification, "reported 2 times"
 
 
 def test_report_validation(client, auth, listing_id):
@@ -82,6 +83,6 @@ def test_admins_see_reporter_and_resolve(client, auth, listing_id, monkeypatch):
     open_only = client.get("/api/admin/reports", params={"status": "open"}, headers=auth("admin")).json()["items"]
     assert [r["reason"] for r in open_only] == ["Spam"]
 
-    # Deleting the item keeps the report history, flagged as gone.
-    client.delete(f"/api/admin/listings/{listing_id}", headers=auth("admin"))
+    # Removing the item keeps the report history, flagged as gone.
+    client.post(f"/api/admin/listings/{listing_id}/remove", json={"reason": "Fake listing"}, headers=auth("admin"))
     assert all(r["target_exists"] is False for r in client.get("/api/admin/reports", headers=auth("admin")).json()["items"])

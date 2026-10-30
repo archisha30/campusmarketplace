@@ -1,8 +1,11 @@
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.routes.notifications import notify
+from app.core.moderation import REPORTS_PER_DAY, notify_report
+from app.core.timeutil import utcnow
 from app.core.security import require_verified
 from app.core.trash import live
 from app.db.session import get_db
@@ -21,8 +24,8 @@ def create_report(
     db: Session = Depends(get_db),
     user: User = Depends(require_verified),
 ):
-    """Report a listing or resource. The seller gets an anonymous notification;
-    admins see the full report under Admin → Reports."""
+    """Report a listing or resource. Admins see the full report under Admin → Reports; the
+    seller gets an anonymous notification (serious reasons wait for an admin: core/moderation.py)."""
     if payload.listing_id is not None:
         target_type, model, target_id = "listing", Listing, payload.listing_id
     else:
@@ -41,8 +44,11 @@ def create_report(
     )
     if exists:
         raise HTTPException(status_code=409, detail="You've already reported this. Our team will review it.")
+    recent = db.query(Report).filter(Report.reporter_id == user.id, Report.created_at >= utcnow() - timedelta(days=1)).count()
+    if recent >= REPORTS_PER_DAY:
+        raise HTTPException(status_code=429, detail="You've sent a lot of reports today. Our team is reviewing them; try again tomorrow.")
 
-    db.add(Report(
+    report = Report(
         reporter_id=user.id,
         owner_id=target.owner_id,
         target_type=target_type,
@@ -50,19 +56,11 @@ def create_report(
         target_title=target.title[:120],
         reason=payload.reason,
         details=payload.details,
-    ))
-    # The seller sees the reason but not who reported it (see NotificationOut).
-    notify(
-        db,
-        recipient_id=target.owner_id,
-        actor=user,
-        type="report",
-        target_type=target_type,
-        target_id=target.id,
-        target_title=target.title,
-        note=payload.reason,
     )
+    db.add(report)
     try:
+        # The seller sees the reason but not who reported it (see NotificationOut).
+        notify_report(db, report, user)
         db.commit()
     except IntegrityError:
         db.rollback()

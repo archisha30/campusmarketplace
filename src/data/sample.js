@@ -22,7 +22,7 @@ export const RENT_PERIODS = [
   { days: 15, label: '15 days', short: '15 days' },
   { days: 30, label: '1 month', short: 'month' },
   { days: 90, label: '3 months', short: '3 months' },
-  { days: 180, label: '6 months (a semester)', short: '6 months' },
+  { days: 180, label: '6 months', short: '6 months' },
 ]
 
 export const LISTING_TYPES = [

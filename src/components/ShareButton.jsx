@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useToast } from '../hooks/useToast.jsx'
+import Modal from './Modal.jsx'
 
 // "Share" on a listing or resource: WhatsApp, copy link, or the phone's own share sheet
 // (Instagram, Telegram, Messages…) where the browser has one. Recipients need to log in
@@ -7,6 +8,7 @@ import { useToast } from '../hooks/useToast.jsx'
 export default function ShareButton({ title, message, path, className = '' }) {
   const toast = useToast()
   const [open, setOpen] = useState(false)
+  const [manualCopy, setManualCopy] = useState(false) // clipboard blocked: show the link to copy by hand
   const box = useRef(null)
   const url = `${window.location.origin}${path}`
   const text = `${message}\n${url}`
@@ -30,7 +32,7 @@ export default function ShareButton({ title, message, path, className = '' }) {
       await navigator.clipboard.writeText(url)
       toast('Link copied')
     } catch {
-      window.prompt('Copy this link', url) // clipboard blocked (e.g. http or an old browser)
+      setManualCopy(true) // clipboard blocked (e.g. http or an old browser)
     }
   }
 
@@ -82,6 +84,11 @@ export default function ShareButton({ title, message, path, className = '' }) {
           )}
         </div>
       )}
+      <Modal open={manualCopy} onClose={() => setManualCopy(false)} title="Copy this link">
+        <input readOnly value={url} className="field-input" aria-label="Link" onFocus={(e) => e.target.select()} autoFocus />
+        <p className="mt-1.5 text-[12.5px] text-ink-faint">Your browser blocked copying. Select the link and copy it.</p>
+        <button className="btn-ghost mt-4 w-full" onClick={() => setManualCopy(false)}>Done</button>
+      </Modal>
     </div>
   )
 }

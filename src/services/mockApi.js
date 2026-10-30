@@ -676,7 +676,10 @@ export function createReport({ listing_id, resource_id, reason, details }) {
     reporter: { id: String(u.id), name: u.name, email: u.email },
     owner: { id: String(owner.id), name: owner.name, email: owner.email || '' },
   })
-  pushNotification({ user_id: owner.id, actor: u, type: 'report', target_type: targetType, target_id: target.id, target_title: target.title, note: reason })
+  // Like the API: serious reasons wait for an admin before the seller hears (core/moderation.py).
+  if (!['Scam / suspicious', 'Prohibited item'].includes(reason)) {
+    pushNotification({ user_id: owner.id, actor: u, type: 'report', target_type: targetType, target_id: target.id, target_title: target.title, note: reason })
+  }
   return delay({ ok: true })
 }
 
@@ -689,8 +692,35 @@ export function adminReports(status, page = 1) {
   return delay({ ...paged(items, { page }, 25), open: reports.filter((r) => r.status === 'open').length })
 }
 
+// Mirrors POST /api/admin/{listings|resources}/:id/remove: gone for good, reports resolved,
+// and the seller told why.
+export function adminRemove(kind, id, reason) {
+  if (!reason?.trim()) return Promise.reject(new Error("Tell the seller why it's being removed"))
+  const list = kind === 'listing' ? listings : resources
+  const item = list.find((x) => x.id === Number(id))
+  if (!item) return Promise.reject(new Error(`${kind === 'listing' ? 'Listing' : 'Resource'} not found`))
+  if (kind === 'listing') listings = listings.filter((x) => x !== item)
+  else resources = resources.filter((x) => x !== item)
+  reports = reports.map((r) => (r.target_type === kind && r.target_id === item.id ? { ...r, status: 'resolved', resolved_at: nowIso() } : r))
+  const owner = kind === 'listing' ? item.seller : item.owner
+  pushNotification({
+    user_id: owner.id, actor: { id: 'team', name: 'CampusMarket team', email: '' }, type: 'removed',
+    target_type: kind, target_id: item.id, target_title: item.title, note: reason.trim(),
+  })
+  return delay(null)
+}
+
 export function setReportStatus(id, status) {
+  const report = reports.find((r) => r.id === Number(id))
+  const resolving = report?.status === 'open' && status === 'resolved'
   reports = reports.map((r) => (r.id === Number(id) ? { ...r, status, resolved_at: status === 'resolved' ? nowIso() : null } : r))
+  // Clearing the last open report on an item tells the seller it stays up.
+  if (resolving && !reports.some((r) => r.status === 'open' && r.target_type === report.target_type && r.target_id === report.target_id)) {
+    pushNotification({
+      user_id: report.owner?.id ?? report.owner_id, actor: { id: 'team', name: 'CampusMarket team', email: '' }, type: 'report_cleared',
+      target_type: report.target_type, target_id: report.target_id, target_title: report.target_title,
+    })
+  }
   return delay(null)
 }
 

@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { resourcesApi } from '../services/api.js'
+import { adminApi, resourcesApi } from '../services/api.js'
 import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useToast } from '../hooks/useToast.jsx'
 import { VerifiedBadge } from '../components/Badge.jsx'
 import ReportModal from '../components/ReportModal.jsx'
 import ShareButton from '../components/ShareButton.jsx'
+import ConfirmModal from '../components/ConfirmModal.jsx'
+import RemoveItemModal from '../components/RemoveItemModal.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import LinkifiedText from '../components/LinkifiedText.jsx'
 import ResourcePreview from '../components/ResourcePreview.jsx'
@@ -373,6 +375,7 @@ function OwnerPanel({ r, onChange, refetch }) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [busy, setBusy] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const isOwner = r.access?.reason === 'owner'
   const requests = useApi(
     () => (r.offer_type === 'sale' ? resourcesApi.accessRequests(r.id) : Promise.resolve([])),
@@ -391,7 +394,6 @@ function OwnerPanel({ r, onChange, refetch }) {
   }
 
   async function remove() {
-    if (!window.confirm(`Delete "${r.title}"? You can restore it from the Deleted tab on your Seller Dashboard for 24 hours.`)) return
     setBusy(true)
     try {
       await resourcesApi.remove(r.id)
@@ -400,7 +402,15 @@ function OwnerPanel({ r, onChange, refetch }) {
     } catch (err) {
       toast(err.message)
       setBusy(false)
+      setConfirmDelete(false)
     }
+  }
+
+  // An admin removing someone else's resource: gone for good, and the owner is told why.
+  async function adminRemove(reason) {
+    await adminApi.removeResource(r.id, reason)
+    toast('Resource removed. The owner has been told why')
+    navigate('/resources', { replace: true })
   }
 
   async function decide(reqId, status) {
@@ -428,7 +438,7 @@ function OwnerPanel({ r, onChange, refetch }) {
             <Link to={`/resources/${r.id}/edit`} className="btn-ghost btn-sm">Edit</Link>
           </>
         )}
-        <button className="btn-danger btn-sm" onClick={remove} disabled={busy}>Delete</button>
+        <button className="btn-danger btn-sm" onClick={() => setConfirmDelete(true)} disabled={busy}>{isOwner ? 'Delete' : 'Remove'}</button>
       </div>
       <p className="mb-4 text-[13px] text-ink-soft">
         Status: <span className="font-semibold text-ink">{r.status === 'available' ? 'Available' : 'Closed'}</span>
@@ -472,6 +482,13 @@ function OwnerPanel({ r, onChange, refetch }) {
           </ul>
         </>
       )}
+      <ConfirmModal open={isOwner && confirmDelete} title="Delete this resource?" confirmLabel="Yes, delete" busyLabel="Deleting…"
+        danger busy={busy} onConfirm={remove} onClose={() => setConfirmDelete(false)}>
+        Are you sure you want to delete <strong className="text-ink">“{r.title}”</strong>? You can restore it from the
+        <strong className="text-ink"> Deleted</strong> tab on your Seller Dashboard for 24 hours.
+      </ConfirmModal>
+      <RemoveItemModal item={!isOwner && confirmDelete ? { kind: 'resource', title: r.title } : null}
+        onRemove={adminRemove} onClose={() => setConfirmDelete(false)} />
     </section>
   )
 }

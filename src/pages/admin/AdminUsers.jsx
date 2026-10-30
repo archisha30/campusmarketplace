@@ -10,6 +10,7 @@ import { formatPhone } from '../../lib/format.js'
 import { Stat, Table, Td, formatDate } from './AdminLayout.jsx'
 import Pagination from '../../components/Pagination.jsx'
 import Modal from '../../components/Modal.jsx'
+import ConfirmModal from '../../components/ConfirmModal.jsx'
 import { usePage } from '../../hooks/usePage.js'
 
 const REASONS = ['Scam or fake listing', 'Harassment or abusive messages', 'Selling prohibited items', 'Spam', 'Impersonation']
@@ -51,8 +52,15 @@ export default function AdminUsers() {
     }
   }
 
+  const [confirming, setConfirming] = useState(null) // { action: 'reinstate' | 'admin', user }
+
+  async function confirmed() {
+    const { action, user: u } = confirming
+    await (action === 'reinstate' ? reinstate(u) : toggleAdmin(u))
+    setConfirming(null)
+  }
+
   async function reinstate(u) {
-    if (!window.confirm(`Reinstate ${u.name || u.email}? They can log in again and their listings and resources come back.`)) return
     setBusy(u.id)
     try {
       replace(await adminApi.reinstate(u.id))
@@ -67,7 +75,6 @@ export default function AdminUsers() {
 
   async function toggleAdmin(u) {
     const making = !u.is_admin
-    if (!window.confirm(making ? `Make ${u.name || u.email} an admin? They'll see every user, listing and resource.` : `Remove admin access for ${u.name || u.email}?`)) return
     setBusy(u.id)
     try {
       replace(await adminApi.setAdmin(u.id, making))
@@ -140,7 +147,7 @@ export default function AdminUsers() {
               <Td className="whitespace-nowrap text-ink-soft">{formatDate(u.created_at)}</Td>
               <Td>
                 {u.suspended ? (
-                  <button className="btn-ghost btn-sm" disabled={busy === u.id} onClick={() => reinstate(u)}>Reinstate</button>
+                  <button className="btn-ghost btn-sm" disabled={busy === u.id} onClick={() => setConfirming({ action: 'reinstate', user: u })}>Reinstate</button>
                 ) : canSuspend(u) ? (
                   <button className="btn-danger btn-sm" disabled={busy === u.id} onClick={() => { setReason(''); setSuspending(u) }}>Suspend</button>
                 ) : (
@@ -156,7 +163,7 @@ export default function AdminUsers() {
                       className={u.is_admin ? 'btn-danger btn-sm' : 'btn-ghost btn-sm'}
                       disabled={busy === u.id || (!u.is_admin && (!u.verified || u.suspended))}
                       title={!u.is_admin && u.suspended ? 'Suspended accounts can’t be admins' : !u.is_admin && !u.verified ? 'Only verified students can be admins' : undefined}
-                      onClick={() => toggleAdmin(u)}
+                      onClick={() => setConfirming({ action: 'admin', user: u })}
                     >
                       {u.is_admin ? 'Remove admin' : 'Make admin'}
                     </button>
@@ -202,6 +209,23 @@ export default function AdminUsers() {
           </>
         )}
       </Modal>
+
+      <ConfirmModal
+        open={Boolean(confirming)}
+        busy={busy === confirming?.user.id}
+        danger={confirming?.action === 'admin' && confirming.user.is_admin}
+        title={confirming?.action === 'reinstate' ? 'Reinstate this account?' : confirming?.user.is_admin ? 'Remove admin access?' : 'Make this student an admin?'}
+        confirmLabel={confirming?.action === 'reinstate' ? 'Reinstate' : confirming?.user.is_admin ? 'Remove access' : 'Make admin'}
+        onConfirm={confirmed}
+        onClose={() => setConfirming(null)}
+      >
+        {confirming && (() => {
+          const who = <strong className="break-words text-ink">{confirming.user.name || confirming.user.email}</strong>
+          if (confirming.action === 'reinstate') return <>{who} can log in again, their listings and resources come back, and their email is unbanned.</>
+          if (confirming.user.is_admin) return <>{who} will lose access to the admin dashboard.</>
+          return <>{who} will see every user, listing, resource and report, and can remove items and suspend accounts.</>
+        })()}
+      </ConfirmModal>
     </>
   )
 }

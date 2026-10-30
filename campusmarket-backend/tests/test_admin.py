@@ -94,8 +94,10 @@ def test_me_reports_owner_flags(client, auth):
 def test_admin_sees_and_deletes_any_listing(client, auth, sold_listing):
     items = client.get("/api/admin/listings", headers=auth("admin")).json()["items"]
     assert [i["status"] for i in items] == ["sold"]  # sold ones included
-    assert client.delete(f"/api/admin/listings/{sold_listing}", headers=auth("buyer")).status_code == 403
-    assert client.delete(f"/api/admin/listings/{sold_listing}", headers=auth("admin")).status_code == 204
+    remove = f"/api/admin/listings/{sold_listing}/remove"
+    assert client.post(remove, json={"reason": "Duplicate listing"}, headers=auth("buyer")).status_code == 403
+    assert client.post(remove, json={"reason": " "}, headers=auth("admin")).status_code == 422  # a reason is required
+    assert client.post(remove, json={"reason": "Duplicate listing"}, headers=auth("admin")).status_code == 204
     assert client.get("/api/admin/listings", headers=auth("admin")).json()["total"] == 0
 
 
@@ -105,7 +107,10 @@ def test_admin_sees_closed_resources_with_contact_and_can_delete(client, auth, c
     items = client.get("/api/admin/resources", headers=auth("admin")).json()["items"]
     assert items[0]["status"] == "closed"
     assert items[0]["owner"]["email"] == "owner@campus.edu"
-    assert client.delete(f"/api/resources/{rid}", headers=auth("admin")).status_code == 204
+    # Admins can't skip the reason by using the owner's delete.
+    assert client.delete(f"/api/resources/{rid}", headers=auth("admin")).status_code == 403
+    res = client.post(f"/api/admin/resources/{rid}/remove", json={"reason": "Copyrighted textbook scan"}, headers=auth("admin"))
+    assert res.status_code == 204
     assert client.get("/api/admin/resources", headers=auth("admin")).json()["total"] == 0
 
 

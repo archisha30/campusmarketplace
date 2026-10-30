@@ -336,7 +336,7 @@ function Notifications() {
           <button className="btn-ghost btn-sm" onClick={() => setConfirmClear(true)}>Clear all</button>
         )}
       </div>
-      <p className="-mt-2 mb-4 text-[13px] text-ink-faint">Access requests, students reaching out, and reports on your items</p>
+      <p className="-mt-2 mb-4 text-[13px] text-ink-faint">Access requests, students reaching out, reports on your items, and updates from the CampusMarket team</p>
 
       {loading && <div className="skeleton h-20" />}
 
@@ -382,11 +382,19 @@ function NotificationRow({ n, onDismiss }) {
       })}`
 
   const isReport = n.type === 'report'
+  const fromTeam = n.type === 'removed' || n.type === 'report_cleared'
   let icon
   let text
   if (isReport) {
     icon = '⚠️'
-    text = <>reported your {n.target_type} {item}</>
+    text = <>reported your {n.target_type} {item}{n.count > 1 && <span className="font-semibold text-coral"> ({n.count} reports)</span>}</>
+  } else if (n.type === 'removed') {
+    icon = '🛑'
+    // The item is gone, so its title isn't a link any more.
+    text = <>removed your {n.target_type} <span className="font-semibold text-ink">{n.target_title}</span></>
+  } else if (n.type === 'report_cleared') {
+    icon = '✅'
+    text = <>reviewed the reports on your {n.target_type} {item}. No rules were broken, so it stays up.</>
   } else if (n.type === 'access_request') {
     icon = '🔑'
     text = <>requested access to {item}</>
@@ -400,6 +408,8 @@ function NotificationRow({ n, onDismiss }) {
       <div className="relative flex-none">
         {isReport ? (
           <div className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-coral/15 text-[16px]" aria-hidden>🚩</div>
+        ) : fromTeam ? (
+          <div className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-brand text-[13px] font-bold text-white" aria-hidden>CM</div>
         ) : (
           <Avatar user={actor} size={38} className="bg-sun font-display text-ink" />
         )}
@@ -412,7 +422,9 @@ function NotificationRow({ n, onDismiss }) {
         {n.note && (
           isReport
             ? <p className="mt-1 text-[13.5px]"><span className="font-semibold">Reason:</span> {n.note}. Our team will review it; if something's wrong, edit or remove the item.</p>
-            : <p className="mt-1 break-words text-[13.5px]">“{n.note}”</p>
+            : n.type === 'removed'
+              ? <p className="mt-1 break-words text-[13.5px]"><span className="font-semibold">Reason:</span> {n.note}. Please follow the rules when you post again; repeated problems can get an account suspended.</p>
+              : <p className="mt-1 break-words text-[13.5px]">“{n.note}”</p>
         )}
         <p className="mt-1 text-[12px] text-ink-faint">
           {timeAgo(n.created_at)}
@@ -421,7 +433,7 @@ function NotificationRow({ n, onDismiss }) {
         </p>
       </div>
       <div className="flex flex-none flex-wrap gap-2">
-        {isReport ? (
+        {n.type === 'removed' ? null : isReport || n.type === 'report_cleared' ? (
           <Link to={href} className="btn-ghost btn-sm">View item</Link>
         ) : n.type === 'access_request' ? (
           <Link to={`${href}#manage`} className="btn-accent btn-sm">Review request</Link>

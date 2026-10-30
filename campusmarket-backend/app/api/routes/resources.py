@@ -511,11 +511,9 @@ def delete_resource(
         db.commit()
         purge_deleted_resources(db)
         return
-    # An admin removing someone else's resource (moderation) deletes it straight away.
-    files = _resource_files(r)
-    db.delete(r)
-    db.commit()
-    _remove_files(files)
+    # Admins remove other people's resources from the admin dashboard, which asks for a reason
+    # to send the owner (POST /api/admin/resources/{id}/remove).
+    raise HTTPException(status_code=403, detail="Remove it from the admin dashboard, with a reason for the owner")
 
 
 @router.post("/{resource_id}/restore", status_code=204)

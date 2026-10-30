@@ -1,5 +1,5 @@
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -25,6 +25,9 @@ class Report(Base):
     reason = Column(String(40), nullable=False)
     details = Column(String(300), nullable=True)
     status = Column(String(10), nullable=False, default="open")  # open | resolved
+    # Whether the seller was told about this report. Serious reasons (SERIOUS_REASONS) wait for
+    # an admin's review, so a scammer isn't tipped off before anyone has looked.
+    owner_notified = Column(Boolean, nullable=False, default=True, server_default="true")
     created_at = Column(DateTime, default=utcnow, nullable=False, index=True)
     resolved_at = Column(DateTime, nullable=True)
 
