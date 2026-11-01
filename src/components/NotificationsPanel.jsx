@@ -143,7 +143,7 @@ function NotificationRow({ n, onDismiss }) {
   } else if (n.type === 'request_match') {
     icon = '📦'
     text = <>just listed {item}, which matches what you're looking for</>
-    action = <Link to={href} className="btn-accent btn-sm">View listing</Link>
+    action = <Link to={href} className="btn-accent btn-sm">View {n.target_type}</Link>
   } else {
     icon = n.channel === 'whatsapp' ? '💬' : '✉️'
     text = <>opened {n.channel === 'whatsapp' ? 'WhatsApp' : 'email'} to message you about {item}</>

@@ -14,6 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.routes.notifications import notify
+from app.core.request_matching import best_matches, notify_matching_requests
 from app.core.trash import can_see_held, existing, live, restore_cutoff
 from app.core.pagination import paginate
 from app.core.pdf_preview import PdfError, open_pdf, read_limited, render_previews
@@ -289,6 +290,11 @@ def _get_owned_resource(resource_id: int, db: Session, user: User, allow_admin: 
 # ---------- routes ----------
 
 
+def matching_resources(db: Session, text: str, exclude_owner_id=None, limit: int = 3) -> list[Resource]:
+    """Open resources that match a Looking For request, best match first."""
+    return best_matches(db, Resource, text, (Resource.status == "available",), exclude_owner_id, limit)
+
+
 @router.get("", response_model=ResourceListOut)
 def list_resources(
     request: Request,
@@ -431,6 +437,9 @@ def create_resource(
     finally:
         if pdf:
             pdf.doc.close()
+    notify_matching_requests(db, seller=user, target_type="resource", target_id=r.id, title=r.title,
+                             fields=(r.title, r.description, r.subject))
+    db.commit()
     return _resource_out(_get_resource(r.id, db, user), request, user, db, detail=True)
 
 

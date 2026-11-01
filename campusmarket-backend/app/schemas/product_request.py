@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
 
 from app.schemas.listing import ListingOut
+from app.schemas.resource import ResourceOut
 
 MAX_LEN = 70
 
@@ -64,5 +65,6 @@ class ProductRequestOut(BaseModel):
 
 
 class ProductRequestCreated(ProductRequestOut):
-    # Listings already for sale that match, so the student may not need to wait for a seller.
+    # Listings and resources already up that match, so the student may not need to wait for a seller.
     matches: list[ListingOut] = []
+    resource_matches: list[ResourceOut] = []

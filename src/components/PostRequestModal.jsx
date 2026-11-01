@@ -5,6 +5,7 @@ import PriceTag from './PriceTag.jsx'
 import { requestsApi } from '../services/api.js'
 import { useToast } from '../hooks/useToast.jsx'
 import { trackEvent } from '../lib/analytics.js'
+import { formatPrice } from '../lib/format.js'
 
 const MAX = 70
 
@@ -14,12 +15,12 @@ export default function PostRequestModal({ open, onClose, onPosted }) {
   const [description, setDescription] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  // Listings already for sale that match the request, shown after posting it.
-  const [matches, setMatches] = useState([])
+  // Listings and resources already up that match the request, shown after posting it.
+  const [matches, setMatches] = useState(null)
 
   function close() {
     setError('')
-    setMatches([])
+    setMatches(null)
     onClose()
   }
 
@@ -33,10 +34,12 @@ export default function PostRequestModal({ open, onClose, onPosted }) {
       onPosted?.()
       setProduct('')
       setDescription('')
-      if (posted.matches?.length) {
+      const listings = posted.matches || []
+      const resources = posted.resource_matches || []
+      if (listings.length || resources.length) {
         toast('Request sent to sellers')
-        trackEvent('request_matched', { matches: posted.matches.length })
-        setMatches(posted.matches)
+        trackEvent('request_matched', { matches: listings.length, resource_matches: resources.length })
+        setMatches({ listings, resources })
       } else {
         toast("Request sent to sellers. We'll let you know when a match is listed.")
         onClose()
@@ -48,33 +51,39 @@ export default function PostRequestModal({ open, onClose, onPosted }) {
     }
   }
 
-  if (matches.length) {
+  if (matches) {
     return (
       <Modal open={open} onClose={close} title="Already on CampusMarket">
         <p className="-mt-2 mb-4 text-[13.5px] text-ink-soft">
           Your request is posted, and we'll tell you if more turn up. Meanwhile, these might be what you need:
         </p>
-        <ul className="mb-5 space-y-2">
-          {matches.map((l) => (
-            <li key={l.id}>
-              <Link
-                to={`/listing/${l.id}`}
-                onClick={close}
-                className="flex items-center gap-3 rounded-card border border-line p-2 transition hover:shadow-lift"
-              >
-                <span
-                  className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] text-[22px]"
-                  style={{ background: l.art?.bg || '#EFEFEC' }}
-                >
-                  {l.images?.[0] ? <img src={l.images[0]} alt="" className="h-full w-full object-cover" /> : <span aria-hidden>{l.art?.emoji || '📦'}</span>}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-semibold">{l.title}</span>
-                  <PriceTag price={l.price} mrp={l.mrp} listingType={l.listing_type} rentDays={l.rent_days} size="sm" />
-                </span>
-                <span className="text-[13px] font-semibold text-ink-soft">View</span>
-              </Link>
-            </li>
+        <ul className="mb-5 max-h-[55vh] space-y-2 overflow-y-auto">
+          {matches.listings.map((l) => (
+            <MatchRow
+              key={`l${l.id}`}
+              to={`/listing/${l.id}`}
+              onOpen={close}
+              title={l.title}
+              thumb={l.images?.[0]}
+              fallback={l.art?.emoji || '📦'}
+              bg={l.art?.bg}
+            >
+              <PriceTag price={l.price} mrp={l.mrp} listingType={l.listing_type} rentDays={l.rent_days} size="sm" />
+            </MatchRow>
+          ))}
+          {matches.resources.map((r) => (
+            <MatchRow
+              key={`r${r.id}`}
+              to={`/resources/${r.id}`}
+              onOpen={close}
+              title={r.title}
+              thumb={r.thumbnail_url}
+              fallback={r.copy_type === 'hard' ? '📗' : '📄'}
+            >
+              <span className="block text-[12.5px] text-ink-faint">
+                Resource Hub · {r.subject} · {r.offer_type === 'free' ? 'Free' : formatPrice(r.price)}
+              </span>
+            </MatchRow>
           ))}
         </ul>
         <button type="button" className="btn-ghost w-full" onClick={close}>Done</button>
@@ -110,6 +119,26 @@ export default function PostRequestModal({ open, onClose, onPosted }) {
         </div>
       </form>
     </Modal>
+  )
+}
+
+function MatchRow({ to, onOpen, title, thumb, fallback, bg, children }) {
+  return (
+    <li>
+      <Link to={to} onClick={onOpen} className="flex items-center gap-3 rounded-card border border-line p-2 transition hover:shadow-lift">
+        <span
+          className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] text-[22px]"
+          style={{ background: bg || '#EFEFEC' }}
+        >
+          {thumb ? <img src={thumb} alt="" className="h-full w-full object-cover object-top" /> : <span aria-hidden>{fallback}</span>}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[14px] font-semibold">{title}</span>
+          {children}
+        </span>
+        <span className="text-[13px] font-semibold text-ink-soft">View</span>
+      </Link>
+    </li>
   )
 }
 

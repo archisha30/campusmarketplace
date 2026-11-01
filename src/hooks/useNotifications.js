@@ -6,7 +6,7 @@ import { usePolling } from './usePolling.js'
 const POLL_MS = 60_000
 
 // Personal notifications for every logged-in student: for buyers, answers to their access
-// requests and new listings matching their Looking For requests; for sellers also access requests, WhatsApp / Email taps and reports on their
+// requests and new listings and resources matching their Looking For requests; for sellers also access requests, WhatsApp / Email taps and reports on their
 // items; and updates from the CampusMarket team. Read state lives on the server, so it's
 // the same on every device.
 //

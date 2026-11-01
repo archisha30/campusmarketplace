@@ -105,20 +105,20 @@ export function createListing(payload, photos = []) {
     art,
   }
   listings.unshift(item)
-  notifyMatchingRequests(item)
+  notifyMatchingRequests(item, 'listing', item)
   return delay(item, 500)
 }
 
-// Like the API: students whose request from the last 30 days matches a new listing hear
-// about it, once each.
-function notifyMatchingRequests(item) {
+// Like the API: students whose request from the last 30 days matches a new listing or
+// resource hear about it, once each. `fields` has its title, description and category.
+function notifyMatchingRequests(item, targetType, fields) {
   const since = Date.now() - 30 * 86400e3
   const told = new Set()
   for (const r of productRequests) {
-    if (told.has(r.requester.id) || new Date(r.created_at).getTime() < since || !mockSearchMatch(item, r.product)) continue
+    if (told.has(r.requester.id) || new Date(r.created_at).getTime() < since || !mockSearchMatch(fields, r.product)) continue
     pushNotification({
       user_id: r.requester.id, actor: { ...seed.currentUser, email: '', phone: null }, type: 'request_match',
-      target_type: 'listing', target_id: item.id, target_title: item.title, note: r.product,
+      target_type: targetType, target_id: item.id, target_title: item.title, note: r.product,
     })
     told.add(r.requester.id)
   }
@@ -419,6 +419,7 @@ export async function createResource(payload, file) {
   }
   if (file) resourceFiles.set(item.id, file)
   resources.unshift(item)
+  notifyMatchingRequests(item, 'resource', { ...item, category: item.subject })
   return delay(resourceOut(item, true), 500)
 }
 
@@ -988,13 +989,19 @@ export function createRequest({ product, description }) {
     requester: { id: String(u.id), name: u.name, email: u.email, phone: u.phone || null, avatar_url: u.avatar_url || null },
   }
   productRequests = [req, ...productRequests]
-  // Like the API: listings still for sale that match, not the student's own (at most 4).
+  // Like the API: listings still for sale (at most 4) and open resources (at most 3) that
+  // match, not the student's own.
   const today = new Date().toISOString().slice(0, 10)
   const matches = listings
     .filter((l) => l.status === 'available' && !l.held && (!l.expiry_date || l.expiry_date >= today))
     .filter((l) => !sameId(l.seller?.id, u.id) && mockSearchMatch(l, product))
     .slice(0, 4)
-  return delay({ ...req, matches })
+  const resourceMatches = resources
+    .filter((r) => r.status === 'available' && !r.held && !sameId(r.owner.id, u.id))
+    .filter((r) => mockSearchMatch({ ...r, category: r.subject }, product))
+    .slice(0, 3)
+    .map((r) => resourceOut(r))
+  return delay({ ...req, matches, resource_matches: resourceMatches })
 }
 
 export function listRequests() {

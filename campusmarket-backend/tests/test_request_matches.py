@@ -118,3 +118,25 @@ def test_old_suspended_and_own_requests_are_skipped(client, auth, db_session, us
     users["other"].suspended_at = None
     db.commit()
     assert matches_for(client, auth, "other") == []
+
+
+# --- The same for the Resource Hub ---
+
+def test_request_shows_open_resources(client, auth, create):
+    assert create({"title": "DBMS handwritten notes", "subject": "DBMS"}).status_code == 201
+    closed = create({"title": "DBMS unit 1 notes", "subject": "DBMS"}).json()
+    client.patch(f"/api/resources/{closed['id']}/status", json={"status": "closed"}, headers=auth("owner"))
+    create({"title": "Physics lab manual", "subject": "Physics"})
+    body = post(client, auth, "dbms notes")
+    assert [r["title"] for r in body["resource_matches"]] == ["DBMS handwritten notes"]
+    assert body["matches"] == []
+    assert "drive_url" not in body["resource_matches"][0] or body["resource_matches"][0]["drive_url"] is None
+
+
+def test_new_resource_notifies_matching_requests(client, auth, create):
+    post(client, auth, "DBMS notes")
+    post(client, auth, "calculator", who="other")
+    resource = create({"title": "DBMS handwritten notes", "subject": "DBMS"}).json()
+    [n] = matches_for(client, auth, "buyer")
+    assert (n["target_type"], n["target_id"], n["note"]) == ("resource", resource["id"], "DBMS notes")
+    assert matches_for(client, auth, "other") == []

@@ -298,9 +298,14 @@ def hits_needed(group_count: int) -> int:
     return group_count if group_count <= 2 else group_count - 1
 
 
+def _category(model):
+    # Resources have a subject where listings have a category.
+    return model.category if hasattr(model, "category") else model.subject
+
+
 def search_filter(model, groups: list[dict[str, bool]]):
     """Every group must match the title, description or category."""
-    fields = (model.title, model.description, model.category)
+    fields = (model.title, model.description, _category(model))
     return [or_(*(_matches(f, terms) for f in fields)) for terms in groups]
 
 
@@ -309,7 +314,7 @@ def relevance(model, groups: list[dict[str, bool]], query: str):
     title most of all."""
     score = case((func.lower(model.title).contains(_norm(query)), 5), else_=0) if _norm(query) else 0
     for terms in groups:
-        score = score + case((_matches(model.title, terms), 3), else_=0) + case((_matches(model.category, terms), 1), else_=0)
+        score = score + case((_matches(model.title, terms), 3), else_=0) + case((_matches(_category(model), terms), 1), else_=0)
     return score
 
 

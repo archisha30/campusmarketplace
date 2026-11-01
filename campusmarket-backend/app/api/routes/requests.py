@@ -1,9 +1,10 @@
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.routes.listings import matching_listings
+from app.api.routes.resources import _resource_out, matching_resources
 from app.core.security import get_current_user, require_seller
 from app.db.session import get_db
 from app.models.product_request import VISIBLE_FOR, ProductRequest
@@ -19,6 +20,7 @@ DAILY_LIMIT = 5
 
 @router.post("", response_model=ProductRequestCreated, status_code=201)
 def create_request(
+    request: Request,
     payload: ProductRequestCreate,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -41,8 +43,13 @@ def create_request(
     out = ProductRequestOut.from_model(req, include_contact=True)  # your own request
     # Searched on what they're looking for only: the description ("need it by Friday") would
     # rule out every listing, since every word of a search has to match.
-    matches = matching_listings(db, req.product, exclude_owner_id=user.id)
-    return ProductRequestCreated(**out.model_dump(), matches=[ListingOut.from_orm_with_art(m) for m in matches])
+    listings = matching_listings(db, req.product, exclude_owner_id=user.id)
+    resources = matching_resources(db, req.product, exclude_owner_id=user.id)
+    return ProductRequestCreated(
+        **out.model_dump(),
+        matches=[ListingOut.from_orm_with_art(m) for m in listings],
+        resource_matches=[_resource_out(r, request) for r in resources],
+    )
 
 
 @router.get("", response_model=list[ProductRequestOut])
