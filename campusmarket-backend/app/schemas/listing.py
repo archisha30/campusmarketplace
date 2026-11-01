@@ -186,3 +186,31 @@ class ListingListOut(BaseModel):
 class RecommendedOut(BaseModel):
     items: list[ListingOut]
     personalized: bool
+
+
+class PublicListingOut(BaseModel):
+    """A listing card on the landing page, which visitors see before signing up. Only what the
+    card shows: no seller, description or pickup spot (those stay for verified students)."""
+    id: int
+    title: str
+    category: str
+    listing_type: str
+    price: float
+    mrp: float | None = None
+    rent_days: int | None = None
+    image: str | None = None
+    art: Art
+
+    @classmethod
+    def from_listing(cls, listing) -> "PublicListingOut":
+        return cls(
+            id=listing.id,
+            title=listing.title,
+            category=listing.category,
+            listing_type=listing.listing_type,
+            price=listing.price,
+            mrp=listing.mrp,
+            rent_days=listing.rent_days,
+            image=(listing.images or [None])[0],
+            art=Art(**CATEGORY_ART.get(listing.category, DEFAULT_ART)),
+        )

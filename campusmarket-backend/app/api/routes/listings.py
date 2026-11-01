@@ -4,10 +4,11 @@ from datetime import date
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, ValidationError
-from sqlalchemy import case, or_
+from sqlalchemy import case, func, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.images import ImageError, check_image, read_upload
@@ -20,6 +21,7 @@ from app.core.trash import can_see_held, existing, live, restore_cutoff
 from app.core.timeutil import utcnow
 from app.db.session import get_db
 from app.models.listing import Listing
+from app.models.listing_view import ListingView
 from app.models.user import User
 from app.schemas.listing import (
     FOOD_CATEGORY,
@@ -27,6 +29,7 @@ from app.schemas.listing import (
     ListingListOut,
     ListingOut,
     ListingUpdate,
+    PublicListingOut,
     RecommendedOut,
     StatusUpdate,
 )
@@ -232,6 +235,50 @@ def list_listings(
     )
 
 
+POPULAR_COUNT = 4
+
+
+@router.get("/popular", response_model=list[PublicListingOut])
+def popular_listings(response: Response, db: Session = Depends(get_db)):
+    """The listings the most students have opened, for the landing page (no login needed).
+    Only items still for sale; topped up with the newest ones while few have been opened."""
+    viewers = func.count(ListingView.user_id)
+    for_sale = (Listing.status == "available", _not_expired(), live(Listing))
+    rows = (
+        db.query(Listing)
+        .join(ListingView, ListingView.listing_id == Listing.id)
+        .filter(*for_sale)
+        .group_by(Listing.id)
+        .order_by(viewers.desc(), Listing.created_at.desc())
+        .limit(POPULAR_COUNT)
+        .all()
+    )
+    if len(rows) < POPULAR_COUNT:
+        newest = (
+            db.query(Listing)
+            .filter(*for_sale, Listing.id.notin_([r.id for r in rows]))
+            .order_by(Listing.created_at.desc())
+            .limit(POPULAR_COUNT - len(rows))
+            .all()
+        )
+        rows += newest
+    response.headers["Cache-Control"] = "public, max-age=300"  # every visitor asks; it changes slowly
+    return [PublicListingOut.from_listing(r) for r in rows]
+
+
+def _record_view(db: Session, listing: Listing, viewer: User) -> None:
+    """Count this student once toward the listing's popularity (not the seller themselves)."""
+    if listing.owner_id == viewer.id:
+        return
+    if db.get(ListingView, (listing.id, viewer.id)):
+        return
+    db.add(ListingView(listing_id=listing.id, user_id=viewer.id))
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()  # the same student opened it twice at once; already counted
+
+
 @router.get("/recommended", response_model=RecommendedOut)
 def recommended_listings(
     exclude_id: Optional[int] = None,
@@ -293,6 +340,7 @@ def get_listing(
         listing = None  # held for review: hidden from everyone but the owner and admins
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
+    _record_view(db, listing, viewer)
     return ListingOut.from_orm_with_art(listing)
 
 

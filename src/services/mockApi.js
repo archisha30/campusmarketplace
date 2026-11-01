@@ -73,6 +73,21 @@ export function listListings(f = {}) {
   return delay(paged(out, f, 24))
 }
 
+// The landing page's cards. The mock doesn't count views, so it shows the newest items for
+// sale, in the API's trimmed-down shape (no seller details for visitors).
+export function popularListings() {
+  const today = new Date().toISOString().slice(0, 10)
+  const items = listings
+    .filter((l) => l.status === 'available' && !l.held && (!l.expiry_date || l.expiry_date >= today))
+    .sort((a, b) => b.id - a.id)
+    .slice(0, 4)
+    .map((l) => ({
+      id: l.id, title: l.title, category: l.category, listing_type: l.listing_type, price: l.price,
+      mrp: l.mrp ?? null, rent_days: l.rent_days ?? null, image: l.images?.[0] || null, art: l.art,
+    }))
+  return delay(items)
+}
+
 export function getListing(id) {
   const found = listings.find((l) => l.id === Number(id))
   return found && canSeeHeld(found, found.seller) ? delay(found) : Promise.reject(new Error('Listing not found'))

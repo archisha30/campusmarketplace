@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import PostRequestBanner from '../components/PostRequestBanner.jsx'
+import PriceTag from '../components/PriceTag.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
+import { listingsApi } from '../services/api.js'
 
 const TRUST = [
   { icon: '🎓', title: 'Verified Students', body: 'Only students using approved institutional email domains can create accounts.' },
@@ -16,7 +19,8 @@ const STEPS = [
 ]
 
 // The landing page is only for visitors who aren't logged in (verified students go straight to the
-// marketplace), so it never shows real listings, just these category tiles.
+// marketplace). It shows the listings the most students opened, as teaser cards without seller
+// details; these category tiles fill in while the marketplace has fewer than four items.
 const GUEST_TILES = [
   { emoji: '📘', title: 'Textbooks', bg: '#F1EAFF' },
   { emoji: '🔌', title: 'Electronics', bg: '#EAFBF0' },
@@ -28,6 +32,11 @@ const TILT = ['-rotate-3 top-0 left-8', 'rotate-3 top-16 right-0 z-10', 'rotate-
 
 export default function Landing() {
   const { user, isVerified, loading: authLoading } = useAuth()
+  const [popular, setPopular] = useState(null) // null while loading
+
+  useEffect(() => {
+    listingsApi.popular().then(setPopular).catch(() => setPopular([]))
+  }, [])
 
   // Logged-in students only use the Marketplace and Resource Hub; the landing page is for visitors.
   if (!authLoading && isVerified) return <Navigate to="/marketplace" replace />
@@ -64,22 +73,11 @@ export default function Landing() {
           </div>
 
           <div className="relative mx-auto h-[340px] w-full max-w-[420px] md:h-[430px] md:max-w-none">
-            {authLoading
+            {authLoading || popular === null
               ? TILT.map((t, i) => <div key={i} className={`skeleton absolute w-[200px] h-[190px] ${t}`} />)
-              : GUEST_TILES.map((t, i) => (
-                  <Link
-                    key={t.title}
-                    to="/signup"
-                    className={`absolute w-[200px] rounded-card border border-line bg-paper p-3.5 shadow-lift transition hover:z-20 hover:scale-[1.03] ${TILT[i]}`}
-                  >
-                    <div className="mb-2.5 flex h-24 items-center justify-center rounded-[10px] text-[34px]" style={{ background: t.bg }}>
-                      {t.emoji}
-                    </div>
-                    <p className="text-[13.5px] font-semibold">{t.title}</p>
-                    <p className="mt-0.5 text-[12px] text-ink-faint">From students on your campus</p>
-                    <p className="mt-1.5 text-[12.5px] font-semibold text-brand">Sign up to browse →</p>
-                  </Link>
-                ))}
+              : [...popular, ...GUEST_TILES.slice(popular.length)].slice(0, 4).map((t, i) =>
+                  t.id ? <PopularCard key={t.id} listing={t} tilt={TILT[i]} /> : <CategoryTile key={t.title} tile={t} tilt={TILT[i]} />
+                )}
           </div>
         </div>
       </section>
@@ -120,5 +118,34 @@ export default function Landing() {
 
       <PostRequestBanner className="mx-auto max-w-[1180px] px-6 pb-16" />
     </>
+  )
+}
+
+const CARD = 'absolute w-[200px] rounded-card border border-line bg-paper p-3.5 shadow-lift transition hover:z-20 hover:scale-[1.03]'
+
+// A real listing. Visitors sign up first, then land on it (Signup sends them back to `from`).
+function PopularCard({ listing: l, tilt }) {
+  return (
+    <Link to="/signup" state={{ from: `/listing/${l.id}` }} className={`${CARD} ${tilt}`}>
+      <div className="mb-2.5 flex h-24 items-center justify-center overflow-hidden rounded-[10px] text-[34px]" style={{ background: l.art?.bg || '#EFEFEC' }}>
+        {l.image ? <img src={l.image} alt="" className="h-full w-full object-cover" /> : <span aria-hidden>{l.art?.emoji || '📦'}</span>}
+      </div>
+      <p className="truncate text-[13.5px] font-semibold">{l.title}</p>
+      <PriceTag price={l.price} mrp={l.mrp} listingType={l.listing_type} rentDays={l.rent_days} size="sm" className="mt-0.5" />
+      <p className="mt-1.5 text-[12.5px] font-semibold text-brand">Sign up to see it →</p>
+    </Link>
+  )
+}
+
+function CategoryTile({ tile: t, tilt }) {
+  return (
+    <Link to="/signup" className={`${CARD} ${tilt}`}>
+      <div className="mb-2.5 flex h-24 items-center justify-center rounded-[10px] text-[34px]" style={{ background: t.bg }}>
+        {t.emoji}
+      </div>
+      <p className="text-[13.5px] font-semibold">{t.title}</p>
+      <p className="mt-0.5 text-[12px] text-ink-faint">From students on your campus</p>
+      <p className="mt-1.5 text-[12.5px] font-semibold text-brand">Sign up to browse →</p>
+    </Link>
   )
 }

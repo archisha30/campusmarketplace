@@ -24,6 +24,8 @@ function listingForm(payload, photos = []) {
 export const listingsApi = {
   // GET /api/listings?category=&campus_id=&q=&sort=&listing_type=&condition=
   list: (filters = {}) => pick(() => http.get('/listings', filters), () => mock.listListings(filters))(),
+  // GET /api/listings/popular  — the 4 listings the most students opened (no login; landing page)
+  popular: () => pick(() => http.get('/listings/popular'), () => mock.popularListings())(),
   // GET /api/listings/:id
   get: (id) => pick(() => http.get(`/listings/${id}`), () => mock.getListing(id))(),
   // POST /api/listings  (multipart: fields as JSON in `data`, 1-3 photos in `files`; a photo is required)
