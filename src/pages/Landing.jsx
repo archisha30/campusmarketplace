@@ -28,8 +28,6 @@ const GUEST_TILES = [
   { emoji: '🛏️', title: 'Dorm Essentials', bg: '#FFECEA' },
 ]
 
-const TILT = ['-rotate-3 top-0 left-8', 'rotate-3 top-16 right-0 z-10', 'rotate-2 bottom-10 left-0', '-rotate-3 bottom-0 right-5']
-
 export default function Landing() {
   const { user, isVerified, loading: authLoading } = useAuth()
   const [popular, setPopular] = useState(null) // null while loading
@@ -72,12 +70,15 @@ export default function Landing() {
             </div>
           </div>
 
-          <div className="relative mx-auto h-[340px] w-full max-w-[420px] md:h-[430px] md:max-w-none">
-            {authLoading || popular === null
-              ? TILT.map((t, i) => <div key={i} className={`skeleton absolute w-[200px] h-[190px] ${t}`} />)
-              : [...popular, ...GUEST_TILES.slice(popular.length)].slice(0, 4).map((t, i) =>
-                  t.id ? <PopularCard key={t.id} listing={t} tilt={TILT[i]} /> : <CategoryTile key={t.title} tile={t} tilt={TILT[i]} />
-                )}
+          {/* A 2x2 grid of cards inside the glowing box; the inner panel leaves 2px for the border. */}
+          <div className="glow-box relative mx-auto w-full max-w-[560px] p-[2px]">
+            <div className="grid grid-cols-2 gap-3 rounded-[24px] bg-gradient-to-br from-brand-tint via-paper to-[#FFF6E0] p-3 md:gap-4 md:p-5">
+              {authLoading || popular === null
+                ? [0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-[190px] md:h-[205px]" />)
+                : [...popular, ...GUEST_TILES.slice(popular.length)].slice(0, 4).map((t) =>
+                    t.id ? <PopularCard key={t.id} listing={t} /> : <CategoryTile key={t.title} tile={t} />
+                  )}
+            </div>
           </div>
         </div>
       </section>
@@ -121,13 +122,14 @@ export default function Landing() {
   )
 }
 
-const CARD = 'absolute w-[200px] rounded-card border border-line bg-paper p-3.5 shadow-lift transition hover:z-20 hover:scale-[1.03]'
+// Hovering lifts the card above the others.
+const CARD = 'relative block min-w-0 rounded-card border border-line bg-paper p-3 shadow-lift transition duration-300 hover:z-10 hover:-translate-y-1.5 hover:scale-[1.04] hover:shadow-xl md:p-3.5'
 
 // A real listing. Visitors sign up first, then land on it (Signup sends them back to `from`).
-function PopularCard({ listing: l, tilt }) {
+function PopularCard({ listing: l }) {
   return (
-    <Link to="/signup" state={{ from: `/listing/${l.id}` }} className={`${CARD} ${tilt}`}>
-      <div className="mb-2.5 flex h-24 items-center justify-center overflow-hidden rounded-[10px] text-[34px]" style={{ background: l.art?.bg || '#EFEFEC' }}>
+    <Link to="/signup" state={{ from: `/listing/${l.id}` }} className={CARD}>
+      <div className="mb-2.5 flex h-24 items-center justify-center overflow-hidden rounded-[10px] text-[34px] md:h-28" style={{ background: l.art?.bg || '#EFEFEC' }}>
         {l.image ? <img src={l.image} alt="" className="h-full w-full object-cover" /> : <span aria-hidden>{l.art?.emoji || '📦'}</span>}
       </div>
       <p className="truncate text-[13.5px] font-semibold">{l.title}</p>
@@ -137,14 +139,14 @@ function PopularCard({ listing: l, tilt }) {
   )
 }
 
-function CategoryTile({ tile: t, tilt }) {
+function CategoryTile({ tile: t }) {
   return (
-    <Link to="/signup" className={`${CARD} ${tilt}`}>
-      <div className="mb-2.5 flex h-24 items-center justify-center rounded-[10px] text-[34px]" style={{ background: t.bg }}>
+    <Link to="/signup" className={CARD}>
+      <div className="mb-2.5 flex h-24 items-center justify-center rounded-[10px] text-[34px] md:h-28" style={{ background: t.bg }}>
         {t.emoji}
       </div>
-      <p className="text-[13.5px] font-semibold">{t.title}</p>
-      <p className="mt-0.5 text-[12px] text-ink-faint">From students on your campus</p>
+      <p className="truncate text-[13.5px] font-semibold">{t.title}</p>
+      <p className="mt-0.5 truncate text-[12px] text-ink-faint">From students on campus</p>
       <p className="mt-1.5 text-[12.5px] font-semibold text-brand">Sign up to browse →</p>
     </Link>
   )

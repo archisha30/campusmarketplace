@@ -31,6 +31,46 @@
   }
 }
 
+/* The landing page's box of listing cards: a streak of brand blue flowing round a faint blue
+   border, with a soft glow behind it. The box's contents sit on their own panel inset 2px, so
+   the border shows around it. */
+@property --glow-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes glow-spin {
+  to { --glow-angle: 360deg; }
+}
+
+.glow-box {
+  border-radius: 26px;
+  isolation: isolate;
+}
+
+.glow-box::before,
+.glow-box::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--glow-angle),
+    rgba(47, 76, 255, .18) 0deg 230deg,
+    #2F4CFF 320deg,
+    #8C9BFF 345deg,
+    rgba(47, 76, 255, .18) 360deg
+  );
+  animation: glow-spin 4s linear infinite;
+}
+
+.glow-box::after {
+  filter: blur(22px);
+  opacity: .55;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
