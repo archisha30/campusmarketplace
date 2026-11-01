@@ -12,13 +12,15 @@ from sqlalchemy.orm import Session
 
 from app.core.images import ImageError, check_image, read_upload
 from app.core.pagination import paginate
-from app.core.search import expand, relevance, search_filter, title_vocabulary
+from app.api.routes.notifications import notify
+from app.core.search import expand, groups_found, hits_needed, relevance, search_filter, title_vocabulary
 from app.core.security import require_seller, require_verified
 from app.core.storage import delete_public_urls, storage
 from app.core.trash import can_see_held, existing, live, restore_cutoff
 from app.core.timeutil import utcnow
 from app.db.session import get_db
 from app.models.listing import Listing
+from app.models.product_request import VISIBLE_FOR, ProductRequest
 from app.models.user import User
 from app.schemas.listing import (
     FOOD_CATEGORY,
@@ -157,10 +159,8 @@ def _get_owned_listing(listing_id: int, db: Session, user: User) -> Listing:
 
 def matching_listings(db: Session, text: str, exclude_owner_id=None, limit: int = 4) -> list[Listing]:
     """Listings still for sale that match `text`, best match first, using the marketplace search.
-    Shown to a student who posts a Looking For request, in case it's already listed.
-
-    Looser than the marketplace search: with 3+ words, one may miss, since requests name exact
-    models ("Casio fx-991CW calculator" should still find "Casio fx-991EX")."""
+    Shown to a student who posts a Looking For request, in case it's already listed. Looser
+    than the marketplace search (see hits_needed)."""
     if not text or not text.strip():
         return []
     titles = (t for (t,) in db.query(Listing.title).filter(live(Listing)).order_by(Listing.created_at.desc()).limit(VOCABULARY_TITLES))
@@ -168,12 +168,37 @@ def matching_listings(db: Session, text: str, exclude_owner_id=None, limit: int 
     if not groups:
         return []
     hits = sum(case((match, 1), else_=0) for match in search_filter(Listing, groups))
-    need = len(groups) if len(groups) <= 2 else len(groups) - 1
-    query = db.query(Listing).filter(Listing.status == "available", _not_expired(), live(Listing), hits >= need)
+    query = db.query(Listing).filter(Listing.status == "available", _not_expired(), live(Listing), hits >= hits_needed(len(groups)))
     if exclude_owner_id is not None:
         query = query.filter(Listing.owner_id != exclude_owner_id)
     order = (hits.desc(), relevance(Listing, groups, text).desc(), Listing.created_at.desc())
     return query.order_by(*order).limit(limit).all()
+
+
+def notify_matching_requests(db: Session, listing: Listing, seller: User) -> None:
+    """Tell students whose open Looking For request matches a new listing (the caller commits).
+    One notification per student, even if several of their requests match."""
+    vocabulary = title_vocabulary([listing.title])
+    fields = (listing.title, listing.description, listing.category)
+    open_requests = (
+        db.query(ProductRequest)
+        .filter(
+            ProductRequest.created_at >= utcnow() - VISIBLE_FOR,
+            ProductRequest.user_id != seller.id,
+            ProductRequest.user.has(User.suspended_at.is_(None)),
+        )
+        .order_by(ProductRequest.created_at.desc())
+        .all()
+    )
+    told = set()
+    for req in open_requests:
+        if req.user_id in told:
+            continue
+        groups = expand(req.product[:100], vocabulary)
+        if groups and groups_found(fields, groups) >= hits_needed(len(groups)):
+            notify(db, recipient_id=req.user_id, actor=seller, type="request_match",
+                   target_type="listing", target_id=listing.id, target_title=listing.title, note=req.product)
+            told.add(req.user_id)
 
 
 @router.get("", response_model=ListingListOut)
@@ -338,6 +363,8 @@ def create_listing(
     listing.images = _store_photos(checked, request)
     db.add(listing)
     _commit_or_drop_photos(db, listing.images)
+    notify_matching_requests(db, listing, user)
+    db.commit()
     db.refresh(listing)
     return ListingOut.from_orm_with_art(listing)
 

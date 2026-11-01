@@ -30,14 +30,15 @@ export default function PostRequestModal({ open, onClose, onPosted }) {
     setError('')
     try {
       const posted = await requestsApi.create({ product: product.trim(), description: description.trim() })
-      toast('Request sent to sellers')
       onPosted?.()
       setProduct('')
       setDescription('')
       if (posted.matches?.length) {
+        toast('Request sent to sellers')
         trackEvent('request_matched', { matches: posted.matches.length })
         setMatches(posted.matches)
       } else {
+        toast("Request sent to sellers. We'll let you know when a match is listed.")
         onClose()
       }
     } catch (err) {
@@ -51,7 +52,7 @@ export default function PostRequestModal({ open, onClose, onPosted }) {
     return (
       <Modal open={open} onClose={close} title="Already on CampusMarket">
         <p className="-mt-2 mb-4 text-[13.5px] text-ink-soft">
-          Your request is posted. While you wait for sellers, these might be what you need:
+          Your request is posted, and we'll tell you if more turn up. Meanwhile, these might be what you need:
         </p>
         <ul className="mb-5 space-y-2">
           {matches.map((l) => (
@@ -84,7 +85,7 @@ export default function PostRequestModal({ open, onClose, onPosted }) {
   return (
     <Modal open={open} onClose={close} title="Post a Request">
       <form onSubmit={submit}>
-        <p className="-mt-2 mb-4 text-[13.5px] text-ink-soft">Sellers on your campus get notified and can reach out to you.</p>
+        <p className="-mt-2 mb-4 text-[13.5px] text-ink-soft">Sellers on your campus get notified and can reach out to you. If a matching item is listed later, we'll let you know.</p>
 
         <Field
           id="req-product"

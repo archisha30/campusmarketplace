@@ -1,10 +1,15 @@
 
+from datetime import timedelta
+
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
 from app.core.timeutil import utcnow
+
+# Requests older than this drop off sellers' dashboards and stop matching new listings.
+VISIBLE_FOR = timedelta(days=30)
 
 
 class ProductRequest(Base):

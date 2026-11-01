@@ -105,7 +105,23 @@ export function createListing(payload, photos = []) {
     art,
   }
   listings.unshift(item)
+  notifyMatchingRequests(item)
   return delay(item, 500)
+}
+
+// Like the API: students whose request from the last 30 days matches a new listing hear
+// about it, once each.
+function notifyMatchingRequests(item) {
+  const since = Date.now() - 30 * 86400e3
+  const told = new Set()
+  for (const r of productRequests) {
+    if (told.has(r.requester.id) || new Date(r.created_at).getTime() < since || !mockSearchMatch(item, r.product)) continue
+    pushNotification({
+      user_id: r.requester.id, actor: { ...seed.currentUser, email: '', phone: null }, type: 'request_match',
+      target_type: 'listing', target_id: item.id, target_title: item.title, note: r.product,
+    })
+    told.add(r.requester.id)
+  }
 }
 
 export function updateListing(id, payload, photos = []) {

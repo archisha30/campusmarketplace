@@ -14,7 +14,7 @@ class ActorOut(BaseModel):
 
 class NotificationOut(BaseModel):
     id: int
-    # access_request | access_approved | access_denied | contact | report | removed | report_cleared | held
+    # access_request | access_approved | access_denied | contact | report | removed | report_cleared | held | request_match
     type: str
     channel: str | None = None
     target_type: str
@@ -45,8 +45,9 @@ class NotificationOut(BaseModel):
 
 # Sent by the team, so they never show the admin who acted.
 TEAM_TYPES = ("removed", "report_cleared", "held")
-# The owner answering a buyer: name and photo only. Contact details go through /api/contact.
-NO_CONTACT_TYPES = ("access_approved", "access_denied")
+# The owner answering a buyer, or a seller whose new listing matched a request: name and photo
+# only. Contact details go through /api/contact.
+NO_CONTACT_TYPES = ("access_approved", "access_denied", "request_match")
 
 
 def _actor_out(n) -> ActorOut:

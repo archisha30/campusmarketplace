@@ -1,4 +1,5 @@
-"""Posting a Looking For request shows listings already for sale that match it."""
+"""Looking For requests and listings find each other: posting a request shows matching listings
+already for sale, and a new listing notifies students whose open request it matches."""
 
 from datetime import date, timedelta
 
@@ -6,6 +7,8 @@ import pytest
 
 from app.core.timeutil import utcnow
 from app.models.listing import Listing
+from app.models.product_request import VISIBLE_FOR, ProductRequest
+from conftest import post_listing
 
 
 @pytest.fixture
@@ -66,3 +69,52 @@ def test_at_most_four_best_first(client, auth, add):
     titles = [m["title"] for m in post(client, auth, "calculator")["matches"]]
     assert len(titles) == 4
     assert titles[0] == "Calculator"  # a title hit beats a description hit
+
+
+# --- A new listing notifies students whose open request it matches ---
+
+def publish(client, auth, title, **fields):
+    body = {"title": title, "category": "Electronics", "condition": "Good", "pickup_spot": "Gate", "price": 500, **fields}
+    res = post_listing(client, auth("owner"), body)
+    assert res.status_code == 200, res.text
+    return res.json()
+
+
+def matches_for(client, auth, who):
+    items = client.get("/api/notifications", headers=auth(who)).json()["items"]
+    return [n for n in items if n["type"] == "request_match"]
+
+
+def test_new_listing_notifies_matching_requests(client, auth):
+    post(client, auth, "Casio fx-991CW calculator")
+    post(client, auth, "guitar", who="other")
+    listing = publish(client, auth, "Casio fx-991EX")
+    [n] = matches_for(client, auth, "buyer")
+    assert (n["target_type"], n["target_id"], n["target_title"]) == ("listing", listing["id"], "Casio fx-991EX")
+    assert n["note"] == "Casio fx-991CW calculator"
+    assert n["actor"]["name"] == "Owner"
+    assert n["actor"]["email"] == "" and n["actor"]["phone"] is None  # contact goes through /api/contact
+    assert matches_for(client, auth, "other") == []
+
+
+def test_one_notification_per_student(client, auth):
+    post(client, auth, "calculator")
+    post(client, auth, "casio")
+    publish(client, auth, "Casio fx-991EX")
+    assert len(matches_for(client, auth, "buyer")) == 1
+
+
+def test_old_suspended_and_own_requests_are_skipped(client, auth, db_session, users):
+    db, _ = db_session
+    post(client, auth, "calculator")
+    post(client, auth, "calculator", who="other")
+    post(client, auth, "calculator", who="owner")
+    old = db.query(ProductRequest).filter(ProductRequest.user_id == users["buyer"].id).one()
+    old.created_at = utcnow() - VISIBLE_FOR - timedelta(days=1)
+    users["other"].suspended_at = utcnow()
+    db.commit()
+    publish(client, auth, "Casio fx-991EX")
+    assert all(matches_for(client, auth, who) == [] for who in ("buyer", "owner"))
+    users["other"].suspended_at = None
+    db.commit()
+    assert matches_for(client, auth, "other") == []

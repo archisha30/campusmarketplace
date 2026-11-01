@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.routes.listings import matching_listings
 from app.core.security import get_current_user, require_seller
 from app.db.session import get_db
-from app.models.product_request import ProductRequest
+from app.models.product_request import VISIBLE_FOR, ProductRequest
 from app.models.user import User
 from app.schemas.listing import ListingOut
 from app.schemas.product_request import ProductRequestCreate, ProductRequestCreated, ProductRequestOut
@@ -14,8 +14,6 @@ from app.core.timeutil import utcnow
 
 router = APIRouter(prefix="/api/requests", tags=["requests"])
 
-# Requests older than this drop off sellers' dashboards.
-VISIBLE_FOR = timedelta(days=30)
 DAILY_LIMIT = 5
 
 

@@ -20,6 +20,8 @@ class Notification(Base):
     type "report_cleared": an admin reviewed the reports on the item and it stays up.
     type "held": enough students reported the item that it's hidden until an admin reviews it
       (note = the report reasons; never who reported it).
+    type "request_match": actor listed an item matching the recipient's Looking For request
+      (note = what the recipient asked for).
     (The app can't see whether a message was actually sent, only that they opened it.)
     """
 
@@ -29,7 +31,7 @@ class Notification(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     actor_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    # access_request | access_approved | access_denied | contact | report | removed | report_cleared | held
+    # access_request | access_approved | access_denied | contact | report | removed | report_cleared | held | request_match
     type = Column(String(20), nullable=False)
     channel = Column(String(10), nullable=True)  # whatsapp | email (contact only)
     target_type = Column(String(10), nullable=False)  # listing | resource

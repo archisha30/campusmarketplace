@@ -273,11 +273,29 @@ def _term_regex(term: str, prefix: bool) -> str:
     return "[^a-z0-9]*".join([*words[:-1], tail])
 
 
+def _pattern(terms: dict[str, bool]) -> str:
+    """Any of the terms at the start of a word. Works as ~ in Postgres and as Python's re."""
+    alternatives = "|".join(sorted({_term_regex(t, prefix) for t, prefix in terms.items()}))
+    return f"(^|[^a-z0-9])({alternatives})"
+
+
 def _matches(column, terms: dict[str, bool]):
     """Any of the terms at the start of a word in `column`, ignoring case. One regex per group,
     which runs as ~ in Postgres and as Python's re in SQLite (the tests)."""
-    alternatives = "|".join(sorted({_term_regex(t, prefix) for t, prefix in terms.items()}))
-    return func.lower(func.coalesce(column, "")).regexp_match(f"(^|[^a-z0-9])({alternatives})")
+    return func.lower(func.coalesce(column, "")).regexp_match(_pattern(terms))
+
+
+def groups_found(texts, groups: list[dict[str, bool]]) -> int:
+    """How many groups match one of `texts` (an item's title, description, category), in Python:
+    the same test search_filter runs in the database."""
+    return sum(1 for terms in groups if any(re.search(_pattern(terms), (t or "").lower()) for t in texts))
+
+
+def hits_needed(group_count: int) -> int:
+    """Groups an item must match to count as what a Looking For request wants. Looser than the
+    marketplace search: with 3+ words one may miss, since requests name exact models
+    ("Casio fx-991CW calculator" should still find "Casio fx-991EX")."""
+    return group_count if group_count <= 2 else group_count - 1
 
 
 def search_filter(model, groups: list[dict[str, bool]]):

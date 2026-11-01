@@ -140,6 +140,10 @@ function NotificationRow({ n, onDismiss }) {
       ? <>removed your access to {item}</>
       : <>declined your access request for {item}. If you've paid, message them, then request again.</>
     action = <Link to={href} className="btn-ghost btn-sm">View resource</Link>
+  } else if (n.type === 'request_match') {
+    icon = '📦'
+    text = <>just listed {item}, which matches what you're looking for</>
+    action = <Link to={href} className="btn-accent btn-sm">View listing</Link>
   } else {
     icon = n.channel === 'whatsapp' ? '💬' : '✉️'
     text = <>opened {n.channel === 'whatsapp' ? 'WhatsApp' : 'email'} to message you about {item}</>
@@ -150,13 +154,15 @@ function NotificationRow({ n, onDismiss }) {
     )
   }
 
-  // Notes: report / held / removed reasons, or the requester's message. "revoked" is a flag, not text.
+  // Notes: report / held / removed reasons, what a matched request asked for, or the requester's message. "revoked" is a flag, not text.
   let note = null
   if (n.note && n.type !== 'access_denied') {
     if (isReport) {
       note = <><span className="font-semibold">Reason:</span> {n.note}. Our team will review it; if something's wrong, edit or remove the item.</>
     } else if (n.type === 'held') {
       note = <><span className="font-semibold">Reported for:</span> {n.note}. You'll get a notification when it's reviewed; you can still edit it meanwhile.</>
+    } else if (n.type === 'request_match') {
+      note = <><span className="font-semibold">You asked for:</span> {n.note}</>
     } else if (n.type === 'removed') {
       note = <><span className="font-semibold">Reason:</span> {n.note}. Please follow the rules when you post again; repeated problems can get an account suspended.</>
     } else {
