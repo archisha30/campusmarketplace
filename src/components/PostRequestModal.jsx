@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import Modal from './Modal.jsx'
+import PriceTag from './PriceTag.jsx'
 import { requestsApi } from '../services/api.js'
 import { useToast } from '../hooks/useToast.jsx'
+import { trackEvent } from '../lib/analytics.js'
 
 const MAX = 70
 
@@ -11,9 +14,12 @@ export default function PostRequestModal({ open, onClose, onPosted }) {
   const [description, setDescription] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  // Listings already for sale that match the request, shown after posting it.
+  const [matches, setMatches] = useState([])
 
   function close() {
     setError('')
+    setMatches([])
     onClose()
   }
 
@@ -23,17 +29,56 @@ export default function PostRequestModal({ open, onClose, onPosted }) {
     setBusy(true)
     setError('')
     try {
-      await requestsApi.create({ product: product.trim(), description: description.trim() })
+      const posted = await requestsApi.create({ product: product.trim(), description: description.trim() })
       toast('Request sent to sellers')
       onPosted?.()
       setProduct('')
       setDescription('')
-      onClose()
+      if (posted.matches?.length) {
+        trackEvent('request_matched', { matches: posted.matches.length })
+        setMatches(posted.matches)
+      } else {
+        onClose()
+      }
     } catch (err) {
       setError(err.message)
     } finally {
       setBusy(false)
     }
+  }
+
+  if (matches.length) {
+    return (
+      <Modal open={open} onClose={close} title="Already on CampusMarket">
+        <p className="-mt-2 mb-4 text-[13.5px] text-ink-soft">
+          Your request is posted. While you wait for sellers, these might be what you need:
+        </p>
+        <ul className="mb-5 space-y-2">
+          {matches.map((l) => (
+            <li key={l.id}>
+              <Link
+                to={`/listing/${l.id}`}
+                onClick={close}
+                className="flex items-center gap-3 rounded-card border border-line p-2 transition hover:shadow-lift"
+              >
+                <span
+                  className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] text-[22px]"
+                  style={{ background: l.art?.bg || '#EFEFEC' }}
+                >
+                  {l.images?.[0] ? <img src={l.images[0]} alt="" className="h-full w-full object-cover" /> : <span aria-hidden>{l.art?.emoji || '📦'}</span>}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14px] font-semibold">{l.title}</span>
+                  <PriceTag price={l.price} mrp={l.mrp} listingType={l.listing_type} rentDays={l.rent_days} size="sm" />
+                </span>
+                <span className="text-[13px] font-semibold text-ink-soft">View</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <button type="button" className="btn-ghost w-full" onClick={close}>Done</button>
+      </Modal>
+    )
   }
 
   return (

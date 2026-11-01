@@ -155,6 +155,27 @@ def _get_owned_listing(listing_id: int, db: Session, user: User) -> Listing:
     return listing
 
 
+def matching_listings(db: Session, text: str, exclude_owner_id=None, limit: int = 4) -> list[Listing]:
+    """Listings still for sale that match `text`, best match first, using the marketplace search.
+    Shown to a student who posts a Looking For request, in case it's already listed.
+
+    Looser than the marketplace search: with 3+ words, one may miss, since requests name exact
+    models ("Casio fx-991CW calculator" should still find "Casio fx-991EX")."""
+    if not text or not text.strip():
+        return []
+    titles = (t for (t,) in db.query(Listing.title).filter(live(Listing)).order_by(Listing.created_at.desc()).limit(VOCABULARY_TITLES))
+    groups = expand(text[:100], title_vocabulary(titles))
+    if not groups:
+        return []
+    hits = sum(case((match, 1), else_=0) for match in search_filter(Listing, groups))
+    need = len(groups) if len(groups) <= 2 else len(groups) - 1
+    query = db.query(Listing).filter(Listing.status == "available", _not_expired(), live(Listing), hits >= need)
+    if exclude_owner_id is not None:
+        query = query.filter(Listing.owner_id != exclude_owner_id)
+    order = (hits.desc(), relevance(Listing, groups, text).desc(), Listing.created_at.desc())
+    return query.order_by(*order).limit(limit).all()
+
+
 @router.get("", response_model=ListingListOut)
 def list_listings(
     q: Optional[str] = None,

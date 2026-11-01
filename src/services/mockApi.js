@@ -972,7 +972,13 @@ export function createRequest({ product, description }) {
     requester: { id: String(u.id), name: u.name, email: u.email, phone: u.phone || null, avatar_url: u.avatar_url || null },
   }
   productRequests = [req, ...productRequests]
-  return delay(req)
+  // Like the API: listings still for sale that match, not the student's own (at most 4).
+  const today = new Date().toISOString().slice(0, 10)
+  const matches = listings
+    .filter((l) => l.status === 'available' && !l.held && (!l.expiry_date || l.expiry_date >= today))
+    .filter((l) => !sameId(l.seller?.id, u.id) && mockSearchMatch(l, product))
+    .slice(0, 4)
+  return delay({ ...req, matches })
 }
 
 export function listRequests() {

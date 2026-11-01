@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.schemas.listing import ListingOut
+
 MAX_LEN = 70
 
 
@@ -59,3 +61,8 @@ class ProductRequestOut(BaseModel):
                 phone=r.user.phone if include_contact else None,
             ),
         )
+
+
+class ProductRequestCreated(ProductRequestOut):
+    # Listings already for sale that match, so the student may not need to wait for a seller.
+    matches: list[ListingOut] = []

@@ -190,6 +190,7 @@ export const authApi = {
 
 export const requestsApi = {
   // POST /api/requests  body: { product, description }  (each max 70 chars)
+  //   -> the request, plus `matches`: up to 4 listings already for sale that match it
   create: (payload) => pick(() => http.post('/requests', payload), () => mock.createRequest(payload))(),
   // GET /api/requests/mine  — requests the current user posted
   mine: () => pick(() => http.get('/requests/mine'), () => mock.myRequests())(),
