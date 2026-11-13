@@ -45,6 +45,19 @@ export function useRequestNotifications({ poll = false, freeze = false } = {}) {
   }, [load, user, freeze])
   usePolling(load, POLL_MS, poll && isSeller)
 
+  // A dismissed request leaves every list (the navbar badge too) straight away.
+  useEffect(() => {
+    const drop = (e) => setItems((list) => list.filter((r) => r.id !== e.detail))
+    window.addEventListener('cm:request-dismissed', drop)
+    return () => window.removeEventListener('cm:request-dismissed', drop)
+  }, [])
+
+  // Hide a request from this seller's feed (the ×), saved on the server for every device.
+  const dismiss = useCallback(async (id) => {
+    await requestsApi.dismiss(id)
+    window.dispatchEvent(new CustomEvent('cm:request-dismissed', { detail: id }))
+  }, [])
+
   // Other components (the navbar badge) listen for this to clear their count.
   useEffect(() => {
     if (freeze) return
@@ -66,5 +79,5 @@ export function useRequestNotifications({ poll = false, freeze = false } = {}) {
   const isNew = useCallback((r) => toMs(r.created_at) > seenAt, [seenAt])
   const unread = items.filter(isNew).length
 
-  return { items, loading, unread, isNew, markAllSeen, reload: load }
+  return { items, loading, unread, isNew, markAllSeen, dismiss, reload: load }
 }

@@ -288,7 +288,7 @@ export default function Dashboard() {
 }
 
 function BuyerRequests() {
-  const { items, loading, unread, isNew, markAllSeen } = useRequestNotifications({ freeze: true })
+  const { items, loading, unread, isNew, markAllSeen, dismiss } = useRequestNotifications({ freeze: true })
   const [showAll, setShowAll] = useState(false)
 
   // Opening the dashboard clears the navbar badge; the "New" markers here
@@ -319,7 +319,7 @@ function BuyerRequests() {
         </p>
       )}
 
-      {!loading && shown.map((r) => <RequestRow key={r.id} r={r} fresh={isNew(r)} />)}
+      {!loading && shown.map((r) => <RequestRow key={r.id} r={r} fresh={isNew(r)} onDismiss={() => dismiss(r.id)} />)}
 
       {!loading && items.length > 5 && (
         <button className="mt-2 text-[13.5px] font-semibold text-brand hover:underline" onClick={() => setShowAll((v) => !v)}>
@@ -330,11 +330,20 @@ function BuyerRequests() {
   )
 }
 
-function RequestRow({ r, fresh }) {
+function RequestRow({ r, fresh, onDismiss }) {
   const { requester } = r
   const toast = useToast()
   const [busy, setBusy] = useState(false)
   const channel = requester.has_phone ? 'whatsapp' : 'email'
+
+  async function dismiss() {
+    try {
+      await onDismiss()
+      toast('Request dismissed')
+    } catch (err) {
+      toast(err.message || 'Could not dismiss the request')
+    }
+  }
 
   // The requester's number/email isn't in the feed; it's fetched only when Reply is tapped.
   async function reply() {
@@ -366,9 +375,20 @@ function RequestRow({ r, fresh }) {
         <p className="mt-0.5 break-words text-[15px] font-semibold">{r.product}</p>
         {r.description && <p className="mt-0.5 break-words text-[13.5px] text-ink-soft">{r.description}</p>}
       </div>
-      <button className="btn-ghost btn-sm flex-none" disabled={busy} onClick={reply}>
-        {requester.has_phone ? 'Reply on WhatsApp' : 'Reply by Email'}
-      </button>
+      <div className="flex flex-none flex-wrap justify-end gap-2">
+        <button className="btn-ghost btn-sm" disabled={busy} onClick={reply}>
+          {requester.has_phone ? 'Reply on WhatsApp' : 'Reply by Email'}
+        </button>
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label={`Dismiss request for ${r.product}`}
+          title="Dismiss"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-[18px] leading-none text-ink-faint hover:bg-bg hover:text-ink"
+        >
+          ×
+        </button>
+      </div>
     </div>
   )
 }

@@ -206,6 +206,8 @@ export const requestsApi = {
   list: () => pick(() => http.get('/requests'), () => mock.listRequests())(),
   // PATCH /api/requests/:id/found  body: { found }  — "Found it" (or undo): leaves sellers' feeds
   setFound: (id, found) => pick(() => http.patch(`/requests/${id}/found`, { found }), () => mock.setRequestFound(id, found))(),
+  // POST /api/requests/:id/dismiss  — a seller hides a request from their own feed (the ×)
+  dismiss: (id) => pick(() => http.post(`/requests/${id}/dismiss`), () => mock.dismissRequest(id))(),
   // DELETE /api/requests/:id
   remove: (id) => pick(() => http.del(`/requests/${id}`), () => mock.deleteRequest(id))(),
 }

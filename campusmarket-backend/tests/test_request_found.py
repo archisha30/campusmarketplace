@@ -2,7 +2,8 @@
 
 import pytest
 
-from conftest import post_listing
+from app.core.security import create_access_token
+from conftest import _user, post_listing
 
 
 def post(client, auth, product="Casio calculator", description="", who="buyer"):
@@ -70,3 +71,21 @@ def test_seller_reply_notifies_the_requester_once(client, auth):
 def test_descriptions_up_to_200_characters(client, auth, length, status):
     res = client.post("/api/requests", json={"product": "Drafter", "description": "x" * length}, headers=auth("buyer"))
     assert res.status_code == status
+
+
+def test_seller_can_dismiss_a_request_from_their_feed(client, auth, db_session, users):
+    db, _ = db_session
+    other_seller = _user(db, "seller2@campus.edu", account_type="seller")
+    req = post(client, auth)
+    assert client.post(f"/api/requests/{req['id']}/dismiss", headers=auth("owner")).status_code == 204
+    assert client.post(f"/api/requests/{req['id']}/dismiss", headers=auth("owner")).status_code == 204  # twice is fine
+    assert feed(client, auth) == []
+    theirs = client.get("/api/requests", headers={"Authorization": f"Bearer {create_access_token(other_seller.id)}"}).json()
+    assert [r["product"] for r in theirs] == ["Casio calculator"]  # other sellers still see it
+    assert client.get("/api/requests/mine", headers=auth("buyer")).json()[0]["product"] == "Casio calculator"
+
+
+def test_dismiss_is_for_sellers_and_real_requests(client, auth):
+    req = post(client, auth)
+    assert client.post(f"/api/requests/{req['id']}/dismiss", headers=auth("other")).status_code == 403  # a buyer
+    assert client.post("/api/requests/9999/dismiss", headers=auth("owner")).status_code == 404

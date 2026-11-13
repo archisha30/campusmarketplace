@@ -32,6 +32,7 @@ from app.models.draft import Draft
 from app.models.banned_email import BannedEmail
 from app.models.wishlist import WishlistItem
 from app.models.listing_view import ListingView
+from app.models.request_dismissal import RequestDismissal
 
 target_metadata = Base.metadata
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)

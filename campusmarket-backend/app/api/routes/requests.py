@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.routes.listings import matching_listings
@@ -8,6 +9,7 @@ from app.api.routes.resources import _resource_out, matching_resources
 from app.core.security import get_current_user, require_seller
 from app.db.session import get_db
 from app.models.product_request import VISIBLE_FOR, ProductRequest
+from app.models.request_dismissal import RequestDismissal
 from app.models.user import User
 from app.schemas.listing import ListingOut
 from app.schemas.product_request import FoundIn, ProductRequestCreate, ProductRequestCreated, ProductRequestOut
@@ -65,6 +67,9 @@ def list_requests(
             ProductRequest.created_at >= utcnow() - VISIBLE_FOR,
             ProductRequest.found_at.is_(None),  # they already have it
             ProductRequest.user_id != user.id,
+            ~ProductRequest.id.in_(  # ones this seller dismissed with the ×
+                db.query(RequestDismissal.request_id).filter(RequestDismissal.user_id == user.id)
+            ),
             ProductRequest.user.has(User.suspended_at.is_(None)),  # suspended students' requests disappear
         )
         .order_by(ProductRequest.created_at.desc())
@@ -105,6 +110,23 @@ def set_found(
     db.commit()
     db.refresh(req)
     return ProductRequestOut.from_model(req, include_contact=True)
+
+
+@router.post("/{request_id}/dismiss", status_code=204)
+def dismiss_request(
+    request_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_seller),
+):
+    """Hide a request from your own feed (the × on the Seller Dashboard). Nobody else is affected."""
+    if not db.query(ProductRequest.id).filter(ProductRequest.id == request_id).first():
+        raise HTTPException(status_code=404, detail="Request not found")
+    if not db.get(RequestDismissal, (user.id, request_id)):
+        db.add(RequestDismissal(user_id=user.id, request_id=request_id))
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()  # dismissed twice at once; already hidden
 
 
 @router.delete("/{request_id}", status_code=204)

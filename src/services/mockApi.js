@@ -1036,8 +1036,18 @@ export function createRequest({ product, description }) {
   return delay({ ...req, matches, resource_matches: resourceMatches })
 }
 
+// Request ids each seller hid with the ×, like the API's request_dismissals.
+const dismissedRequests = new Set()
+
 export function listRequests() {
-  return delay(productRequests.filter((r) => !r.found && r.requester.id !== String(seed.currentUser.id)))
+  const me = String(seed.currentUser.id)
+  return delay(productRequests.filter((r) => !r.found && r.requester.id !== me && !dismissedRequests.has(`${me}:${r.id}`)))
+}
+
+export function dismissRequest(id) {
+  if (!productRequests.some((r) => r.id === Number(id))) return Promise.reject(mockError('Request not found', 404))
+  dismissedRequests.add(`${seed.currentUser.id}:${Number(id)}`)
+  return delay(null, 100)
 }
 
 export function myRequests() {
