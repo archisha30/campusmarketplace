@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.routes.listings import listing_files
+from app.api.routes.listings import add_listing_stats, contacts_subquery, listing_files, views_subquery
 from app.api.routes.resources import _owner_out, _remove_files, _resource_files, _resource_out
 from app.core.moderation import SERIOUS_REASONS, item_removed, reports_cleared
 from app.core.trash import existing
@@ -251,18 +251,28 @@ def reinstate_user(
 @router.get("/listings", response_model=AdminListingsOut)
 def list_all_listings(
     q: Optional[str] = None,
+    sort: str = "newest",  # newest | views | contacts
     page: int = 1,
     page_size: int = ADMIN_PAGE_SIZE,
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
-    """Every listing, including reserved and sold ones."""
+    """Every listing, including reserved and sold ones, with how many students viewed and
+    contacted each (most viewed / most contacted first with `sort`)."""
     query = db.query(Listing).options(joinedload(Listing.owner)).filter(Listing.deleted_at.is_(None))
     if q and q.strip():
         query = query.filter(Listing.title.ilike(f"%{q.strip()}%"))
-    items, total, page, page_size, pages = paginate(query.order_by(Listing.created_at.desc(), Listing.id.desc()), page, page_size)
+    newest = (Listing.created_at.desc(), Listing.id.desc())
+    if sort in ("views", "contacts"):
+        counts = views_subquery() if sort == "views" else contacts_subquery()
+        query = query.outerjoin(counts, counts.c.listing_id == Listing.id).order_by(func.coalesce(counts.c.n, 0).desc(), *newest)
+    else:
+        query = query.order_by(*newest)
+    items, total, page, page_size, pages = paginate(query, page, page_size)
+    out = [ListingOut.from_orm_with_art(i, include_contact=True) for i in items]
+    add_listing_stats(db, out)
     return AdminListingsOut(
-        items=[ListingOut.from_orm_with_art(i, include_contact=True) for i in items],
+        items=out,
         total=total, page=page, page_size=page_size, pages=pages,
         available=db.query(Listing).filter(Listing.status == "available", Listing.deleted_at.is_(None)).count(),
     )

@@ -49,3 +49,28 @@ def test_only_the_seller_and_admins_see_them(client, auth, users, lamp):
     assert client.get(f"/api/listings/{lamp}", headers=auth("other")).json()["views"] is None
     [admin_view] = own_list(client, auth, who="admin", users=users)
     assert admin_view["views"] == 2  # buyer, and "other" opening it just above
+
+
+def test_admin_content_lists_and_sorts_by_views_and_contacts(client, auth, users, db_session):
+    db, _ = db_session
+    ids = {}
+    for title in ("Lamp", "Kettle", "Fan"):
+        listing = Listing(owner_id=users["owner"].id, title=title, category="Dorm Essentials", listing_type="sale",
+                          price=100, condition="Good", pickup_spot="Gate", images=[])
+        db.add(listing)
+        db.commit()
+        ids[title] = listing.id
+    for who in ("buyer", "other"):
+        client.get(f"/api/listings/{ids['Kettle']}", headers=auth(who))
+    client.get(f"/api/listings/{ids['Fan']}", headers=auth("buyer"))
+    contact(client, auth, "buyer", ids["Fan"])
+
+    def admin_list(sort):
+        res = client.get("/api/admin/listings", params={"sort": sort}, headers=auth("admin"))
+        assert res.status_code == 200, res.text
+        return [(l["title"], l["views"], l["contacts"]) for l in res.json()["items"]]
+
+    assert admin_list("views") == [("Kettle", 2, 0), ("Fan", 1, 1), ("Lamp", 0, 0)]
+    assert admin_list("contacts")[0] == ("Fan", 1, 1)
+    assert [t for t, *_ in admin_list("newest")] == ["Fan", "Kettle", "Lamp"]
+    assert client.get("/api/admin/listings", headers=auth("buyer")).status_code == 403

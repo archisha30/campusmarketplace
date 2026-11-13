@@ -279,7 +279,9 @@ export const adminApi = {
   // POST /api/admin/users/:id/reinstate  (undo a suspension made by mistake)
   reinstate: (id) => pick(() => http.post(`/admin/users/${id}/reinstate`), () => mock.reinstateUser(id))(),
   // GET /api/admin/listings?q=  -> every listing, including reserved and sold
-  listings: (q, page = 1) => pick(() => http.get('/admin/listings', { q, page }), () => mock.adminListings(q, page))(),
+  // sort: newest | views | contacts. Each listing carries views and contacts (different students).
+  listings: (q, page = 1, sort = 'newest') =>
+    pick(() => http.get('/admin/listings', { q, page, sort }), () => mock.adminListings(q, page, sort))(),
   // POST /api/admin/listings/:id/remove  body: { reason }  (moderation: deleted for good, the seller is told why)
   removeListing: (id, reason) =>
     pick(() => http.post(`/admin/listings/${id}/remove`, { reason }), () => mock.adminRemove('listing', id, reason))(),

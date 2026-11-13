@@ -15,6 +15,12 @@ import { useReportSummary } from '../../hooks/useReportSummary.jsx'
 
 const VIEWS = ['Listings', 'Resources']
 
+const LISTING_SORTS = [
+  { value: 'newest', label: 'Newest first' },
+  { value: 'views', label: 'Most viewed' },
+  { value: 'contacts', label: 'Most contacted' },
+]
+
 const STATUS_TONE = {
   available: 'bg-leaf/10 text-leaf',
   reserved: 'bg-sun/25 text-[#946B00]',
@@ -40,12 +46,13 @@ export default function AdminContent() {
   const { refresh: refreshSummary } = useReportSummary()
   const [view, setView] = useState('Listings')
   const [q, setQ] = useState('')
+  const [sort, setSort] = useState('newest') // listings only
   const debouncedQ = useDebounced(q)
-  // One page number for the tab you're on; switching tab or searching starts from page 1.
-  const [page, setPage] = usePage(`${view}|${debouncedQ}`)
+  // One page number for the tab you're on; switching tab, searching or sorting starts from page 1.
+  const [page, setPage] = usePage(`${view}|${debouncedQ}|${sort}`)
   const listingsPage = view === 'Listings' ? page : 1
   const resourcesPage = view === 'Resources' ? page : 1
-  const listings = useApi(() => adminApi.listings(debouncedQ, listingsPage), [debouncedQ, listingsPage])
+  const listings = useApi(() => adminApi.listings(debouncedQ, listingsPage, sort), [debouncedQ, listingsPage, sort])
   const resources = useApi(() => adminApi.resources(debouncedQ, resourcesPage), [debouncedQ, resourcesPage])
   const current = view === 'Listings' ? listings : resources
 
@@ -90,13 +97,23 @@ export default function AdminContent() {
           ))}
         </div>
         <SearchBar value={q} onChange={setQ} placeholder={view === 'Listings' ? 'Search listing titles…' : 'Search titles or subjects…'} />
+        {view === 'Listings' && (
+          <select
+            aria-label="Sort listings"
+            className="field-input w-auto py-2 text-[13.5px]"
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+          >
+            {LISTING_SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+        )}
       </div>
 
       {current.loading && <SkeletonRows />}
       {current.error && <p className="text-[14px] text-coral">{current.error.message}</p>}
 
       {!current.loading && !current.error && view === 'Listings' && (
-        <Table head={['Listing', 'Seller', 'Price', 'Status', 'Posted', '']}>
+        <Table head={['Listing', 'Seller', 'Price', 'Status', 'Views', 'Contacts', 'Posted', '']}>
           {items.map((l) => (
             <tr key={l.id}>
               <Td>
@@ -113,6 +130,8 @@ export default function AdminContent() {
               <Td><Owner person={l.seller} /></Td>
               <Td className="whitespace-nowrap">{formatPrice(l.price)}</Td>
               <Td><StatusBadge status={l.status} />{l.held && <span className="badge ml-1 bg-coral/12 text-coral">Held for review</span>}</Td>
+              <Td className="whitespace-nowrap tabular-nums"><span title="Different students who opened it">👁 {l.views ?? 0}</span></Td>
+              <Td className="whitespace-nowrap tabular-nums"><span title="Different students who tapped Contact Seller">💬 {l.contacts ?? 0}</span></Td>
               <Td className="whitespace-nowrap text-ink-soft">{formatDate(l.created_at)}</Td>
               <Td><button className="btn-danger btn-sm" onClick={() => setRemoving({ kind: 'listing', id: l.id, title: l.title })}>Remove</button></Td>
             </tr>

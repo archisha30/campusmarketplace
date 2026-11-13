@@ -1121,9 +1121,13 @@ export function setAdmin(id, isAdmin) {
   return delay(adminUserOut(u))
 }
 
-export function adminListings(q = '', page = 1) {
+export function adminListings(q = '', page = 1, sort = 'newest') {
   const needle = (q || '').toLowerCase()
-  const matches = listings.filter((l) => l.title.toLowerCase().includes(needle)).sort((a, b) => b.id - a.id)
+  const matches = listings
+    .filter((l) => l.title.toLowerCase().includes(needle))
+    .map((l) => ({ ...l, views: l.views ?? (l.id * 7) % 23, contacts: l.contacts ?? (l.id * 3) % 4 })) // made-up counts
+    .sort((a, b) => b.id - a.id)
+  if (sort === 'views' || sort === 'contacts') matches.sort((a, b) => b[sort] - a[sort]) // stable: newest first on ties
   return delay({ ...paged(matches, { page }, 25), available: listings.filter((l) => l.status === 'available').length })
 }
 

@@ -8,7 +8,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, ValidationError
-from sqlalchemy import case, func, or_
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -189,8 +189,27 @@ def matching_listings(db: Session, text: str, exclude_owner_id=None, limit: int 
     return best_matches(db, Listing, text, filters, exclude_owner_id, limit)
 
 
-def _add_seller_stats(db: Session, listings: list[ListingOut]) -> None:
-    """Fill in views and contacts (different students, never who) for the seller's own list."""
+def views_subquery():
+    """listing_id -> how many different students opened it."""
+    return (
+        select(ListingView.listing_id.label("listing_id"), func.count(ListingView.user_id).label("n"))
+        .group_by(ListingView.listing_id)
+        .subquery()
+    )
+
+
+def contacts_subquery():
+    """listing_id -> how many different students tapped Contact Seller on it."""
+    return (
+        select(ContactReveal.target_id.label("listing_id"), func.count(func.distinct(ContactReveal.user_id)).label("n"))
+        .where(ContactReveal.target_type == "listing")
+        .group_by(ContactReveal.target_id)
+        .subquery()
+    )
+
+
+def add_listing_stats(db: Session, listings: list[ListingOut]) -> None:
+    """Fill in views and contacts (different students, never who): the seller's own list and admins."""
     ids = [l.id for l in listings]
     if not ids:
         return
@@ -275,7 +294,7 @@ def list_listings(
     items, total, page, page_size, pages = paginate(query, page, page_size)
     out = [ListingOut.from_orm_with_art(i) for i in items]
     if own:
-        _add_seller_stats(db, out)
+        add_listing_stats(db, out)
     return ListingListOut(
         items=out,
         total=total,
