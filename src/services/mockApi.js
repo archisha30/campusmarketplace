@@ -76,6 +76,21 @@ export function listListings(f = {}) {
   return delay(paged(out, f, 24))
 }
 
+// Mirrors GET /api/sellers/:id: a student's public page, built from their items.
+export function getSellerProfile(id) {
+  const today = new Date().toISOString().slice(0, 10)
+  const theirs = listings.filter((l) => sameId(l.seller?.id, id))
+  const resourcesUp = resources.filter((r) => sameId(r.owner?.id, id) && r.status === 'available' && !r.held)
+  const who = theirs[0]?.seller || resourcesUp[0]?.owner || (sameId(seed.currentUser.id, id) ? seed.currentUser : null)
+  if (!who) return Promise.reject(mockError('Student not found', 404))
+  return delay({
+    id: String(who.id), name: who.name, avatar_url: who.avatar_url || null, college: who.campus || null,
+    joined_at: '2026-08-01T00:00:00', sold_count: theirs.filter((l) => l.status === 'sold').length,
+    listings: theirs.filter((l) => ['available', 'reserved'].includes(l.status) && !l.held && (!l.expiry_date || l.expiry_date >= today)),
+    resources: resourcesUp.map((r) => resourceOut(r)),
+  })
+}
+
 // The landing page's cards. The mock doesn't count views, so it shows the newest items for
 // sale, in the API's trimmed-down shape (no seller details for visitors).
 export function popularListings() {

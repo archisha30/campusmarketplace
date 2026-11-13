@@ -354,8 +354,11 @@ function OwnerCard({ r }) {
       <div className="flex items-center gap-3.5">
         <Avatar user={o} size={44} className="bg-sun font-display text-ink" />
         <div>
-          <p className="text-[14.5px] font-semibold">{o.name || 'Campus student'}</p>
-          <p className="text-[13px] text-ink-soft">{o.campus || ''}</p>
+          <Link to={`/u/${o.id}`} className="text-[14.5px] font-semibold hover:underline">{o.name || 'Campus student'}</Link>
+          <p className="text-[13px] text-ink-soft">
+            {o.campus ? `${o.campus} · ` : ''}
+            <Link to={`/u/${o.id}`} className="font-semibold text-brand hover:underline">See their items →</Link>
+          </p>
         </div>
         {o.verified && <span className="ml-auto"><VerifiedBadge /></span>}
       </div>

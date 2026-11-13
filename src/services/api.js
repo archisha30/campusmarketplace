@@ -190,6 +190,11 @@ export const authApi = {
 
 }
 
+export const sellersApi = {
+  // GET /api/sellers/:id  — a student's public page: name, joined, items sold, what they have up
+  get: (id) => pick(() => http.get(`/sellers/${id}`), () => mock.getSellerProfile(id))(),
+}
+
 export const requestsApi = {
   // POST /api/requests  body: { product (max 70 chars), description (max 200) }
   //   -> the request, plus `matches` (up to 4 listings for sale) and `resource_matches`

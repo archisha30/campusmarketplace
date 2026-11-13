@@ -184,8 +184,11 @@ export default function ListingDetail() {
           <div className="my-5 flex items-center gap-3.5 rounded-card border border-line bg-paper p-4">
             <Avatar user={l.seller} size={44} className="bg-sun font-display text-ink" />
             <div>
-              <p className="text-[14.5px] font-semibold">{l.seller.name || 'Campus student'}</p>
-              <p className="text-[13px] text-ink-soft">{l.seller.campus || ''}</p>
+              <Link to={`/u/${l.seller.id}`} className="text-[14.5px] font-semibold hover:underline">{l.seller.name || 'Campus student'}</Link>
+              <p className="text-[13px] text-ink-soft">
+                {l.seller.campus ? `${l.seller.campus} · ` : ''}
+                <Link to={`/u/${l.seller.id}`} className="font-semibold text-brand hover:underline">See their items →</Link>
+              </p>
             </div>
             <span className="ml-auto"><VerifiedBadge /></span>
           </div>

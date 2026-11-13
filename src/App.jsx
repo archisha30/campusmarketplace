@@ -18,6 +18,7 @@ import Dashboard from './pages/Dashboard.jsx'
 import Resources from './pages/Resources.jsx'
 import ResourceDetail from './pages/ResourceDetail.jsx'
 import ResourceForm from './pages/ResourceForm.jsx'
+import SellerProfile from './pages/SellerProfile.jsx'
 import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
 import ForgotPassword from './pages/ForgotPassword.jsx'
@@ -65,6 +66,7 @@ export default function App() {
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/resources/:id" element={<ResourceDetail />} />
+            <Route path="/u/:id" element={<SellerProfile />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/interests" element={<Interests />} />
             <Route path="/profile" element={<Profile />} />

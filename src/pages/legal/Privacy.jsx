@@ -40,7 +40,7 @@ export default function Privacy() {
       <section>
         <h2>Who can see what</h2>
         <ul>
-          <li><strong>Other verified students</strong> see your name, college, profile picture, and what you post.</li>
+          <li><strong>Other verified students</strong> see your name, college, profile picture, and what you post. Your profile page also shows when you joined and how many items you've sold.</li>
           <li><strong>People who aren't logged in</strong> may see the title, first photo and price of a few popular listings on the home page. They never see who posted them, the description, the pickup spot or any contact details; everything else needs a verified account.</li>
           <li><strong>Your phone number and email</strong> are never shown in lists. A student only gets them when they tap “Contact Seller” on one of your items, and that is limited and logged to prevent misuse.</li>
           <li><strong>Paid PDFs</strong> are only available to the owner, admins, and students the owner approves.</li>
