@@ -68,6 +68,7 @@ def test_deleted_listing_photos_go_after_restore_window(client, auth, db_session
     lid = post(client, auth, item()).json()["id"]
     db, _ = db_session
     db.get(Listing, lid).images = ["https://x.supabase.co/a.jpg", "https://x.supabase.co/b.jpg"]
+    db.get(Listing, lid).thumbnails = {}  # just the two photos (thumbnails have their own tests)
     db.commit()
 
     assert client.delete(f"/api/listings/{lid}", headers=auth("owner")).status_code == 204

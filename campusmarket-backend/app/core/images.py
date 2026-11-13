@@ -8,7 +8,7 @@ extension come from what Pillow found.
 
 import io
 
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 # Refuse "decompression bombs": tiny files that expand to gigantic images in memory.
 Image.MAX_IMAGE_PIXELS = 40_000_000
@@ -44,3 +44,21 @@ def check_image(data: bytes) -> tuple[str, str]:
     if fmt not in ALLOWED_FORMATS:
         raise ImageError("Use a JPG, PNG, WEBP or GIF image")
     return ALLOWED_FORMATS[fmt]
+
+
+THUMB_SIZE = 480  # longest side; grid cards show photos ~200px wide (2x for sharp phone screens)
+
+
+def make_thumbnail(data: bytes) -> bytes:
+    """A small JPEG of an already-checked image, for listing cards: the right way up (phone
+    photos store rotation separately), flattened onto white, longest side THUMB_SIZE."""
+    with Image.open(io.BytesIO(data)) as img:
+        img = ImageOps.exif_transpose(img)
+        img.thumbnail((THUMB_SIZE, THUMB_SIZE))
+        if img.mode != "RGB":
+            rgba = img.convert("RGBA")
+            img = Image.new("RGB", rgba.size, "white")
+            img.paste(rgba, mask=rgba.split()[3])
+        out = io.BytesIO()
+        img.save(out, "JPEG", quality=80, optimize=True, progressive=True)
+        return out.getvalue()

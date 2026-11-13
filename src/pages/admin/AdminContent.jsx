@@ -102,7 +102,7 @@ export default function AdminContent() {
               <Td>
                 <div className="flex items-start gap-2.5">
                   <div className="flex h-11 w-11 flex-none items-center justify-center overflow-hidden rounded-[9px] text-[20px]" style={{ background: l.art?.bg }}>
-                    {l.images?.length ? <img src={l.images[0]} alt="" className="h-full w-full object-cover" /> : l.art?.emoji}
+                    {l.images?.length ? <img src={l.thumbnail || l.images[0]} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : l.art?.emoji}
                   </div>
                   <div className="min-w-0">
                     <Link to={`/listing/${l.id}`} className="font-semibold hover:underline">{l.title}</Link>
@@ -128,7 +128,7 @@ export default function AdminContent() {
               <Td>
                 <div className="flex items-start gap-2.5">
                   <div className="h-11 w-11 flex-none overflow-hidden rounded-[9px] border border-line bg-bg">
-                    {r.thumbnail_url && <img src={r.thumbnail_url} alt="" className="h-full w-full object-cover object-top" />}
+                    {r.thumbnail_url && <img src={r.thumbnail_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover object-top" />}
                   </div>
                   <div className="min-w-0">
                     <Link to={`/resources/${r.id}`} className="font-semibold hover:underline">{r.title}</Link>

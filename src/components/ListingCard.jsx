@@ -10,7 +10,8 @@ export default function ListingCard({ listing, compact = false }) {
   const { isSaved, toggle } = useWishlist()
   const toast = useToast()
   const saved = isSaved(id)
-  const thumbnail = images && images.length > 0 ? images[0] : null
+  // The small copy made at upload when there is one (much lighter than the full photo).
+  const thumbnail = listing.thumbnail || (images && images.length > 0 ? images[0] : null)
   const sold = status === 'sold'
 
   return (
@@ -40,7 +41,13 @@ export default function ListingCard({ listing, compact = false }) {
           {saved ? '♥' : '♡'}
         </button>
         {thumbnail ? (
-          <img src={thumbnail} alt={title} className={`h-full w-full object-cover ${sold ? 'opacity-60' : ''}`} />
+          <img
+            src={thumbnail}
+            alt={title}
+            loading="lazy" // only when it's about to scroll into view
+            decoding="async"
+            className={`h-full w-full object-cover ${sold ? 'opacity-60' : ''}`}
+          />
         ) : (
           <span aria-hidden className={sold ? 'opacity-60' : ''}>{art?.emoji || '📦'}</span>
         )}

@@ -200,7 +200,7 @@ export default function Dashboard() {
       {showingTrash && !loading && trashed.map((t) => (
         <div key={`${t.type}-${t.id}`} className="mb-3 flex flex-wrap items-center gap-4 rounded-card border border-dashed border-line bg-paper p-3.5">
           <div className="flex h-[60px] w-[60px] flex-none items-center justify-center overflow-hidden rounded-[10px] text-[26px] opacity-70" style={{ background: t.bg }}>
-            {t.image ? <img src={t.image} alt="" className="h-full w-full object-cover" /> : t.emoji}
+            {t.image ? <img src={t.image} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : t.emoji}
           </div>
           <div className="min-w-0 flex-1">
             <p className="flex flex-wrap items-center gap-2 text-[14.5px] font-semibold">
@@ -219,7 +219,7 @@ export default function Dashboard() {
         <div key={l.id} className="mb-3 flex flex-wrap items-center gap-4 rounded-card border border-line bg-paper p-3.5">
           <div className="flex h-[60px] w-[60px] flex-none items-center justify-center overflow-hidden rounded-[10px] text-[26px]" style={{ background: l.art.bg }}>
             {l.images?.length > 0 ? (
-              <img src={l.images[0]} alt={l.title} className="h-full w-full object-cover" />
+              <img src={l.thumbnail || l.images[0]} alt={l.title} loading="lazy" decoding="async" className="h-full w-full object-cover" />
             ) : (
               l.art.emoji
             )}

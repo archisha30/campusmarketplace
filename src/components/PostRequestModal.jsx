@@ -65,7 +65,7 @@ export default function PostRequestModal({ open, onClose, onPosted }) {
               to={`/listing/${l.id}`}
               onOpen={close}
               title={l.title}
-              thumb={l.images?.[0]}
+              thumb={l.thumbnail || l.images?.[0]}
               fallback={l.art?.emoji || '📦'}
               bg={l.art?.bg}
             >

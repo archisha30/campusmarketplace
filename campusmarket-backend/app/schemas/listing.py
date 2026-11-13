@@ -17,6 +17,13 @@ FOOD_CATEGORY = "F&B"
 DEFAULT_ART = {"emoji": "📦", "bg": "#EFEFEC"}
 
 
+def card_photo(listing, thumbnail_only: bool = False) -> str | None:
+    """The first photo's thumbnail, else (unless thumbnail_only) the first photo itself."""
+    first = (listing.images or [None])[0]
+    thumb = (listing.thumbnails or {}).get(first) if first else None
+    return thumb if thumbnail_only else thumb or first
+
+
 class Art(BaseModel):
     emoji: str
     bg: str
@@ -131,6 +138,7 @@ class ListingOut(BaseModel):
     contacts: int | None = None
     campus_id: int
     images: list[str] = []
+    thumbnail: str | None = None  # small copy of the first photo, for cards (None: use images[0])
     food_temp: str | None = None
     expiry_date: date | None = None
     is_expired: bool = False
@@ -160,6 +168,7 @@ class ListingOut(BaseModel):
             held=listing.held_at is not None,
             campus_id=listing.campus_id,
             images=listing.images or [],
+            thumbnail=card_photo(listing, thumbnail_only=True),
             food_temp=listing.food_temp,
             expiry_date=listing.expiry_date,
             is_expired=bool(listing.expiry_date and listing.expiry_date < date.today()),
@@ -215,6 +224,6 @@ class PublicListingOut(BaseModel):
             price=listing.price,
             mrp=listing.mrp,
             rent_days=listing.rent_days,
-            image=(listing.images or [None])[0],
+            image=card_photo(listing),
             art=Art(**CATEGORY_ART.get(listing.category, DEFAULT_ART)),
         )

@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from datetime import date
 from pathlib import Path
@@ -11,7 +12,7 @@ from sqlalchemy import case, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.images import ImageError, check_image, read_upload
+from app.core.images import ImageError, check_image, make_thumbnail, read_upload
 from app.core.pagination import paginate
 from app.core.request_matching import VOCABULARY_TITLES, best_matches, notify_matching_requests
 from app.core.search import expand, relevance, search_filter, title_vocabulary
@@ -131,13 +132,36 @@ def _check_photos(files: list) -> list[tuple[bytes, str, str]]:
     return checked
 
 
-def _store_photos(checked: list[tuple[bytes, str, str]], request: Request) -> list[str]:
-    urls = []
+def _store_photos(checked: list[tuple[bytes, str, str]], request: Request) -> tuple[list[str], dict[str, str]]:
+    """Store each photo and a small copy for cards. Returns (photo URLs, {photo URL: thumbnail URL})."""
+    urls, thumbs = [], {}
+    base = str(request.base_url)
     for data, content_type, ext in checked:
-        key = f"listings/{uuid.uuid4().hex}{ext}"
+        name = uuid.uuid4().hex
+        key = f"listings/{name}{ext}"
         storage.put_public(key, data, content_type)
-        urls.append(storage.public_url(key, str(request.base_url)))
-    return urls
+        url = storage.public_url(key, base)
+        urls.append(url)
+        try:
+            thumb_key = f"listings/{name}_thumb.jpg"
+            storage.put_public(thumb_key, make_thumbnail(data), "image/jpeg")
+            thumbs[url] = storage.public_url(thumb_key, base)
+        except Exception:  # noqa: BLE001  a missing thumbnail only means cards load the full photo
+            logging.getLogger("campusmarket.photos").exception("Couldn't make a thumbnail for %s", key)
+    return urls, thumbs
+
+
+def sync_thumbnails(old: dict | None, kept: list[str], added: dict[str, str]) -> tuple[dict[str, str], list[str]]:
+    """Thumbnails after an edit: the kept photos' plus the new ones'. Also returns the dropped
+    thumbnails' URLs, to delete with their photos."""
+    old = old or {}
+    keep = {u: t for u, t in old.items() if u in kept}
+    return {**keep, **added}, [t for u, t in old.items() if u not in keep]
+
+
+def listing_files(listing: Listing) -> list[str]:
+    """Every stored file of a listing: its photos and their thumbnails."""
+    return [*(listing.images or []), *(listing.thumbnails or {}).values()]
 
 
 def _commit_or_drop_photos(db: Session, urls: list[str]) -> None:
@@ -394,9 +418,9 @@ def create_listing(
     _apply_food_rules(listing, check_expiry=True)
     _apply_mrp_rule(listing)
     _apply_rent_rules(listing)
-    listing.images = _store_photos(checked, request)
+    listing.images, listing.thumbnails = _store_photos(checked, request)
     db.add(listing)
-    _commit_or_drop_photos(db, listing.images)
+    _commit_or_drop_photos(db, [*listing.images, *listing.thumbnails.values()])
     notify_matching_requests(db, seller=user, target_type="listing", target_id=listing.id, title=listing.title,
                              fields=(listing.title, listing.description, listing.category))
     db.commit()
@@ -435,11 +459,13 @@ def update_listing(
     _apply_food_rules(listing, check_expiry="expiry_date" in data)
     _apply_mrp_rule(listing)
     _apply_rent_rules(listing)
-    added = _store_photos(checked, request)
+    added, added_thumbs = _store_photos(checked, request)
+    dropped_thumbs = []
     if photos_change:
         listing.images = [*kept, *added]
-    _commit_or_drop_photos(db, added)
-    _delete_upload_files(removed)
+        listing.thumbnails, dropped_thumbs = sync_thumbnails(listing.thumbnails, kept, added_thumbs)
+    _commit_or_drop_photos(db, [*added, *added_thumbs.values()])
+    _delete_upload_files([*removed, *dropped_thumbs])
     db.refresh(listing)
     return ListingOut.from_orm_with_art(listing)
 
@@ -495,7 +521,7 @@ def purge_deleted_listings(db: Session) -> None:
     expired = db.query(Listing).filter(Listing.deleted_at < restore_cutoff()).all()
     if not expired:
         return
-    photos = [url for listing in expired for url in (listing.images or [])]
+    photos = [url for listing in expired for url in listing_files(listing)]
     for listing in expired:
         db.delete(listing)
     db.commit()
@@ -516,8 +542,9 @@ def upload_images(
     if room <= 0:
         raise HTTPException(status_code=400, detail=f"A listing can have at most {MAX_IMAGES} photos")
 
-    urls = _store_photos(_check_photos(files[:room]), request)
+    urls, thumbs = _store_photos(_check_photos(files[:room]), request)
     listing.images = [*(listing.images or []), *urls]
-    _commit_or_drop_photos(db, urls)
+    listing.thumbnails = {**(listing.thumbnails or {}), **thumbs}
+    _commit_or_drop_photos(db, [*urls, *thumbs.values()])
     db.refresh(listing)
     return ListingOut.from_orm_with_art(listing)

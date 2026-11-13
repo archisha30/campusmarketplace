@@ -17,7 +17,7 @@ from app.db.session import get_db
 from app.models.listing import Listing
 from app.models.resource import Resource
 from app.models.user import User
-from app.schemas.listing import CATEGORY_ART, DEFAULT_ART
+from app.schemas.listing import CATEGORY_ART, DEFAULT_ART, card_photo
 
 router = APIRouter(prefix="/api/trash", tags=["trash"])
 
@@ -54,7 +54,7 @@ def list_trash(
         art = CATEGORY_ART.get(listing.category, DEFAULT_ART)
         items.append(TrashItemOut(
             type="listing", id=listing.id, title=listing.title, price=listing.price,
-            image=(listing.images or [None])[0], emoji=art["emoji"], bg=art["bg"],
+            image=card_photo(listing), emoji=art["emoji"], bg=art["bg"],
             deleted_at=_utc(listing.deleted_at), restore_until=_utc(restore_until(listing.deleted_at)),
         ))
     for r in db.query(Resource).filter(Resource.owner_id == user.id, Resource.deleted_at >= cutoff):

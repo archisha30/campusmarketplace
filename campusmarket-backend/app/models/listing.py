@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Column, Date, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import JSON, Column, Date, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import relationship
 
@@ -30,6 +30,9 @@ class Listing(Base):
 
     status = Column(String, nullable=False, default="available")  # available | reserved | sold
     images = Column(ARRAY(String), nullable=False, default=list)
+    # Small copy of each photo for listing cards: {photo URL: thumbnail URL}. Photos from before
+    # thumbnails existed may be missing; cards then fall back to the photo itself.
+    thumbnails = Column(JSON, nullable=False, default=dict, server_default="{}")
 
     # F&B only: served "hot" or "cold" (required for F&B), and an optional expiry date.
     # Expired F&B listings drop out of the marketplace automatically.

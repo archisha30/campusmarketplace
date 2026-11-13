@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
+from app.api.routes.listings import listing_files
 from app.api.routes.resources import _owner_out, _remove_files, _resource_files, _resource_out
 from app.core.moderation import SERIOUS_REASONS, item_removed, reports_cleared
 from app.core.trash import existing
@@ -279,7 +280,7 @@ def remove_listing(
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
-    photos = list(listing.images or [])
+    photos = listing_files(listing)
     item_removed(db, owner_id=listing.owner_id, target_type="listing", target_id=listing.id,
                  title=listing.title, reason=payload.reason, admin=admin)
     db.delete(listing)

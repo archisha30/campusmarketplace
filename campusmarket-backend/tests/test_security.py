@@ -26,7 +26,8 @@ SVG = b'<svg xmlns="http://www.w3.org/2000/svg"><script>alert(document.cookie)</
 
 def _stored(tmp_path):
     root = tmp_path / "up"
-    return sorted(p.name for p in root.rglob("*") if p.is_file()) if root.exists() else []
+    # Photos only; each also gets a small JPEG copy for cards (see test_thumbnails.py).
+    return sorted(p.name for p in root.rglob("*") if p.is_file() and not p.name.endswith("_thumb.jpg")) if root.exists() else []
 
 
 @pytest.fixture
