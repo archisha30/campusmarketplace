@@ -7,7 +7,8 @@ import { useToast } from '../hooks/useToast.jsx'
 import { trackEvent } from '../lib/analytics.js'
 import { formatPrice } from '../lib/format.js'
 
-const MAX = 70
+const PRODUCT_MAX = 70
+const DESCRIPTION_MAX = 200
 
 export default function PostRequestModal({ open, onClose, onPosted }) {
   const toast = useToast()
@@ -102,14 +103,16 @@ export default function PostRequestModal({ open, onClose, onPosted }) {
           value={product}
           onChange={setProduct}
           placeholder="e.g. Casio fx-991CW calculator"
+          max={PRODUCT_MAX}
           required
         />
         <Field
           id="req-description"
-          label="One-line description"
+          label="Details (optional)"
           value={description}
           onChange={setDescription}
-          placeholder="e.g. Need it for tomorrow's exam, can rent too"
+          placeholder="e.g. Need it for Tuesday's exam, any condition, under ₹800, can rent too"
+          max={DESCRIPTION_MAX}
         />
 
         {error && <p className="mb-3 text-[13px] text-coral">{error}</p>}
@@ -142,19 +145,19 @@ function MatchRow({ to, onOpen, title, thumb, fallback, bg, children }) {
   )
 }
 
-function Field({ id, label, value, onChange, placeholder, required }) {
+function Field({ id, label, value, onChange, placeholder, max, required }) {
   return (
     <div className="mb-4">
       <div className="flex items-baseline justify-between">
         <label className="field-label" htmlFor={id}>{label}</label>
-        <span className={`text-[12px] tabular-nums ${value.length >= MAX ? 'text-coral' : 'text-ink-faint'}`}>
-          {value.length}/{MAX}
+        <span className={`text-[12px] tabular-nums ${value.length >= max ? 'text-coral' : 'text-ink-faint'}`}>
+          {value.length}/{max}
         </span>
       </div>
       <input
         id={id}
         required={required}
-        maxLength={MAX}
+        maxLength={max}
         className="field-input"
         value={value}
         onChange={(e) => onChange(e.target.value.replace(/[\r\n]+/g, ' '))}

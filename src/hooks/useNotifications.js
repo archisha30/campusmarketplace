@@ -6,9 +6,9 @@ import { usePolling } from './usePolling.js'
 const POLL_MS = 60_000
 
 // Personal notifications for every logged-in student: for buyers, answers to their access
-// requests and new listings and resources matching their Looking For requests; for sellers also access requests, WhatsApp / Email taps and reports on their
-// items; and updates from the CampusMarket team. Read state lives on the server, so it's
-// the same on every device.
+// requests, seller replies to their Looking For requests and new items matching them; for
+// sellers also access requests, WhatsApp / Email taps and reports on their items; and updates
+// from the CampusMarket team. Read state lives on the server, so it's the same on every device.
 //
 // `freeze` keeps each item's read flag from when the page loaded, so the dashboard
 // can mark everything read (clearing the navbar badge) and still highlight what was new.

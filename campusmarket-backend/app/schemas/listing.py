@@ -125,6 +125,10 @@ class ListingOut(BaseModel):
     pickup_spot: str
     status: str
     held: bool = False  # held for review after a pile-up of reports; only the owner and admins see it
+    # Only in the seller's own list (Seller Dashboard): how many different students opened the
+    # listing, and how many tapped Contact Seller on it. Never who.
+    views: int | None = None
+    contacts: int | None = None
     campus_id: int
     images: list[str] = []
     food_temp: str | None = None

@@ -50,6 +50,8 @@ def _load_target(db: Session, payload: ContactIn, user: User):
         req = db.query(ProductRequest).filter(ProductRequest.id == payload.target_id).first()
         if not req:
             raise HTTPException(status_code=404, detail="That request no longer exists")
+        if req.found_at:
+            raise HTTPException(status_code=410, detail="They've already found one")
         return req.user, req.product
     model = Listing if payload.target_type == "listing" else Resource
     target = db.query(model).filter(model.id == payload.target_id, live(model)).first()
@@ -95,8 +97,9 @@ def reveal_contact(
     if not is_self and _check_limits(db, user, payload):
         db.add(ContactReveal(user_id=user.id, target_type=payload.target_type, target_id=payload.target_id))
 
-    # Let sellers know someone reached out about their listing/resource (once an hour per channel).
-    if payload.target_type in ("listing", "resource") and not is_self:
+    # Let the owner know someone reached out about their listing/resource, or replied to their
+    # "Looking for" request (once an hour per channel), in case the message never arrives.
+    if not is_self:
         recent = (
             db.query(Notification)
             .filter(

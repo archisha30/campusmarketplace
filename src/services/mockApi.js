@@ -60,6 +60,8 @@ export function listListings(f = {}) {
   if (f.max_price) out = out.filter((l) => l.price <= Number(f.max_price))
   if (f.min_price) out = out.filter((l) => l.price >= Number(f.min_price))
   if (f.seller_id) out = out.filter((l) => l.seller.id === Number(f.seller_id))
+  // The seller's own list carries view/contact counts, like the API (the mock makes some up).
+  const own = f.seller_id && sameId(f.seller_id, seed.currentUser.id)
   if (f.status) out = out.filter((l) => l.status === f.status)
   // Expired food and held items leave the marketplace; the seller's own view still shows them.
   const today = new Date().toISOString().slice(0, 10)
@@ -70,6 +72,7 @@ export function listListings(f = {}) {
   else out.sort((a, b) => b.id - a.id)
   out.sort((a, b) => (a.status === 'sold') - (b.status === 'sold')) // stable: keeps the order above
 
+  if (own) out = out.map((l) => ({ ...l, views: l.views ?? (l.id * 7) % 23, contacts: l.contacts ?? (l.id * 3) % 4 }))
   return delay(paged(out, f, 24))
 }
 
@@ -130,7 +133,7 @@ function notifyMatchingRequests(item, targetType, fields) {
   const since = Date.now() - 30 * 86400e3
   const told = new Set()
   for (const r of productRequests) {
-    if (told.has(r.requester.id) || new Date(r.created_at).getTime() < since || !mockSearchMatch(fields, r.product)) continue
+    if (told.has(r.requester.id) || r.found || new Date(r.created_at).getTime() < since || !mockSearchMatch(fields, r.product)) continue
     pushNotification({
       user_id: r.requester.id, actor: { ...seed.currentUser, email: '', phone: null }, type: 'request_match',
       target_type: targetType, target_id: item.id, target_title: item.title, note: r.product,
@@ -684,6 +687,7 @@ export function revealContact(targetType, targetId, channel) {
   let title
   if (targetType === 'request') {
     const req = productRequests.find((r) => r.id === Number(targetId))
+    if (req?.found) return Promise.reject(mockError("They've already found one", 410))
     owner = req?.requester
     title = req?.product
   } else {
@@ -696,9 +700,7 @@ export function revealContact(targetType, targetId, channel) {
   if (!owner) return Promise.reject(mockError('That item no longer exists', 404))
   const phone = owner.phone || (sameId(owner.id, u.id) ? u.phone : null) || '919000000000'
   const email = owner.email || `${String(owner.name || 'student').split(' ')[0].toLowerCase()}@polaris.edu`
-  if (targetType !== 'request') {
-    pushNotification({ user_id: owner.id, actor: u, type: 'contact', channel, target_type: targetType, target_id: Number(targetId), target_title: title })
-  }
+  pushNotification({ user_id: owner.id, actor: u, type: 'contact', channel, target_type: targetType, target_id: Number(targetId), target_title: title })
   return delay({ name: owner.name, phone: channel === 'whatsapp' ? phone : null, email: channel === 'email' ? email : null }, 150)
 }
 
@@ -1000,7 +1002,7 @@ let productRequests = [
 export function createRequest({ product, description }) {
   const u = seed.currentUser
   const req = {
-    id: nextId++, product, description: description || null, created_at: new Date().toISOString(),
+    id: nextId++, product, description: description || null, created_at: new Date().toISOString(), found: false,
     requester: { id: String(u.id), name: u.name, email: u.email, phone: u.phone || null, avatar_url: u.avatar_url || null },
   }
   productRequests = [req, ...productRequests]
@@ -1020,11 +1022,18 @@ export function createRequest({ product, description }) {
 }
 
 export function listRequests() {
-  return delay(productRequests.filter((r) => r.requester.id !== String(seed.currentUser.id)))
+  return delay(productRequests.filter((r) => !r.found && r.requester.id !== String(seed.currentUser.id)))
 }
 
 export function myRequests() {
   return delay(productRequests.filter((r) => r.requester.id === String(seed.currentUser.id)))
+}
+
+export function setRequestFound(id, found) {
+  const req = productRequests.find((r) => r.id === Number(id))
+  if (!req) return Promise.reject(mockError('Request not found', 404))
+  req.found = Boolean(found)
+  return delay({ ...req })
 }
 
 export function deleteRequest(id) {

@@ -231,6 +231,7 @@ export default function Dashboard() {
               {isExpired(l) && <span className="ml-1.5 font-semibold text-coral">· Expired, hidden from the marketplace</span>}
               {l.held && <span className="ml-1.5 font-semibold text-coral">· Held for review, hidden until our team checks the reports</span>}
             </p>
+            <ListingStats l={l} />
           </div>
           <div className="flex flex-wrap gap-2">
             <button className="btn-ghost btn-sm" onClick={() => navigate(`/sell/${l.id}/edit`)}>Edit</button>
@@ -369,5 +370,28 @@ function RequestRow({ r, fresh }) {
         {requester.has_phone ? 'Reply on WhatsApp' : 'Reply by Email'}
       </button>
     </div>
+  )
+}
+
+// Different students who opened the listing / tapped Contact Seller, with a nudge when lots of
+// people look but nobody gets in touch (the price or photos are usually why).
+const NUDGE_VIEWS = 10
+
+function ListingStats({ l }) {
+  if (l.views == null) return null
+  const nudge = l.status === 'available' && l.views >= NUDGE_VIEWS && l.contacts === 0
+  return (
+    <>
+      <p className="mt-0.5 text-[12.5px] text-ink-faint">
+        <span title="Different students who opened this listing">👁 {l.views} {l.views === 1 ? 'view' : 'views'}</span>
+        <span className="mx-1.5">·</span>
+        <span title="Different students who tapped Contact Seller">💬 {l.contacts} {l.contacts === 1 ? 'contact' : 'contacts'}</span>
+      </p>
+      {nudge && (
+        <p className="mt-0.5 text-[12.5px] font-medium text-[#946B00]">
+          Lots of views but no contacts yet. A lower price or clearer photos usually help.
+        </p>
+      )}
+    </>
   )
 }

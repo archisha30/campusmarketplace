@@ -10,7 +10,7 @@ from app.db.session import get_db
 from app.models.product_request import VISIBLE_FOR, ProductRequest
 from app.models.user import User
 from app.schemas.listing import ListingOut
-from app.schemas.product_request import ProductRequestCreate, ProductRequestCreated, ProductRequestOut
+from app.schemas.product_request import FoundIn, ProductRequestCreate, ProductRequestCreated, ProductRequestOut
 from app.core.timeutil import utcnow
 
 router = APIRouter(prefix="/api/requests", tags=["requests"])
@@ -63,6 +63,7 @@ def list_requests(
         .options(joinedload(ProductRequest.user))
         .filter(
             ProductRequest.created_at >= utcnow() - VISIBLE_FOR,
+            ProductRequest.found_at.is_(None),  # they already have it
             ProductRequest.user_id != user.id,
             ProductRequest.user.has(User.suspended_at.is_(None)),  # suspended students' requests disappear
         )
@@ -85,6 +86,25 @@ def my_requests(
         .all()
     )
     return [ProductRequestOut.from_model(r, include_contact=True) for r in rows]
+
+
+@router.patch("/{request_id}/found", response_model=ProductRequestOut)
+def set_found(
+    request_id: int,
+    payload: FoundIn,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """"Found it" (or undo): found requests leave sellers' feeds and stop matching new items."""
+    req = db.query(ProductRequest).filter(ProductRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    if req.user_id != user.id:
+        raise HTTPException(status_code=403, detail="You can only update your own requests")
+    req.found_at = (req.found_at or utcnow()) if payload.found else None
+    db.commit()
+    db.refresh(req)
+    return ProductRequestOut.from_model(req, include_contact=True)
 
 
 @router.delete("/{request_id}", status_code=204)

@@ -191,7 +191,7 @@ export const authApi = {
 }
 
 export const requestsApi = {
-  // POST /api/requests  body: { product, description }  (each max 70 chars)
+  // POST /api/requests  body: { product (max 70 chars), description (max 200) }
   //   -> the request, plus `matches` (up to 4 listings for sale) and `resource_matches`
   //      (up to 3 open resources) that match it
   create: (payload) => pick(() => http.post('/requests', payload), () => mock.createRequest(payload))(),
@@ -199,6 +199,8 @@ export const requestsApi = {
   mine: () => pick(() => http.get('/requests/mine'), () => mock.myRequests())(),
   // GET /api/requests  — sellers' notification feed
   list: () => pick(() => http.get('/requests'), () => mock.listRequests())(),
+  // PATCH /api/requests/:id/found  body: { found }  — "Found it" (or undo): leaves sellers' feeds
+  setFound: (id, found) => pick(() => http.patch(`/requests/${id}/found`, { found }), () => mock.setRequestFound(id, found))(),
   // DELETE /api/requests/:id
   remove: (id) => pick(() => http.del(`/requests/${id}`), () => mock.deleteRequest(id))(),
 }

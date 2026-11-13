@@ -13,7 +13,8 @@ class Notification(Base):
     type "access_request": actor asked for access to the recipient's resource.
     type "access_approved" / "access_denied": the resource owner (actor) answered the recipient's
       access request (note "revoked" when access they had was taken away).
-    type "contact": actor tapped WhatsApp / Email on the recipient's listing or resource.
+    type "contact": actor tapped WhatsApp / Email on the recipient's listing or resource, or
+      replied to the recipient's "Looking for" request (target_type "request").
     type "report": actor reported the recipient's item (shown anonymously; note = reason).
       Repeat reports on the same item update one unread notification (count = open reports).
     type "removed": an admin removed the recipient's item (note = the reason they gave).
@@ -34,7 +35,7 @@ class Notification(Base):
     # access_request | access_approved | access_denied | contact | report | removed | report_cleared | held | request_match
     type = Column(String(20), nullable=False)
     channel = Column(String(10), nullable=True)  # whatsapp | email (contact only)
-    target_type = Column(String(10), nullable=False)  # listing | resource
+    target_type = Column(String(10), nullable=False)  # listing | resource | request
     target_id = Column(Integer, nullable=False)
     target_title = Column(String(120), nullable=False)  # snapshot, so it still reads well if the item is deleted
     note = Column(String(300), nullable=True)

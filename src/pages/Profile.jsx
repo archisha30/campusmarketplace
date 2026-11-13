@@ -180,6 +180,18 @@ function MyRequests() {
   const [posting, setPosting] = useState(false)
   const items = data || []
 
+  async function toggleFound(r) {
+    const before = items
+    setData(items.map((x) => (x.id === r.id ? { ...x, found: !r.found } : x)))
+    try {
+      await requestsApi.setFound(r.id, !r.found)
+      toast(r.found ? 'Request reopened. Sellers can see it again.' : "Marked as found. Sellers won't see it any more.")
+    } catch (err) {
+      setData(before)
+      toast(err.message || 'Could not update request')
+    }
+  }
+
   async function remove(id) {
     const before = items
     setData(items.filter((r) => r.id !== id))
@@ -193,11 +205,11 @@ function MyRequests() {
   }
 
   return (
-    <section className="mt-6 rounded-slab border border-line bg-paper p-6 md:p-8">
+    <section id="requests" className="mt-6 scroll-mt-24 rounded-slab border border-line bg-paper p-6 md:p-8">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[19px] font-semibold">My requests</h2>
-          <p className="text-[13px] text-ink-faint">Things you've asked sellers for. Delete one once you've found it.</p>
+          <p className="text-[13px] text-ink-faint">Things you've asked sellers for. Tap “Found it” once you have it, so sellers stop replying.</p>
         </div>
         <button className="btn-ghost btn-sm" onClick={() => setPosting(true)}>+ Post a Request</button>
       </div>
@@ -209,13 +221,24 @@ function MyRequests() {
       )}
 
       {!loading && items.map((r) => (
-        <div key={r.id} className="mb-2.5 flex items-start gap-3 rounded-card border border-line p-3.5">
+        <div key={r.id} className={`mb-2.5 flex flex-wrap items-start gap-3 rounded-card border p-3.5 ${r.found ? 'border-leaf/30 bg-leaf/5' : 'border-line'}`}>
           <div className="min-w-0 flex-1">
-            <p className="break-words text-[15px] font-semibold">{r.product}</p>
+            <p className="break-words text-[15px] font-semibold">
+              {r.product}
+              {r.found && <span className="badge ml-2 bg-leaf/15 align-middle text-leaf">✓ Found</span>}
+            </p>
             {r.description && <p className="mt-0.5 break-words text-[13.5px] text-ink-soft">{r.description}</p>}
-            <p className="mt-1 text-[12px] text-ink-faint">Posted {timeAgo(r.created_at)}</p>
+            <p className="mt-1 text-[12px] text-ink-faint">
+              Posted {timeAgo(r.created_at)}
+              {r.found && ' · Hidden from sellers'}
+            </p>
           </div>
-          <button className="btn-danger btn-sm flex-none" onClick={() => remove(r.id)}>Delete</button>
+          <div className="flex flex-none gap-2">
+            <button className={r.found ? 'btn-ghost btn-sm' : 'btn-accent btn-sm'} onClick={() => toggleFound(r)}>
+              {r.found ? 'Reopen' : '✓ Found it'}
+            </button>
+            <button className="btn-danger btn-sm" onClick={() => remove(r.id)}>Delete</button>
+          </div>
         </div>
       ))}
 

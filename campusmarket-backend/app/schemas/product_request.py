@@ -5,12 +5,13 @@ from pydantic import BaseModel, Field, field_validator
 from app.schemas.listing import ListingOut
 from app.schemas.resource import ResourceOut
 
-MAX_LEN = 70
+MAX_LEN = 70  # what they're looking for
+DESCRIPTION_MAX = 200  # room for "need it by Tuesday, any condition, under ₹800"
 
 
 class ProductRequestCreate(BaseModel):
     product: str = Field(max_length=MAX_LEN)
-    description: str | None = Field(default=None, max_length=MAX_LEN)
+    description: str | None = Field(default=None, max_length=DESCRIPTION_MAX)
 
     @field_validator("product")
     @classmethod
@@ -26,6 +27,10 @@ class ProductRequestCreate(BaseModel):
         # Collapse newlines/extra spaces so it stays a single line.
         value = " ".join((value or "").split())
         return value or None
+
+
+class FoundIn(BaseModel):
+    found: bool
 
 
 class RequesterOut(BaseModel):
@@ -44,6 +49,7 @@ class ProductRequestOut(BaseModel):
     product: str
     description: str | None = None
     created_at: datetime
+    found: bool = False  # the student marked it found
     requester: RequesterOut
 
     @classmethod
@@ -53,6 +59,7 @@ class ProductRequestOut(BaseModel):
             product=r.product,
             description=r.description,
             created_at=r.created_at,
+            found=r.found_at is not None,
             requester=RequesterOut(
                 id=str(r.user.id),
                 name=r.user.name or r.user.email.split("@")[0],

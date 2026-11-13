@@ -20,6 +20,7 @@ from app.core.storage import delete_public_urls, storage
 from app.core.trash import can_see_held, existing, live, restore_cutoff
 from app.core.timeutil import utcnow
 from app.db.session import get_db
+from app.models.contact_reveal import ContactReveal
 from app.models.listing import Listing
 from app.models.listing_view import ListingView
 from app.models.user import User
@@ -164,6 +165,28 @@ def matching_listings(db: Session, text: str, exclude_owner_id=None, limit: int 
     return best_matches(db, Listing, text, filters, exclude_owner_id, limit)
 
 
+def _add_seller_stats(db: Session, listings: list[ListingOut]) -> None:
+    """Fill in views and contacts (different students, never who) for the seller's own list."""
+    ids = [l.id for l in listings]
+    if not ids:
+        return
+    views = dict(
+        db.query(ListingView.listing_id, func.count(ListingView.user_id))
+        .filter(ListingView.listing_id.in_(ids))
+        .group_by(ListingView.listing_id)
+        .all()
+    )
+    contacts = dict(
+        db.query(ContactReveal.target_id, func.count(func.distinct(ContactReveal.user_id)))
+        .filter(ContactReveal.target_type == "listing", ContactReveal.target_id.in_(ids))
+        .group_by(ContactReveal.target_id)
+        .all()
+    )
+    for l in listings:
+        l.views = views.get(l.id, 0)
+        l.contacts = contacts.get(l.id, 0)
+
+
 @router.get("", response_model=ListingListOut)
 def list_listings(
     q: Optional[str] = None,
@@ -226,8 +249,11 @@ def list_listings(
         query = query.order_by(sold_last, Listing.created_at.desc())
 
     items, total, page, page_size, pages = paginate(query, page, page_size)
+    out = [ListingOut.from_orm_with_art(i) for i in items]
+    if own:
+        _add_seller_stats(db, out)
     return ListingListOut(
-        items=[ListingOut.from_orm_with_art(i) for i in items],
+        items=out,
         total=total,
         page=page,
         page_size=page_size,

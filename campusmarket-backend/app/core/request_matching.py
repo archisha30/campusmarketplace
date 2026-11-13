@@ -44,6 +44,7 @@ def notify_matching_requests(db: Session, *, seller: User, target_type: str, tar
         db.query(ProductRequest)
         .filter(
             ProductRequest.created_at >= utcnow() - VISIBLE_FOR,
+            ProductRequest.found_at.is_(None),
             ProductRequest.user_id != seller.id,
             ProductRequest.user.has(User.suspended_at.is_(None)),
         )

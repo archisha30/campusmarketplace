@@ -97,7 +97,11 @@ const FROM_TEAM = new Set(['removed', 'report_cleared', 'held'])
 function NotificationRow({ n, onDismiss }) {
   const { actor } = n
   const fresh = !n.read
-  const href = n.target_type === 'listing' ? `/listing/${n.target_id}` : `/resources/${n.target_id}`
+  const href = {
+    listing: `/listing/${n.target_id}`,
+    resource: `/resources/${n.target_id}`,
+    request: '/profile#requests', // your own "Looking for" requests
+  }[n.target_type]
   const item = <Link to={href} className="font-semibold text-ink hover:underline">{n.target_title}</Link>
   const greeting = `Hi ${actor.name}! Following up on "${n.target_title}" from CampusMarket.`
   const reply = actor.phone
@@ -146,7 +150,9 @@ function NotificationRow({ n, onDismiss }) {
     action = <Link to={href} className="btn-accent btn-sm">View {n.target_type}</Link>
   } else {
     icon = n.channel === 'whatsapp' ? '💬' : '✉️'
-    text = <>opened {n.channel === 'whatsapp' ? 'WhatsApp' : 'email'} to message you about {item}</>
+    text = n.target_type === 'request'
+      ? <>replied to your request for {item} on {n.channel === 'whatsapp' ? 'WhatsApp' : 'email'}</>
+      : <>opened {n.channel === 'whatsapp' ? 'WhatsApp' : 'email'} to message you about {item}</>
     action = (
       <a className="btn-ghost btn-sm" href={reply} target="_blank" rel="noopener noreferrer">
         {actor.phone ? 'Reply on WhatsApp' : 'Reply by Email'}
