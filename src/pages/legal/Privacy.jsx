@@ -5,7 +5,7 @@ const CONTACT = 'archishap30@gmail.com'
 
 export default function Privacy() {
   return (
-    <LegalPage title="Privacy Policy" updated="19 October 2026">
+    <LegalPage title="Privacy Policy" updated="13 November 2026">
       <p>
         CampusMarket is a marketplace for verified students of Medhavi Skills University to buy, sell, rent and share
         things, and to share study material. This page explains what we collect, why, and what you can do about it.
@@ -20,6 +20,7 @@ export default function Privacy() {
           <li><strong>What you post:</strong> listings, photos, resources and PDFs, “Looking for” requests and reports.</li>
           <li><strong>Sign-in:</strong> if you use “Continue with Google”, Google tells us your email, name and that your email is verified. We never see your Google password. If you use a password with us, we only store a scrambled (hashed) version of it.</li>
           <li><strong>Activity used for recommendations:</strong> which listing categories and resource subjects you open.</li>
+          <li><strong>Which listings you open:</strong> each listing records which students opened it (once per student), so we can show the most popular items. Nobody else, including the seller, can see who opened a listing.</li>
           <li><strong>Basic usage statistics</strong> through Google Analytics (pages visited, not your personal details).</li>
         </ul>
       </section>
@@ -30,8 +31,8 @@ export default function Privacy() {
           <li>To verify that you're a student of the college and keep the marketplace safe.</li>
           <li>To show your listings and resources, and let buyers contact you.</li>
           <li>To send you login and verification codes by email.</li>
-          <li>To notify you about access requests, messages and reports on your items.</li>
-          <li>To recommend things you're likely to want.</li>
+          <li>To notify you about access requests, messages and reports on your items, and when something matching your “Looking for” request is posted.</li>
+          <li>To recommend things you're likely to want, and to show the most popular listings on the home page.</li>
         </ul>
         <p className="mt-2">We don't sell your data and we don't show ads.</p>
       </section>
@@ -39,7 +40,8 @@ export default function Privacy() {
       <section>
         <h2>Who can see what</h2>
         <ul>
-          <li><strong>Other verified students</strong> see your name, college, profile picture, and what you post. Nothing is visible to people who aren't logged in.</li>
+          <li><strong>Other verified students</strong> see your name, college, profile picture, and what you post.</li>
+          <li><strong>People who aren't logged in</strong> may see the title, first photo and price of a few popular listings on the home page. They never see who posted them, the description, the pickup spot or any contact details; everything else needs a verified account.</li>
           <li><strong>Your phone number and email</strong> are never shown in lists. A student only gets them when they tap “Contact Seller” on one of your items, and that is limited and logged to prevent misuse.</li>
           <li><strong>Paid PDFs</strong> are only available to the owner, admins, and students the owner approves.</li>
           <li><strong>Reports</strong> are anonymous to the person reported; admins can see who reported.</li>
