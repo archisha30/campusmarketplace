@@ -9,6 +9,7 @@ import Avatar from '../components/Avatar.jsx'
 import { COLLEGES, SEMESTERS } from '../data/sample.js'
 import { shrinkToJpeg } from '../lib/images.js'
 import Modal from '../components/Modal.jsx'
+import ConfirmModal from '../components/ConfirmModal.jsx'
 import PostRequestModal from '../components/PostRequestModal.jsx'
 import { formatPhone, timeAgo } from '../lib/format.js'
 import PasswordInput from '../components/PasswordInput.jsx'
@@ -338,7 +339,53 @@ function SellerSection({ user }) {
           </div>
         ))}
       </div>
+      {/* Once they've sold something the account stays a seller, so the option disappears. */}
+      {!user.has_sold && <SwitchToBuyer />}
     </section>
+  )
+}
+
+function SwitchToBuyer() {
+  const { becomeBuyer } = useAuth()
+  const toast = useToast()
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  async function confirm() {
+    setBusy(true)
+    try {
+      await becomeBuyer()
+      toast('Your account is now a buyer account')
+      setOpen(false)
+    } catch (err) {
+      toast(err.message || 'Could not switch account')
+      setOpen(false)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <>
+      <p className="mt-4 text-[13px] text-ink-faint">
+        Changed your mind?{' '}
+        <button type="button" className="font-semibold text-brand hover:underline" onClick={() => setOpen(true)}>
+          Switch back to a buyer account
+        </button>
+      </p>
+      <ConfirmModal
+        open={open}
+        title="Switch back to buyer?"
+        confirmLabel="Switch to buyer"
+        busyLabel="Switching…"
+        busy={busy}
+        onConfirm={confirm}
+        onClose={() => setOpen(false)}
+      >
+        <p>You'll stop seeing the Seller Dashboard and buyer requests. You can become a seller again any time.</p>
+        <p className="mt-2">This is only possible while you haven't sold anything. Delete any listings or resources you have up first.</p>
+      </ConfirmModal>
+    </>
   )
 }
 
@@ -366,7 +413,7 @@ function BuyerSection() {
       <div>
         <h2 className="text-[19px] font-semibold">Want to sell something?</h2>
         <p className="mt-1 max-w-md text-[14px] text-ink-soft">
-          Your account is set up for buying. Switch to a seller account to list items. You'll still be able to buy.
+          Your account is set up for buying. Switch to a seller account to list items. You'll still be able to buy, and you can switch back until you make your first sale.
         </p>
       </div>
       <button className="btn-accent" disabled={busy} onClick={upgrade}>

@@ -192,6 +192,7 @@ export function importWishlist(ids) {
 
 export function setListingStatus(id, status) {
   listings = listings.map((l) => (l.id === Number(id) ? { ...l, status } : l))
+  if (status === 'sold') seed.currentUser.has_sold = true // stays a seller from now on
   return getListing(id)
 }
 
@@ -544,6 +545,7 @@ export function decideResourceAccess(id, requestId, status) {
     if (!req) throw new Error('Request not found')
     const previous = req.status
     Object.assign(req, { status, decided_at: nowIso(), updated_at: nowIso() })
+    if (status === 'approved' && r.offer_type === 'sale') seed.currentUser.has_sold = true // a paid resource is a sale
     // Like the API: the buyer hears the answer, from the owner, without their contact details.
     if (status !== previous) {
       pushNotification({
@@ -965,9 +967,16 @@ export function saveInterests(interests) {
   return delay(seed.currentUser)
 }
 
+// Like the API: sellers can go back to buyer only if they've never sold and their shop is empty.
 export function setAccountType(accountType) {
-  seed.currentUser.account_type = accountType
-  return delay(seed.currentUser)
+  const u = seed.currentUser
+  if (u.account_type === 'seller' && accountType === 'buyer') {
+    if (u.has_sold) return Promise.reject(mockError("You've sold on CampusMarket, so your account stays a seller", 400))
+    const up = listings.filter((l) => sameId(l.seller?.id, u.id)).length + resources.filter((r) => sameId(r.owner?.id, u.id)).length
+    if (up) return Promise.reject(mockError('Delete your listings and resources first, then switch back to buyer', 400))
+  }
+  u.account_type = accountType
+  return delay(u)
 }
 
 export function updateProfile(payload) {

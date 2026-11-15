@@ -102,6 +102,12 @@ export function AuthProvider({ children }) {
       setUser(updated)
       return updated
     },
+    // Only allowed while they've never sold anything and their shop is empty (the API explains why not).
+    async becomeBuyer() {
+      const updated = await authApi.setAccountType('buyer')
+      setUser(updated)
+      return updated
+    },
     async updateProfile(payload) {
       const updated = await authApi.updateProfile(payload)
       setUser(updated)

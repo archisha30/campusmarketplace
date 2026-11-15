@@ -31,6 +31,8 @@ from app.core.storage import storage
 from app.core.timeutil import utcnow
 from app.db.session import get_db  # <-- point this at your existing db session dependency
 from app.models.otp import OTPCode
+from app.models.listing import Listing
+from app.models.resource import Resource
 from app.models.user import User
 from app.schemas.auth import (
     AccountTypeRequest,
@@ -372,10 +374,18 @@ def set_account_type(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    # Buyers can upgrade to seller. Going back is blocked so a seller's
-    # existing listings never end up owned by an account that can't manage them.
+    # Buyers can become sellers. Sellers can go back only if they've never sold anything, and
+    # once their shop is empty, so no listing or resource is left with an owner who can't manage it.
     if user.account_type == "seller" and payload.account_type == "buyer":
-        raise HTTPException(status_code=400, detail="Seller accounts can't switch back to buyer")
+        if user.has_sold:
+            raise HTTPException(status_code=400, detail="You've sold on CampusMarket, so your account stays a seller")
+        listings = db.query(Listing).filter(Listing.owner_id == user.id, Listing.deleted_at.is_(None)).count()
+        resources = db.query(Resource).filter(Resource.owner_id == user.id, Resource.deleted_at.is_(None)).count()
+        if listings or resources:
+            items = " and ".join(
+                f"{n} {word}{'' if n == 1 else 's'}" for n, word in ((listings, "listing"), (resources, "resource")) if n
+            )
+            raise HTTPException(status_code=400, detail=f"Delete your {items} first, then switch back to buyer")
     user.account_type = payload.account_type
     db.commit()
     db.refresh(user)

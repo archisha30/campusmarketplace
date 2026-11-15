@@ -41,6 +41,10 @@ class User(Base):
     # working and their listings/resources disappear. The email also goes on banned_emails.
     suspended_at = Column(DateTime, nullable=True)
     suspension_reason = Column(String(300), nullable=True)
+    # Set the first time they sell something (a listing marked sold, or access approved on a paid
+    # resource) and never cleared: from then on the account stays a seller. Kept here because
+    # sold listings can be deleted, so counting them wouldn't be reliable.
+    first_sold_at = Column(DateTime, nullable=True)
 
     @property
     def has_password(self) -> bool:
@@ -55,6 +59,14 @@ class User(Base):
         """Old email-only accounts must create a password before anything else. Google accounts
         don't need one (Google already proves who they are); they can add one in Profile."""
         return not self.password_hash and not self.google_sub
+
+    @property
+    def has_sold(self) -> bool:
+        return self.first_sold_at is not None
+
+    def record_sale(self) -> None:
+        if self.first_sold_at is None:
+            self.first_sold_at = utcnow()
 
     @property
     def is_owner(self) -> bool:

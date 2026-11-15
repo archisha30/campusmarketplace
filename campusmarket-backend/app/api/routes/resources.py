@@ -650,6 +650,8 @@ def decide_access_request(
     req.status = payload.status
     req.decided_at = now
     req.updated_at = now
+    if payload.status == "approved" and r.offer_type == "sale":
+        r.owner.record_sale()  # a paid resource counts as a sale (see set_account_type)
     if payload.status != previous:
         # The buyer hears the answer. It comes from the owner even when an admin decided on
         # their behalf, and never carries the owner's phone or email (see NotificationOut).

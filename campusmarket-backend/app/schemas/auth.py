@@ -199,6 +199,7 @@ class UserOut(BaseModel):
     is_admin: bool = False  # owners + approved admins (computed, see User.is_admin)
     is_owner: bool = False
     account_type: str = "buyer"
+    has_sold: bool = False  # sellers who've sold something can't switch back to buyer
     avatar_url: str | None = None
     phone: str | None = None
     verified: bool

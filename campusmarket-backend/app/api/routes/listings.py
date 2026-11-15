@@ -498,6 +498,8 @@ def set_listing_status(
 ):
     listing = _get_owned_listing(listing_id, db, user)
     listing.status = payload.status
+    if payload.status == "sold":
+        user.record_sale()  # from now on they stay a seller (see set_account_type)
     db.commit()
     db.refresh(listing)
     return ListingOut.from_orm_with_art(listing)
