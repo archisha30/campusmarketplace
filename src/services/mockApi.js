@@ -448,7 +448,9 @@ export function listResources(f = {}) {
   else if (f.sort === 'price_high') out.sort((a, b) => b.price - a.price)
   else out.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
 
-  return delay(paged(out.map((r) => resourceOut(r)), f, 18))
+  // Your own list carries "requests waiting", like the API.
+  const pending = (r) => resourceAccess.filter((a) => a.resource_id === r.id && a.status === 'pending').length
+  return delay(paged(out.map((r) => (f.mine ? { ...resourceOut(r), pending_requests: pending(r) } : resourceOut(r))), f, 18))
 }
 
 export function recommendedResources({ excludeId, year, subjectScores = {} } = {}) {

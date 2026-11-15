@@ -24,6 +24,7 @@ const TABS = [
   { label: 'Active', status: 'available' },
   { label: 'Reserved', status: 'reserved' },
   { label: 'Sold', status: 'sold' },
+  { label: 'Resources', status: 'resources' }, // your Resource Hub items, open and closed
   { label: 'Drafts', status: 'drafts' }, // saved from Sell / Post a Resource
   { label: 'Deleted', status: 'deleted' }, // restorable for 24 hours
 ]
@@ -48,24 +49,28 @@ export default function Dashboard() {
   const [params, setParams] = useSearchParams()
   const tab = TABS.find((t) => t.status === params.get('tab')) || TABS[0]
   const setTab = (t) => setParams(t === TABS[0] ? {} : { tab: t.status }, { replace: true })
-  const [confirmDelete, setConfirmDelete] = useState(null) // listing waiting for "Yes, delete"
+  const [confirmDelete, setConfirmDelete] = useState(null) // { kind: 'listing' | 'resource', ...item } waiting for "Yes, delete"
   const [deleting, setDeleting] = useState(false)
   const [confirmDraft, setConfirmDraft] = useState(null) // draft waiting for "Yes, delete"
 
   const showingTrash = tab.status === 'deleted'
   const showingDrafts = tab.status === 'drafts'
+  const showingResources = tab.status === 'resources'
+  const showingListings = !showingTrash && !showingDrafts && !showingResources
   const { data, loading, refetch } = useApi(
     () => {
       if (showingTrash) return trashApi.list()
       if (showingDrafts) return draftsApi.list().then((drafts) => ({ drafts }))
+      if (showingResources) return resourcesApi.list({ mine: true }).then((res) => ({ resources: res.items }))
       return listingsApi.list({ seller_id: user?.id, status: tab.status, include_sold: true })
     },
     [user?.id, tab.status]
   )
   // Right after switching tabs, `data` still holds the previous tab's response for one
-  // render (listings come as { items }, drafts as { drafts }, the trash as a plain array),
-  // so check the shape.
-  const items = !showingTrash && !showingDrafts && Array.isArray(data?.items) ? data.items : []
+  // render (listings come as { items }, resources as { resources }, drafts as { drafts }, the
+  // trash as a plain array), so check the shape.
+  const items = showingListings && Array.isArray(data?.items) ? data.items : []
+  const myResources = showingResources && Array.isArray(data?.resources) ? data.resources : []
   const trashed = showingTrash && Array.isArray(data) ? data : []
   const drafts = showingDrafts && Array.isArray(data?.drafts) ? data.drafts : []
 
@@ -101,15 +106,26 @@ export default function Dashboard() {
     refetch()
   }
 
+  async function changeResourceStatus(r, status) {
+    try {
+      await resourcesApi.setStatus(r.id, status)
+      toast(status === 'closed' ? `Closed "${r.title}". It's hidden from the Resource Hub` : `"${r.title}" is open again`)
+      refetch()
+    } catch (err) {
+      toast(err.message || "Couldn't update the resource")
+    }
+  }
+
   async function remove() {
+    const isResource = confirmDelete.kind === 'resource'
     setDeleting(true)
     try {
-      await listingsApi.remove(confirmDelete.id)
-      toast('Listing deleted. You can restore it from the Deleted tab for 24 hours')
+      await (isResource ? resourcesApi.remove(confirmDelete.id) : listingsApi.remove(confirmDelete.id))
+      toast(`${isResource ? 'Resource' : 'Listing'} deleted. You can restore it from the Deleted tab for 24 hours`)
       setConfirmDelete(null)
       refetch()
     } catch (err) {
-      toast(err.message || "Couldn't delete the listing")
+      toast(err.message || `Couldn't delete the ${isResource ? 'resource' : 'listing'}`)
     } finally {
       setDeleting(false)
     }
@@ -120,7 +136,7 @@ export default function Dashboard() {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[30px] font-bold">Seller Dashboard</h1>
-          <p className="mt-1.5 text-[14.5px] text-ink-soft">Your notifications, what students are looking for, and your listings, all in one place.</p>
+          <p className="mt-1.5 text-[14.5px] text-ink-soft">Your notifications, what students are looking for, and your listings and resources, all in one place.</p>
         </div>
         <div className="flex gap-2">
           <Link to="/sell" className="btn-accent btn-sm">+ Sell an Item</Link>
@@ -134,15 +150,15 @@ export default function Dashboard() {
       />
       <BuyerRequests />
 
-      <h1 className="mb-6 text-[30px] font-bold">My Listings</h1>
+      <h1 className="mb-6 text-[30px] font-bold">My Listings & Resources</h1>
 
-      <div className="mb-6 flex border-b border-line">
+      <div className="mb-6 flex overflow-x-auto border-b border-line">
         {TABS.map((t) => (
           <button
             key={t.label}
             onClick={() => setTab(t)}
             aria-current={tab.label === t.label}
-            className={`-mb-px mr-6 border-b-[2.5px] pb-3 pt-3 text-[14.5px] font-semibold ${
+            className={`-mb-px mr-6 shrink-0 border-b-[2.5px] pb-3 pt-3 text-[14.5px] font-semibold ${
               tab.label === t.label ? 'border-brand text-ink' : 'border-transparent text-ink-faint'
             }`}
           >
@@ -153,7 +169,46 @@ export default function Dashboard() {
 
       {loading && <SkeletonRows />}
 
-      {!showingTrash && !showingDrafts && !loading && items.length === 0 && (
+      {showingResources && !loading && myResources.length === 0 && (
+        <EmptyState
+          emoji="📚"
+          title="No resources yet"
+          body="Share notes, papers or books with students on your campus, free or for a price."
+          actionLabel="Post a Resource"
+          actionTo="/resources/new"
+        />
+      )}
+
+      {showingResources && !loading && myResources.map((r) => (
+        <div key={r.id} className="mb-3 flex flex-wrap items-center gap-4 rounded-card border border-line bg-paper p-3.5">
+          <div className="flex h-[60px] w-[60px] flex-none items-center justify-center overflow-hidden rounded-[10px] border border-line bg-bg text-[26px]">
+            {r.thumbnail_url
+              ? <img src={r.thumbnail_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover object-top" />
+              : <span aria-hidden>{r.copy_type === 'hard' ? '📗' : '📄'}</span>}
+          </div>
+          <div className="min-w-0 flex-1">
+            <Link to={`/resources/${r.id}`} className="text-[14.5px] font-semibold hover:underline">{r.title}</Link>
+            <p className="text-[13px] text-ink-soft">
+              {r.offer_type === 'free' ? 'Free' : formatPrice(r.price)} · {r.subject} · {r.status === 'closed' ? 'Closed' : 'Open'}
+              {r.held && <span className="ml-1.5 font-semibold text-coral">· Held for review, hidden until our team checks the reports</span>}
+            </p>
+            {r.pending_requests > 0 && (
+              <Link to={`/resources/${r.id}#manage`} className="mt-0.5 inline-block text-[12.5px] font-semibold text-brand hover:underline">
+                🔑 {r.pending_requests} access request{r.pending_requests === 1 ? '' : 's'} waiting →
+              </Link>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button className="btn-ghost btn-sm" onClick={() => navigate(`/resources/${r.id}/edit`)}>Edit</button>
+            {r.status === 'closed'
+              ? <button className="btn-ghost btn-sm" onClick={() => changeResourceStatus(r, 'available')}>Reopen</button>
+              : <button className="btn-ghost btn-sm" onClick={() => changeResourceStatus(r, 'closed')}>Close</button>}
+            <button className="btn-danger btn-sm" onClick={() => setConfirmDelete({ ...r, kind: 'resource' })}>Delete</button>
+          </div>
+        </div>
+      ))}
+
+      {showingListings && !loading && items.length === 0 && (
         <EmptyState
           emoji="📭"
           title="Nothing here yet"
@@ -247,20 +302,25 @@ export default function Dashboard() {
             {l.status !== 'sold' && (
               <button className="btn-ghost btn-sm" onClick={() => changeStatus(l.id, 'sold')}>Mark Sold</button>
             )}
-            <button className="btn-danger btn-sm" onClick={() => setConfirmDelete(l)}>Delete</button>
+            <button className="btn-danger btn-sm" onClick={() => setConfirmDelete({ ...l, kind: 'listing' })}>Delete</button>
           </div>
         </div>
       ))}
 
-      <Modal open={Boolean(confirmDelete)} onClose={() => !deleting && setConfirmDelete(null)} title="Delete this listing?">
+      <Modal open={Boolean(confirmDelete)} onClose={() => !deleting && setConfirmDelete(null)} title={`Delete this ${confirmDelete?.kind === 'resource' ? 'resource' : 'listing'}?`}>
         {confirmDelete && (
           <>
             <p className="text-[14px] text-ink-soft">
               Are you sure you want to delete <strong className="text-ink">"{confirmDelete.title}"</strong>? You can restore it from the <strong className="text-ink">Deleted</strong> tab for 24 hours, then it's gone for good.
             </p>
-            {confirmDelete.status !== 'sold' && (
+            {confirmDelete.kind === 'listing' && confirmDelete.status !== 'sold' && (
               <p className="mt-3 rounded-[10px] bg-brand-tint px-3 py-2 text-[12.5px] text-brand-deep">
                 Sold it? Use <strong>Mark Sold</strong> instead, so it stays on the marketplace as sold.
+              </p>
+            )}
+            {confirmDelete.kind === 'resource' && confirmDelete.status !== 'closed' && (
+              <p className="mt-3 rounded-[10px] bg-brand-tint px-3 py-2 text-[12.5px] text-brand-deep">
+                Just want to stop new requests? Use <strong>Close</strong> instead. Students you've already approved keep their access.
               </p>
             )}
             <div className="mt-5 flex gap-2.5">

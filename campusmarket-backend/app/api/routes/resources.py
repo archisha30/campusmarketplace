@@ -338,8 +338,19 @@ def list_resources(
         query = query.order_by(Resource.created_at.desc(), Resource.id.desc())
 
     items, total, page, page_size, pages = paginate(query, page, page_size)
+    out = [_resource_out(r, request) for r in items]
+    if mine and out:
+        # The Seller Dashboard shows "2 requests waiting" on each of your resources.
+        pending = dict(
+            db.query(ResourceAccess.resource_id, func.count(ResourceAccess.id))
+            .filter(ResourceAccess.resource_id.in_([r.id for r in out]), ResourceAccess.status == "pending")
+            .group_by(ResourceAccess.resource_id)
+            .all()
+        )
+        for r in out:
+            r.pending_requests = pending.get(r.id, 0)
     return ResourceListOut(
-        items=[_resource_out(r, request) for r in items],
+        items=out,
         total=total,
         page=page,
         page_size=page_size,

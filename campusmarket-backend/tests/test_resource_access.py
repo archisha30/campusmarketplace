@@ -188,3 +188,13 @@ def test_buyer_accounts_cannot_post(create):
 
 def test_mine_requires_login(client):
     assert client.get("/api/resources", params={"mine": "true"}).status_code in (401, 403)
+
+
+def test_your_own_list_shows_requests_waiting(client, auth, create):
+    rid = create().json()["id"]
+    client.post(f"/api/resources/{rid}/access", json={"note": "paid"}, headers=auth("buyer"))
+    client.post(f"/api/resources/{rid}/access", json={"note": "me too"}, headers=auth("other"))
+    mine = client.get("/api/resources", params={"mine": "true"}, headers=auth("owner")).json()["items"]
+    assert mine[0]["pending_requests"] == 2
+    public = client.get("/api/resources", headers=auth("buyer")).json()["items"]
+    assert public[0]["pending_requests"] is None  # only the owner sees it
