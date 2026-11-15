@@ -41,7 +41,7 @@ function draftPrice(d) {
 }
 
 export default function Dashboard() {
-  const { user } = useAuth()
+  const { user, noteSale } = useAuth()
   const toast = useToast()
   const navigate = useNavigate()
   // The tab lives in the URL (/dashboard?tab=drafts), so links and refreshes land on it.
@@ -96,6 +96,7 @@ export default function Dashboard() {
 
   async function changeStatus(id, status) {
     await listingsApi.setStatus(id, status)
+    if (status === 'sold') noteSale() // the account stays a seller from now on
     toast(status === 'available' ? 'Listing is available again' : `Marked ${status}`)
     refetch()
   }

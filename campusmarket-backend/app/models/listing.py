@@ -43,6 +43,9 @@ class Listing(Base):
     campus_id = Column(Integer, nullable=False, default=1)
 
     created_at = Column(DateTime, default=utcnow)
+    # When the seller last answered "No, still available" to the "Is it sold?" prompt. Listings
+    # up for STILL_UP_AFTER since this (or since created_at) get asked again; see listings.py.
+    checked_at = Column(DateTime, nullable=True)
     # Set when the owner deletes it; restorable for 24h from the Deleted tab (see core/trash.py).
     deleted_at = Column(DateTime, nullable=True, index=True)
     # Set when HOLD_AFTER_REPORTS students have open reports on it: hidden from everyone but the

@@ -1,7 +1,7 @@
 import json
 import logging
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -305,6 +305,37 @@ def list_listings(
 
 
 POPULAR_COUNT = 4
+# Sellers are asked "Is it sold?" about listings that have been up this long without an answer,
+# so sold items don't stay on the marketplace because someone forgot to mark them.
+STILL_UP_AFTER = timedelta(days=7)
+
+
+@router.get("/sold-check", response_model=list[ListingOut])
+def listings_to_check(db: Session = Depends(get_db), user: User = Depends(require_seller)):
+    """Your listings still marked available or reserved that have been up STILL_UP_AFTER since
+    you posted them or last said they're still available, oldest first."""
+    due = utcnow() - STILL_UP_AFTER
+    rows = (
+        db.query(Listing)
+        .filter(
+            Listing.owner_id == user.id,
+            Listing.status.in_(("available", "reserved")),
+            existing(Listing),
+            _not_expired(),  # expired food already left the marketplace
+            func.coalesce(Listing.checked_at, Listing.created_at) <= due,
+        )
+        .order_by(func.coalesce(Listing.checked_at, Listing.created_at).asc())
+        .all()
+    )
+    return [ListingOut.from_orm_with_art(r) for r in rows]
+
+
+@router.post("/{listing_id}/still-available", status_code=204)
+def still_available(listing_id: int, db: Session = Depends(get_db), user: User = Depends(require_seller)):
+    """"No, still available": don't ask about this listing again for another STILL_UP_AFTER."""
+    listing = _get_owned_listing(listing_id, db, user)
+    listing.checked_at = utcnow()
+    db.commit()
 
 
 @router.get("/popular", response_model=list[PublicListingOut])

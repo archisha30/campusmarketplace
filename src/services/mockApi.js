@@ -196,6 +196,24 @@ export function setListingStatus(id, status) {
   return getListing(id)
 }
 
+// Like GET /listings/sold-check: your listings still up a week after posting or the last "No".
+const STILL_UP_MS = 7 * 86400e3
+
+export function soldCheckListings() {
+  const u = seed.currentUser
+  const since = (l) => new Date(l.checked_at || l.created_at).getTime()
+  return delay(
+    listings
+      .filter((l) => sameId(l.seller?.id, u.id) && ['available', 'reserved'].includes(l.status) && Date.now() - since(l) >= STILL_UP_MS)
+      .sort((a, b) => since(a) - since(b))
+  )
+}
+
+export function markStillAvailable(id) {
+  listings = listings.map((l) => (l.id === Number(id) ? { ...l, checked_at: new Date().toISOString() } : l))
+  return delay(null, 100)
+}
+
 // Deleted items wait here for 24 hours so they can be restored, like the real API.
 const RESTORE_MS = 24 * 3600e3
 let trash = [] // { type: 'listing' | 'resource', item, deleted_at }

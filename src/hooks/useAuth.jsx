@@ -102,6 +102,10 @@ export function AuthProvider({ children }) {
       setUser(updated)
       return updated
     },
+    // After marking something sold: the account now stays a seller (the server records it too).
+    noteSale() {
+      setUser((u) => (u ? { ...u, has_sold: true } : u))
+    },
     // Only allowed while they've never sold anything and their shop is empty (the API explains why not).
     async becomeBuyer() {
       const updated = await authApi.setAccountType('buyer')

@@ -39,6 +39,10 @@ export const listingsApi = {
   // POST /api/listings/:id/restore  (within 24h of deleting)
   restore: (id) => pick(() => http.post(`/listings/${id}/restore`), () => mock.restoreListing(id))(),
   // PATCH /api/listings/:id/status  body: { status: "available" | "reserved" | "sold" }
+  // GET /api/listings/sold-check  — your listings up for a week or more: "Is it sold?"
+  soldCheck: () => pick(() => http.get('/listings/sold-check'), () => mock.soldCheckListings())(),
+  // POST /api/listings/:id/still-available  — "No, still available": ask again in a week
+  stillAvailable: (id) => pick(() => http.post(`/listings/${id}/still-available`), () => mock.markStillAvailable(id))(),
   setStatus: (id, status) =>
     pick(() => http.patch(`/listings/${id}/status`, { status }), () => mock.setListingStatus(id, status))(),
   // POST /api/listings/:id/images  (multipart, Supabase Storage / Cloudinary on the backend)

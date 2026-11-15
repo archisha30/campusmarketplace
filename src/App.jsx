@@ -8,6 +8,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx'
 import ScrollToHash from './components/ScrollToHash.jsx'
 import AnalyticsTracker from './components/AnalyticsTracker.jsx'
 import PhonePrompt from './components/PhonePrompt.jsx'
+import SoldCheckPrompt from './components/SoldCheckPrompt.jsx'
 import SetPasswordModal from './components/SetPasswordModal.jsx'
 
 import Landing from './pages/Landing.jsx'
@@ -43,6 +44,7 @@ export default function App() {
     <ScrollToHash />
     <AnalyticsTracker />
     <PhonePrompt />
+    <SoldCheckPrompt />
     <SetPasswordModal />
     {/* While a password must be created, everything behind the modal is inert: no clicks, no tabbing. */}
     <div className="flex min-h-screen flex-col pb-[74px] md:pb-0" inert={needsPassword ? '' : undefined}>
