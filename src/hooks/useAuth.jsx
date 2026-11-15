@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { IS_MOCK, authApi } from '../services/api.js'
 import { syncHistory } from '../lib/recommendations.js'
 
@@ -9,6 +9,8 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   // Why the user was logged out, shown on the login page (e.g. their account was suspended).
   const [notice, setNotice] = useState('')
+  const userRef = useRef(null) // the latest user, for the cross-tab check below
+  userRef.current = user
 
   useEffect(() => {
     function suspended(e) {
@@ -41,6 +43,41 @@ export function AuthProvider({ children }) {
       .catch(() => setUser(null))
       .finally(() => setLoading(false))
   }, [])
+
+  // All tabs share one session cookie, so logging into another account (or out) in one tab
+  // changes it for every tab. When a tab comes back into view, check who's really logged in:
+  // a different account reloads the page so nothing from the old one stays on screen.
+  useEffect(() => {
+    if (IS_MOCK || loading) return
+    let checking = false
+    function recheck() {
+      if (document.visibilityState !== 'visible' || checking) return
+      checking = true
+      authApi
+        .me()
+        .then((fresh) => {
+          const current = userRef.current
+          if (current && fresh && current.id !== fresh.id) {
+            window.location.reload() // someone else is logged in now
+            return
+          }
+          const same = current && fresh && ['account_type', 'role', 'is_admin', 'is_owner', 'verified'].every((k) => current[k] === fresh[k])
+          if (!same) setUser(fresh)
+        })
+        .catch((err) => {
+          if (err.status === 401) setUser(null) // logged out in another tab
+        })
+        .finally(() => {
+          checking = false
+        })
+    }
+    document.addEventListener('visibilitychange', recheck)
+    window.addEventListener('focus', recheck)
+    return () => {
+      document.removeEventListener('visibilitychange', recheck)
+      window.removeEventListener('focus', recheck)
+    }
+  }, [loading])
 
   // Merge this account's saved browsing history with anything viewed as a guest on this device.
   useEffect(() => {
