@@ -241,6 +241,12 @@ export const wishlistApi = {
   save: (id) => pick(() => http.put(`/wishlist/${id}`), () => mock.saveToWishlist(id))(),
   // DELETE /api/wishlist/:listingId
   remove: (id) => pick(() => http.del(`/wishlist/${id}`), () => mock.removeFromWishlist(id))(),
+  // GET /api/wishlist/resources -> [resource]  saved Resource Hub items, most recently saved first
+  resources: () => pick(() => http.get('/wishlist/resources'), () => mock.listSavedResources())(),
+  // PUT /api/wishlist/resources/:resourceId
+  saveResource: (id) => pick(() => http.put(`/wishlist/resources/${id}`), () => mock.saveResource(id))(),
+  // DELETE /api/wishlist/resources/:resourceId
+  removeResource: (id) => pick(() => http.del(`/wishlist/resources/${id}`), () => mock.unsaveResource(id))(),
   // POST /api/wishlist/import  body: { listing_ids }  (moves a browser's old saved list to the account)
   importIds: (ids) => pick(() => http.post('/wishlist/import', { listing_ids: ids }), () => mock.importWishlist(ids))(),
 }

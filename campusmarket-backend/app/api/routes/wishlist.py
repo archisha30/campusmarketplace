@@ -1,17 +1,21 @@
-"""The heart button: listings a student saved, kept on the server so the wishlist is the
-same on every device. Deleted, expired-and-purged or suspended sellers' listings drop out."""
+"""The heart button: listings and Resource Hub items a student saved, kept on the server so the
+wishlist is the same on every device. Deleted, held, or suspended owners' items drop out."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.security import require_verified
 from app.core.trash import live
 from app.db.session import get_db
+from app.api.routes.resources import _resource_out
 from app.models.listing import Listing
+from app.models.resource import Resource
+from app.models.resource_wishlist import ResourceWishlistItem
 from app.models.user import User
 from app.models.wishlist import WishlistItem
 from app.schemas.listing import ListingOut
+from app.schemas.resource import ResourceOut
 
 router = APIRouter(prefix="/api/wishlist", tags=["wishlist"])
 
@@ -47,6 +51,56 @@ def _add(db: Session, user: User, listing_ids: list[int]) -> None:
             db.add(WishlistItem(user_id=user.id, listing_id=lid))
     db.commit()
 
+
+# ---------- Resource Hub items (declared before /{listing_id} so "resources" isn't read as an id) ----------
+
+@router.get("/resources", response_model=list[ResourceOut])
+def list_saved_resources(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_verified),
+):
+    """Saved resources, most recently saved first (closed ones stay, marked closed)."""
+    rows = (
+        db.query(Resource)
+        .options(joinedload(Resource.owner))
+        .join(ResourceWishlistItem, ResourceWishlistItem.resource_id == Resource.id)
+        .filter(ResourceWishlistItem.user_id == user.id, live(Resource))
+        .order_by(ResourceWishlistItem.created_at.desc(), Resource.id.desc())
+        .all()
+    )
+    return [_resource_out(r, request) for r in rows]
+
+
+@router.put("/resources/{resource_id}", status_code=204)
+def save_resource(
+    resource_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_verified),
+):
+    if not db.query(Resource.id).filter(Resource.id == resource_id, live(Resource)).first():
+        raise HTTPException(status_code=404, detail="Resource not found")
+    if db.get(ResourceWishlistItem, (user.id, resource_id)):
+        return
+    if db.query(ResourceWishlistItem).filter(ResourceWishlistItem.user_id == user.id).count() >= MAX_SAVED:
+        raise HTTPException(status_code=409, detail=f"You can save up to {MAX_SAVED} resources. Remove a few first.")
+    db.add(ResourceWishlistItem(user_id=user.id, resource_id=resource_id))
+    db.commit()
+
+
+@router.delete("/resources/{resource_id}", status_code=204)
+def unsave_resource(
+    resource_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_verified),
+):
+    db.query(ResourceWishlistItem).filter(
+        ResourceWishlistItem.user_id == user.id, ResourceWishlistItem.resource_id == resource_id
+    ).delete(synchronize_session=False)
+    db.commit()
+
+
+# ---------- Listings ----------
 
 @router.get("", response_model=list[ListingOut])
 def list_wishlist(

@@ -1,8 +1,16 @@
 import { Link } from 'react-router-dom'
 import { formatPrice } from '../lib/format.js'
 import { deliveryLabel, yearLabel } from '../lib/resources.js'
+import { useAuth } from '../hooks/useAuth.jsx'
+import { useToast } from '../hooks/useToast.jsx'
+import { useWishlist } from '../hooks/useWishlist.jsx'
 
-export default function ResourceCard({ r, showStatus }) {
+export default function ResourceCard({ r }) {
+  const { user } = useAuth()
+  const { isResourceSaved, toggleResource } = useWishlist()
+  const toast = useToast()
+  const saved = isResourceSaved(r.id)
+  const own = String(r.owner?.id) === String(user?.id)
   return (
     <Link to={`/resources/${r.id}`} className="group block overflow-hidden rounded-card border border-line bg-paper transition hover:border-brand hover:shadow-lift">
       <div className="relative h-[170px] overflow-hidden border-b border-line bg-bg">
@@ -14,8 +22,23 @@ export default function ResourceCard({ r, showStatus }) {
         <span className={`badge absolute left-3 top-3 text-[12px] ${r.offer_type === 'free' ? 'bg-coral text-white' : 'bg-ink text-white'}`}>
           {r.offer_type === 'free' ? 'Free' : formatPrice(r.price)}
         </span>
-        {showStatus && r.status === 'closed' && (
-          <span className="badge absolute right-3 top-3 bg-paper text-ink-faint">Closed</span>
+        {r.status === 'closed' && (
+          <span className="badge absolute bottom-3 left-3 bg-paper text-ink-faint">Closed</span>
+        )}
+        {!own && (
+          <button
+            type="button"
+            aria-label={saved ? 'Remove from wishlist' : 'Save to wishlist'}
+            aria-pressed={saved}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              toast(toggleResource(r) ? 'Saved to your wishlist' : 'Removed from your wishlist')
+            }}
+            className={`absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm shadow transition hover:scale-110 ${saved ? 'text-coral' : 'text-ink'}`}
+          >
+            {saved ? '♥' : '♡'}
+          </button>
         )}
       </div>
       <div className="p-4">

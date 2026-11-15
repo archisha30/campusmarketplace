@@ -185,6 +185,24 @@ export function removeFromWishlist(id) {
   return delay(null, 100)
 }
 
+// Saved resources, like /api/wishlist/resources.
+let savedResources = [] // resource ids, most recently saved first
+
+export function listSavedResources() {
+  return delay(savedResources.map((id) => resources.find((r) => r.id === id)).filter((r) => r && !r.held).map((r) => resourceOut(r)), 150)
+}
+
+export function saveResource(id) {
+  if (!resources.some((r) => r.id === Number(id))) return Promise.reject(mockError('Resource not found', 404))
+  savedResources = [Number(id), ...savedResources.filter((x) => x !== Number(id))]
+  return delay(null, 100)
+}
+
+export function unsaveResource(id) {
+  savedResources = savedResources.filter((x) => x !== Number(id))
+  return delay(null, 100)
+}
+
 export function importWishlist(ids) {
   ids.forEach((id) => { if (listings.some((l) => l.id === Number(id)) && !wishlist.includes(Number(id))) wishlist.push(Number(id)) })
   return listWishlist()

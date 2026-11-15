@@ -5,6 +5,7 @@ import { useReportSummary } from '../hooks/useReportSummary.jsx'
 import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useToast } from '../hooks/useToast.jsx'
+import { useWishlist } from '../hooks/useWishlist.jsx'
 import { VerifiedBadge } from '../components/Badge.jsx'
 import ReportModal from '../components/ReportModal.jsx'
 import ShareButton from '../components/ShareButton.jsx'
@@ -63,6 +64,7 @@ export default function ResourceDetail() {
               path={`/resources/${r.id}`}
               message={`Check out "${r.title}" (${r.subject}, ${r.offer_type === 'free' ? 'free' : formatPrice(r.price)}) on the CampusMarket Resource Hub`}
             />
+            {r.access?.reason !== 'owner' && <SaveResourceButton r={r} />}
           </div>
           <h1 className="mt-3 text-[28px] font-bold">{r.title}</h1>
           <p className="my-3 font-display text-[32px] font-bold">{r.offer_type === 'free' ? 'Free' : formatPrice(r.price)}</p>
@@ -515,4 +517,24 @@ function RequestStatus({ status }) {
     denied: 'bg-coral/10 text-coral',
   }[status]
   return <span className={`badge ${tone}`}>{status[0].toUpperCase() + status.slice(1)}</span>
+}
+
+// Same look as the listing page's "Save to wishlist".
+function SaveResourceButton({ r }) {
+  const { isResourceSaved, toggleResource } = useWishlist()
+  const toast = useToast()
+  const saved = isResourceSaved(r.id)
+  return (
+    <button
+      type="button"
+      aria-pressed={saved}
+      onClick={() => toast(toggleResource(r) ? 'Saved to your wishlist' : 'Removed from your wishlist')}
+      className={`inline-flex items-center gap-1.5 rounded-pill border-[1.5px] px-3 py-1 text-[12.5px] font-semibold transition ${
+        saved ? 'border-coral bg-coral/10 text-coral' : 'border-line bg-paper text-ink-soft hover:border-ink hover:text-ink'
+      }`}
+    >
+      <span aria-hidden>{saved ? '♥' : '♡'}</span>
+      {saved ? 'Saved' : 'Save to wishlist'}
+    </button>
+  )
 }

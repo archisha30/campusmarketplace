@@ -115,7 +115,7 @@ export default function Resources() {
 
       {!loading && !error && items.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((r) => <ResourceCard key={r.id} r={r} showStatus={mine} />)}
+          {items.map((r) => <ResourceCard key={r.id} r={r} />)}
         </div>
       )}
 

@@ -5,7 +5,8 @@ import { useToast } from './useToast.jsx'
 
 const WishlistContext = createContext(null)
 
-// Saved listings live on the server (/api/wishlist), so they're the same on every device.
+// Saved listings and resources live on the server (/api/wishlist, /api/wishlist/resources), so
+// they're the same on every device.
 // The heart updates straight away and the request follows; if it fails, it's undone.
 // Older versions kept the list in this browser's storage: it's moved to the account once.
 const legacyKeys = (user) => [`cm_wishlist_${user.id}`, 'cm_wishlist_guest']
@@ -33,22 +34,26 @@ export function WishlistProvider({ children }) {
   const { user } = useAuth()
   const toast = useToast()
   const [items, setItems] = useState([])
+  const [resources, setResources] = useState([])
   const [loading, setLoading] = useState(false)
   const itemsRef = useRef(items)
   itemsRef.current = items
+  const resourcesRef = useRef(resources)
+  resourcesRef.current = resources
   const canSave = Boolean(user?.verified && !user?.needs_password)
 
   useEffect(() => {
     setItems([])
+    setResources([])
     if (!canSave) return
     let cancelled = false
     setLoading(true)
     const legacy = takeLegacyIds(user)
     const load = legacy.length ? wishlistApi.importIds(legacy).then((list) => { forgetLegacy(user); return list }) : wishlistApi.list()
-    load
-      .then((list) => { if (!cancelled) setItems(list || []) })
-      .catch(() => {}) // the hearts just show empty; saving still works
-      .finally(() => { if (!cancelled) setLoading(false) })
+    Promise.allSettled([
+      load.then((list) => { if (!cancelled) setItems(list || []) }),
+      wishlistApi.resources().then((list) => { if (!cancelled) setResources(list || []) }),
+    ]).finally(() => { if (!cancelled) setLoading(false) }) // a failed load just shows empty hearts
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, canSave])
@@ -79,7 +84,26 @@ export function WishlistProvider({ children }) {
     return true
   }, [remove, toast])
 
-  const value = { items, loading, count: items.length, isSaved, toggle, remove }
+  // The same for Resource Hub items.
+  const isResourceSaved = useCallback((id) => resources.some((r) => r.id === id), [resources])
+
+  // Returns true when the resource is now saved.
+  const toggleResource = useCallback((resource) => {
+    const before = resourcesRef.current
+    const saved = before.some((r) => r.id === resource.id)
+    setResources(saved ? before.filter((r) => r.id !== resource.id) : [resource, ...before])
+    const call = saved ? wishlistApi.removeResource(resource.id) : wishlistApi.saveResource(resource.id)
+    call.catch((err) => {
+      setResources(before)
+      toast(err.message || "Couldn't update your wishlist")
+    })
+    return !saved
+  }, [toast])
+
+  const value = {
+    items, resources, loading, count: items.length + resources.length,
+    isSaved, toggle, remove, isResourceSaved, toggleResource,
+  }
 
   return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>
 }

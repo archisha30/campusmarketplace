@@ -45,6 +45,7 @@ from app.models.banned_email import BannedEmail
 from app.models.wishlist import WishlistItem
 from app.models.listing_view import ListingView
 from app.models.request_dismissal import RequestDismissal
+from app.models.resource_wishlist import ResourceWishlistItem
 from app.models.product_request import ProductRequest
 from app.models.resource import Resource, ResourceAccess
 from app.models.user import User
@@ -66,7 +67,7 @@ def db_session():
     Base.metadata.create_all(engine, tables=[User.__table__, Listing.__table__, Resource.__table__, ResourceAccess.__table__, Notification.__table__, OTPCode.__table__, Report.__table__,
         ContactReveal.__table__, ProductRequest.__table__, Draft.__table__,
         BannedEmail.__table__, WishlistItem.__table__, ListingView.__table__,
-        RequestDismissal.__table__])
+        RequestDismissal.__table__, ResourceWishlistItem.__table__])
     Session = sessionmaker(bind=engine, autocommit=False, autoflush=False)
     session = Session()
     yield session, Session
