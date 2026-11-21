@@ -175,7 +175,7 @@ class ListingOut(BaseModel):
             created_at=listing.created_at,
             seller=SellerOut(
                 id=str(listing.owner.id),
-                name=listing.owner.name or listing.owner.email.split("@")[0],
+                name=listing.owner.display_name,
                 campus_id=1,
                 campus=listing.owner.college,
                 verified=listing.owner.verified,

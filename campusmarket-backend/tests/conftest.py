@@ -15,6 +15,12 @@ os.environ.update(
     SMTP_PASSWORD="test",
     SMTP_FROM="test@example.com",
     ENVIRONMENT="test",  # session cookie without the Secure flag (tests use http://testserver)
+    # Never build the Supabase client, even when .env holds a real service-role key: tests must
+    # not be able to upload to (or delete from) the live buckets.
+    STORAGE_BACKEND="local",
+    SUPABASE_SERVICE_ROLE_KEY="",
+    SUPABASE_URL="",
+    BREVO_API_KEY="",
 )
 
 import pymupdf
@@ -27,6 +33,7 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.api.routes import auth as auth_routes
 from app.api.routes import listings as listings_routes
 from app.api.routes import resources as resources_routes
 from app.core import storage as storage_module
@@ -75,12 +82,13 @@ def db_session():
     engine.dispose()
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def file_dirs(tmp_path, monkeypatch):
     """Local storage rooted in a temp dir. Returns (private root, public previews dir)."""
     local = LocalStorage(tmp_path / "uploads", tmp_path / "private")
     monkeypatch.setattr(resources_routes, "storage", local)
     monkeypatch.setattr(listings_routes, "storage", local)  # listing photos too, not the real uploads/
+    monkeypatch.setattr(auth_routes, "storage", local)  # avatars
     monkeypatch.setattr(storage_module, "storage", local)
     return tmp_path / "private", tmp_path / "uploads" / "resource-previews"
 

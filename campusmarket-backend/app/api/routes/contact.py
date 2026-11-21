@@ -126,7 +126,7 @@ def reveal_contact(
     db.commit()
 
     return ContactOut(
-        name=owner.name or owner.email.split("@")[0],
+        name=owner.display_name,
         phone=owner.phone if payload.channel == "whatsapp" else None,
         email=owner.email if payload.channel == "email" else None,
     )

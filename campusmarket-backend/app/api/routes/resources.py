@@ -1,4 +1,3 @@
-import json
 import re
 import uuid
 from dataclasses import dataclass
@@ -17,6 +16,7 @@ from app.api.routes.notifications import notify
 from app.core.request_matching import best_matches, notify_matching_requests
 from app.core.trash import can_see_held, existing, live, restore_cutoff
 from app.core.pagination import paginate
+from app.core.ranking import affinity, boost, parse_scores, score_expression
 from app.core.pdf_preview import PdfError, open_pdf, read_limited, render_previews
 from app.core.security import get_current_user, require_seller, require_verified
 from app.core.storage import storage
@@ -170,7 +170,7 @@ def _access(r: Resource, user: User | None, db: Session) -> AccessOut:
 def _owner_out(u: User, with_contact: bool) -> OwnerOut:
     return OwnerOut(
         id=str(u.id),
-        name=u.name or u.email.split("@")[0],
+        name=u.display_name,
         avatar_url=u.avatar_url,
         verified=bool(u.verified),
         campus=u.college,
@@ -311,6 +311,8 @@ def list_resources(
     viewer: User = Depends(require_verified),  # the Resource Hub is for verified students only
 ):
     query = db.query(Resource).options(joinedload(Resource.owner))
+    if page is None and not mine:
+        page = 1  # only your own list may come back all at once
 
     if mine:  # your own include closed ones and ones held for review
         query = query.filter(existing(Resource), Resource.owner_id == viewer.id)
@@ -382,27 +384,18 @@ def recommended_resources(
 ):
     """Same idea as /api/listings/recommended: subject affinity from what the student opened,
     plus a small boost for material from their year of study. Newest first on ties."""
-    scores: dict[str, float] = {}
-    if subject_scores:
-        try:
-            parsed = json.loads(subject_scores)
-            if isinstance(parsed, dict):
-                scores = {str(k).lower(): float(v) for k, v in parsed.items()}
-        except (ValueError, TypeError):
-            scores = {}  # malformed input just means "no personalization"
+    scores = parse_scores(subject_scores, lower=True)
 
     query = db.query(Resource).options(joinedload(Resource.owner)).filter(Resource.status == "available", live(Resource))
     if exclude_id:
         query = query.filter(Resource.id != exclude_id)
-    pool = query.order_by(Resource.created_at.desc(), Resource.id.desc()).all()
-
-    def score(r: Resource) -> float:
-        s = scores.get(r.subject.lower(), 0.0)
-        if year in ("1", "2", "3", "4") and r.year == year:
-            s += 0.5
-        return s
-
-    ranked = sorted(pool, key=score, reverse=True)[:8]  # stable: ties stay newest-first
+    # Ranked in the database: subject affinity + same-year boost, newest first on ties.
+    score = score_expression([
+        affinity(func.lower(Resource.subject), scores),
+        boost(Resource.year == year) if year in ("1", "2", "3", "4") else None,
+    ])
+    newest = [Resource.created_at.desc(), Resource.id.desc()]
+    ranked = query.order_by(*newest if score is None else (score.desc(), *newest)).limit(8).all()
     return ResourceRecommendedOut(
         items=[_resource_out(r, request) for r in ranked],
         personalized=bool(scores),

@@ -46,6 +46,39 @@ def check_image(data: bytes) -> tuple[str, str]:
     return ALLOWED_FORMATS[fmt]
 
 
+def clean_image(data: bytes) -> tuple[bytes, str, str]:
+    """Check an upload (see check_image), then re-save it without its metadata. Phone photos
+    carry EXIF: GPS coordinates of where they were taken (often the student's room), the phone
+    model, the time. Photos are public, so none of that may be stored. The pixels are kept, the
+    right way up (the EXIF rotation is applied, since the tag that held it is dropped), and the
+    colour profile is kept so colours don't shift. Returns (bytes, content_type, extension)."""
+    content_type, ext = check_image(data)
+    return _without_metadata(data), content_type, ext
+
+
+def _without_metadata(data: bytes) -> bytes:
+    out = io.BytesIO()
+    with Image.open(io.BytesIO(data)) as img:
+        fmt = img.format
+        icc = img.info.get("icc_profile")
+        if getattr(img, "is_animated", False):
+            # Animated GIF/WEBP: every frame is kept; only what's passed here is written.
+            img.save(out, fmt, save_all=True)
+            return out.getvalue()
+        clean = ImageOps.exif_transpose(img).copy()
+        clean.info = {}  # nothing from the original (EXIF, XMP, text chunks, comments) is carried over
+        extra = {"icc_profile": icc} if icc else {}
+        if fmt == "JPEG":
+            clean.save(out, "JPEG", quality=90, optimize=True, **extra)
+        elif fmt == "PNG":
+            clean.save(out, "PNG", optimize=True, **extra)
+        elif fmt == "WEBP":
+            clean.save(out, "WEBP", quality=90, **extra)
+        else:  # GIF
+            clean.save(out, "GIF")
+    return out.getvalue()
+
+
 THUMB_SIZE = 480  # longest side; grid cards show photos ~200px wide (2x for sharp phone screens)
 
 

@@ -237,6 +237,33 @@ def test_wrong_codes_burn_the_code(client, users, mailbox):
     assert res.status_code == 400 and "Too many" in res.json()["detail"]
 
 
+def test_right_code_on_the_last_allowed_try_still_works(client, users, mailbox):
+    client.post("/api/auth/password/forgot", json={"email": "buyer@campus.edu"})
+    real = mailbox["buyer@campus.edu"]
+    wrong = "000000" if real != "000000" else "111111"
+    body = {"email": "buyer@campus.edu", "password": GOOD, "confirm_password": GOOD}
+    for _ in range(settings.OTP_MAX_ATTEMPTS - 1):
+        assert client.post("/api/auth/password/reset", json={**body, "otp": wrong}).status_code == 400
+    assert client.post("/api/auth/password/reset", json={**body, "otp": real}).status_code == 200
+
+
+def test_attempt_limit_is_decided_in_the_database(client, users, mailbox, db_session):
+    """Parallel guesses: request A loaded the code when it had 0 attempts, but meanwhile other
+    requests used them all up. A's guess must be refused, not judged on its stale copy."""
+    from app.models.otp import OTPCode
+
+    client.post("/api/auth/password/forgot", json={"email": "buyer@campus.edu"})
+    _, Session = db_session
+    request_a, others = Session(), Session()
+    stale = request_a.query(OTPCode).filter(OTPCode.email == "buyer@campus.edu").one()
+    assert stale.attempts == 0
+    others.query(OTPCode).filter(OTPCode.id == stale.id).update({OTPCode.attempts: settings.OTP_MAX_ATTEMPTS})
+    others.commit()
+    assert auth_routes._take_attempt(request_a, stale.id) is False
+    request_a.close()
+    others.close()
+
+
 # ---------- sessions ----------
 
 

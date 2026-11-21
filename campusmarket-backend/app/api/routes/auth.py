@@ -12,7 +12,7 @@ from app.core.bans import BANNED_EMAIL_MESSAGE, SUSPENDED_MESSAGE, is_banned
 from app.core.config import settings
 from app.core.email import EmailError, send_account_exists_email, send_otp_email
 from app.core.google import GoogleTokenError, verify_google_token
-from app.core.images import ImageError, check_image, read_upload
+from app.core.images import ImageError, clean_image, read_upload
 from app.core.ratelimit import SlidingWindowLimiter, client_ips
 from app.core.security import (
     create_access_token,
@@ -96,14 +96,33 @@ def _consume_otp(db: Session, email: str, otp: str, purpose: str) -> None:
         .first()
     )
     if not record or record.expires_at < utcnow():
-        raise HTTPException(status_code=400, detail="Code expired, request a new one")
-    if record.attempts >= settings.OTP_MAX_ATTEMPTS:
+        raise HTTPException(status_code=400, detail=CODE_EXPIRED)
+    record_id, code_hash = record.id, record.code_hash
+    # Every guess (right or wrong) takes one of the code's OTP_MAX_ATTEMPTS slots BEFORE it's checked.
+    if not _take_attempt(db, record_id):
         raise HTTPException(status_code=400, detail="Too many wrong codes. Request a new one.")
-    if not verify_otp(otp.strip(), record.code_hash):
-        record.attempts += 1
-        db.commit()
+    if not verify_otp(otp.strip(), code_hash):
         raise HTTPException(status_code=400, detail="Incorrect code")
-    db.delete(record)
+    # Single use, even when the right code arrives twice at once: only one request deletes the row.
+    if not db.query(OTPCode).filter(OTPCode.id == record_id).delete(synchronize_session=False):
+        raise HTTPException(status_code=400, detail=CODE_EXPIRED)
+
+
+CODE_EXPIRED = "Code expired, request a new one"
+
+
+def _take_attempt(db: Session, record_id) -> bool:
+    """Count one guess against a code, in the database: a single conditional UPDATE, so parallel
+    guesses can't all read "0 attempts so far" and slip past the limit together. Each guess
+    either gets a slot or doesn't. Committed straight away, so the row isn't kept locked while
+    the code is checked and the slot is spent even if the request fails afterwards."""
+    taken = (
+        db.query(OTPCode)
+        .filter(OTPCode.id == record_id, OTPCode.attempts < settings.OTP_MAX_ATTEMPTS)
+        .update({OTPCode.attempts: OTPCode.attempts + 1}, synchronize_session=False)
+    )
+    db.commit()
+    return taken == 1
 
 
 def _login_response(user: User, response: Response) -> dict:
@@ -413,8 +432,9 @@ def upload_avatar(
     user: User = Depends(get_current_user),
 ):
     try:
-        data = read_upload(file.file, MAX_AVATAR_BYTES)
-        content_type, ext = check_image(data)  # by the actual bytes, not the file name or browser's label
+        # Checked by the actual bytes (not the file name or browser's label), and re-saved
+        # without metadata such as GPS location.
+        data, content_type, ext = clean_image(read_upload(file.file, MAX_AVATAR_BYTES))
     except ImageError as e:
         raise HTTPException(status_code=400, detail=str(e).replace("Images must", "Profile picture must"))
 

@@ -62,7 +62,7 @@ class ProductRequestOut(BaseModel):
             found=r.found_at is not None,
             requester=RequesterOut(
                 id=str(r.user.id),
-                name=r.user.name or r.user.email.split("@")[0],
+                name=r.user.display_name,
                 avatar_url=r.user.avatar_url,
                 has_phone=bool(r.user.phone),
                 email=r.user.email if include_contact else None,

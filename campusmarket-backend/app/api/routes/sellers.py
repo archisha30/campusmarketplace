@@ -51,7 +51,7 @@ def seller_profile(
     )
     return SellerProfileOut(
         id=str(user.id),
-        name=user.name or user.email.split("@")[0],
+        name=user.display_name,
         avatar_url=user.avatar_url,
         college=user.college,
         joined_at=user.created_at,

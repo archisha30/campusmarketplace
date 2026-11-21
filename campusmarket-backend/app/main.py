@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from pathlib import Path
 
@@ -21,8 +22,19 @@ from app.api.routes.trash import router as trash_router
 from app.api.routes.wishlist import router as wishlist_router
 from app.core.config import settings
 from app.core.email import EmailError
-from app.core.storage import StorageError, storage
+from app.core.storage import StorageError
 from app.db.session import engine
+
+# The app's own log lines (campusmarket.*: errors, rate limits, admin actions) go to stdout,
+# which Render keeps in its Logs tab. uvicorn only sets up its own loggers, so without this the
+# INFO-level admin audit lines would be dropped.
+_log = logging.getLogger("campusmarket")
+if not _log.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+    _log.addHandler(_handler)
+    _log.setLevel(logging.INFO)
+    _log.propagate = False
 
 _prod = settings.ENVIRONMENT.lower() == "production"
 # The interactive API docs are handy locally but just a map for attackers in production.
@@ -79,6 +91,49 @@ UPLOAD_DIR = Path(__file__).resolve().parents[1] / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
+@app.middleware("http")
+async def unhandled_errors(request: Request, call_next):
+    """A bug anywhere becomes a plain JSON 500 with no internals in it (the details go to the
+    log). Added before CORS, so CORS wraps it and the browser can read the error: without this,
+    crashes skipped the CORS headers and showed up as a vague network failure in the app."""
+    try:
+        return await call_next(request)
+    except Exception:
+        logging.getLogger("campusmarket.errors").exception("Unhandled error on %s %s", request.method, request.url.path)
+        return JSONResponse(status_code=500, content={"detail": "Something went wrong on our side. Try again in a minute."})
+
+
+# At most this many requests are worked on at once: one per database connection (db/session.py).
+# Each request takes its connection while checking who's logged in, then waits for a worker
+# thread to run the endpoint, still holding it. Letting hundreds in at once (a load test at 500
+# students) left every connection held by a request stuck waiting for a thread, and every thread
+# waiting for a connection: 500s, and a server that stayed jammed after the spike. Requests over
+# the limit now wait here instead, holding nothing, and get a quick "busy" after BUSY_WAIT_SECONDS.
+_IN_FLIGHT_MAX = settings.DB_POOL_SIZE + settings.DB_MAX_OVERFLOW
+_in_flight: asyncio.Semaphore | None = None
+BUSY_WAIT_SECONDS = 15
+
+
+@app.middleware("http")
+async def limit_in_flight(request: Request, call_next):
+    global _in_flight
+    if _in_flight is None:
+        _in_flight = asyncio.Semaphore(_IN_FLIGHT_MAX)
+    try:
+        await asyncio.wait_for(_in_flight.acquire(), timeout=BUSY_WAIT_SECONDS)
+    except asyncio.TimeoutError:
+        logging.getLogger("campusmarket.load").warning("Busy: turned away %s %s", request.method, request.url.path)
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "CampusMarket is very busy right now. Try again in a few seconds."},
+            headers={"Retry-After": "5"},
+        )
+    try:
+        return await call_next(request)
+    finally:
+        _in_flight.release()
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -103,12 +158,8 @@ def email_error(request: Request, exc: EmailError):
 
 @app.get("/health")
 def health_check():
-    """Confirms the API is up and can actually reach the Supabase database."""
+    """Confirms the API is up and can actually reach the database. Says nothing else: which
+    environment, storage or email provider is in use is a map for attackers, not for uptime checks."""
     with engine.connect() as conn:
         conn.execute(text("SELECT 1"))
-    return {
-        "status": "ok",
-        "environment": settings.ENVIRONMENT,
-        "storage": storage.name,
-        "email": "brevo" if settings.BREVO_API_KEY else "smtp",
-    }
+    return {"status": "ok"}

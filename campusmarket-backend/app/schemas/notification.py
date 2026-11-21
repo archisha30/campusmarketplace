@@ -57,7 +57,7 @@ def _actor_out(n) -> ActorOut:
         return ActorOut(id="", name="A student", email="")
     if n.type in TEAM_TYPES:
         return ActorOut(id="", name="CampusMarket team", email="")
-    name = a.name or a.email.split("@")[0]
+    name = a.display_name
     if n.type in NO_CONTACT_TYPES:
         return ActorOut(id=str(a.id), name=name, avatar_url=a.avatar_url, email="")
     return ActorOut(id=str(a.id), name=name, avatar_url=a.avatar_url, email=a.email, phone=a.phone)

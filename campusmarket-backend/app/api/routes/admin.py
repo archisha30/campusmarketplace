@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -30,6 +31,10 @@ from app.core.timeutil import utcnow
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 ADMIN_PAGE_SIZE = 25
+
+# Audit trail of admin actions, in the server log (Render -> Logs; search "campusmarket.admin").
+# Ids, not emails, so the log doesn't become a copy of student contact details.
+audit = logging.getLogger("campusmarket.admin")
 
 
 class AdminUserOut(BaseModel):
@@ -196,6 +201,7 @@ def set_admin(
         raise HTTPException(status_code=400, detail="Suspended accounts can't be made admins")
     target.role = "admin" if payload.is_admin else "student"
     db.commit()
+    audit.info("owner %s %s admin rights for user %s", _owner.id, "granted" if payload.is_admin else "removed", target.id)
     db.refresh(target)
     return _user_out(target, _counts(db, Listing), _counts(db, Resource))
 
@@ -228,6 +234,7 @@ def suspend_user(
     else:
         db.add(BannedEmail(email=email, reason=payload.reason, banned_by=admin.id))
     db.commit()
+    audit.info("admin %s suspended user %s: %s", admin.id, target.id, payload.reason)
     db.refresh(target)
     return _user_out(target, _counts(db, Listing), _counts(db, Resource))
 
@@ -244,6 +251,7 @@ def reinstate_user(
     target.suspension_reason = None
     db.query(BannedEmail).filter(BannedEmail.email == target.email.strip().lower()).delete(synchronize_session=False)
     db.commit()
+    audit.info("admin %s reinstated user %s", _admin.id, target.id)
     db.refresh(target)
     return _user_out(target, _counts(db, Listing), _counts(db, Resource))
 
@@ -293,8 +301,10 @@ def remove_listing(
     photos = listing_files(listing)
     item_removed(db, owner_id=listing.owner_id, target_type="listing", target_id=listing.id,
                  title=listing.title, reason=payload.reason, admin=admin)
+    owner_id = listing.owner_id
     db.delete(listing)
     db.commit()
+    audit.info("admin %s removed listing %s (owner %s): %s", admin.id, listing_id, owner_id, payload.reason)
     delete_public_urls(photos)
 
 
@@ -312,8 +322,10 @@ def remove_resource(
     files = _resource_files(r)
     item_removed(db, owner_id=r.owner_id, target_type="resource", target_id=r.id,
                  title=r.title, reason=payload.reason, admin=admin)
+    owner_id = r.owner_id
     db.delete(r)
     db.commit()
+    audit.info("admin %s removed resource %s (owner %s): %s", admin.id, resource_id, owner_id, payload.reason)
     _remove_files(files)
 
 
@@ -450,3 +462,4 @@ def set_report_status(
     if resolving and db.query(model.id).filter(model.id == report.target_id, model.deleted_at.is_(None)).first():
         reports_cleared(db, report, admin)
     db.commit()
+    audit.info("admin %s set report %s to %s", admin.id, report_id, payload.status)

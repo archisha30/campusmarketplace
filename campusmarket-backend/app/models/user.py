@@ -74,6 +74,12 @@ class User(Base):
         return (self.email or "").lower() in {e.lower() for e in settings.OWNER_EMAILS}
 
     @property
+    def display_name(self) -> str:
+        """The name other students see. Never derived from the email (the part before the @ is
+        usually the student's roll number or full name, i.e. the email itself)."""
+        return (self.name or "").strip() or "CampusMarket student"
+
+    @property
     def is_admin(self) -> bool:
         """Owners, plus users an owner approved (role "admin")."""
         return self.role == "admin" or self.is_owner

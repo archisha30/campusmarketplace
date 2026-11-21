@@ -8,6 +8,10 @@ class Settings(BaseSettings):
     # Full Postgres connection string from Supabase (see .env.example for where to get it)
     DATABASE_URL: str
 
+    # Database connections kept open per server process (see db/session.py for why 20 + 20).
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 20
+
     # Comma-separated list of frontend origins allowed to call this API
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
 

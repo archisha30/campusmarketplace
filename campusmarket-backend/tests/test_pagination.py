@@ -47,6 +47,14 @@ def test_without_page_everything_comes_back(client, auth, users, thirty_listings
     assert len(res["items"]) == 30 and res["page"] is None
 
 
+def test_other_peoples_listings_never_come_back_all_at_once(client, auth, users, thirty_listings):
+    # Without a page, the marketplace (or someone else's shop) still comes one page at a time.
+    res = page(client, auth)
+    assert res["page"] == 1 and len(res["items"]) == 24 and res["total"] == 30
+    res = page(client, auth, seller_id=str(users["owner"].id))
+    assert res["page"] == 1 and len(res["items"]) == 24
+
+
 def test_resources_paginate_too(client, auth, create):
     for i in range(5):
         create({"title": f"Notes {i}"})

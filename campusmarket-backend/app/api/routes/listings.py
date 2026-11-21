@@ -12,8 +12,9 @@ from sqlalchemy import case, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.images import ImageError, check_image, make_thumbnail, read_upload
+from app.core.images import ImageError, clean_image, make_thumbnail, read_upload
 from app.core.pagination import paginate
+from app.core.ranking import affinity, boost, parse_scores, score_expression
 from app.core.request_matching import VOCABULARY_TITLES, best_matches, notify_matching_requests
 from app.core.search import expand, relevance, search_filter, title_vocabulary
 from app.core.security import require_seller, require_verified
@@ -124,8 +125,7 @@ def _check_photos(files: list) -> list[tuple[bytes, str, str]]:
     checked = []
     for f in files:
         try:
-            data = read_upload(f.file, MAX_PHOTO_BYTES)
-            content_type, ext = check_image(data)
+            data, content_type, ext = clean_image(read_upload(f.file, MAX_PHOTO_BYTES))  # checked, metadata stripped
         except ImageError as e:
             raise HTTPException(status_code=400, detail=str(e))
         checked.append((data, content_type, ext))
@@ -250,6 +250,8 @@ def list_listings(
 ):
     # Your own listings (the Seller Dashboard) include ones held for review; everyone else's don't.
     own = bool(seller_id) and (seller_id == str(viewer.id) or viewer.is_admin)
+    if page is None and not own:
+        page = 1  # only your own Dashboard/Profile may ask for everything at once (stops scraping the whole site)
     query = db.query(Listing).filter(existing(Listing) if own else live(Listing))
 
     groups = []
@@ -389,14 +391,7 @@ def recommended_listings(
     _viewer: User = Depends(require_verified),
 ):
     """Content-based ranking: category affinity + mild same-campus boost + recency tiebreak."""
-    scores: dict[str, float] = {}
-    if category_scores:
-        try:
-            parsed = json.loads(category_scores)
-            if isinstance(parsed, dict):
-                scores = {str(k): float(v) for k, v in parsed.items()}
-        except (ValueError, TypeError):
-            scores = {}  # malformed input just means "no personalization"
+    scores = parse_scores(category_scores)
 
     only: list[str] = []
     if only_categories:
@@ -413,16 +408,10 @@ def recommended_listings(
     if only:
         # "Picked for you" with chosen interests shows only those categories, never filler.
         query = query.filter(Listing.category.in_(only))
-    pool = query.order_by(Listing.created_at.desc()).all()
-
-    def score(listing: Listing) -> float:
-        s = scores.get(listing.category, 0.0)
-        if campus_id and listing.campus_id == campus_id:
-            s += 0.5
-        return s
-
-    # sorted() is stable, so equal scores keep the newest-first order from the query.
-    ranked = sorted(pool, key=score, reverse=True)[:8]
+    # Ranked in the database: category affinity + same-campus boost, newest first on ties.
+    score = score_expression([affinity(Listing.category, scores), boost(Listing.campus_id == campus_id) if campus_id else None])
+    order = [Listing.created_at.desc()] if score is None else [score.desc(), Listing.created_at.desc()]
+    ranked = query.order_by(*order).limit(8).all()
     return RecommendedOut(
         items=[ListingOut.from_orm_with_art(i) for i in ranked],
         personalized=bool(scores),
