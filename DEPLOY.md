@@ -181,13 +181,64 @@ Render's free plan blocks outgoing SMTP (Gmail), so the live backend sends OTP e
 
 Locally, leave `BREVO_API_KEY` blank and Gmail SMTP keeps working.
 
+## Backups and recovery
+
+Supabase's free plan keeps no backups, and Supabase backups never include Storage files. So a
+GitHub Action (`.github/workflows/backup.yml`) backs up both every night at 02:00 IST: the
+database (app tables) and every file in both buckets, **encrypted**, kept for 14 days.
+
+The repo is public, and anyone signed in to GitHub can download a public repo's artifacts. That's
+why the backup is encrypted with your passphrase before upload: without it the file is useless.
+
+**One-time setup:** GitHub repo → **Settings → Secrets and variables → Actions → New repository
+secret**, add:
+
+| Secret | Value |
+| --- | --- |
+| `DATABASE_URL` | The **production** connection string (same as on Render) |
+| `SUPABASE_URL` | `https://<production-project-ref>.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | The **production** secret key (same as on Render) |
+| `BACKUP_PASSPHRASE` | A long random passphrase (20+ characters). **Save it in a password manager too.** Lose it and the backups can't be opened. |
+
+Then **Actions → Nightly backup → Run workflow** once, and check it goes green.
+
+GitHub emails you if a nightly run fails. GitHub also pauses scheduled workflows after 60 days
+without a commit to the repo; if that happens, re-enable it on the Actions tab.
+
+**Restoring** (on the Mac, from `campusmarket-backend/`):
+
+1. Download the backup: **Actions → Nightly backup →** the run you want **→ Artifacts**. Unzip
+   it to get `campusmarket-YYYY-MM-DD.tar.gz.gpg`.
+2. Decrypt and unpack it (one time first: `brew install gnupg libpq`):
+   ```bash
+   gpg --decrypt campusmarket-YYYY-MM-DD.tar.gz.gpg | tar -xz -C ~/restore
+   ```
+   You get `db.dump` and `storage/<bucket>/...`.
+3. Database: restore into the target database. Use the **session pooler** URL (port **5432**,
+   not 6543). Try it on the dev project first.
+   ```bash
+   pg_restore --clean --if-exists --no-owner --no-privileges --schema=public \
+     -d "postgresql://...:5432/postgres" ~/restore/db.dump
+   ```
+   The dump includes the migration version (`alembic_version`) and keeps row level security
+   switched on for every table, so a brand-new project needs nothing else.
+4. Files:
+   ```bash
+   SUPABASE_URL=https://<ref>.supabase.co SUPABASE_SERVICE_ROLE_KEY=<key> \
+     uv run python scripts/backup_storage.py upload ~/restore/storage
+   ```
+
+Take a manual backup (**Run workflow**) right before anything risky, such as a big migration.
+
+---
+
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
 | "Failed to fetch" on every request | `CORS_ORIGINS` on Render doesn't exactly match the Vercel address, or `VITE_API_BASE_URL` is wrong. Check both, then redeploy Vercel. |
 | First request after a while takes ~1 minute | Normal on Render's free plan: the backend sleeps after 15 minutes idle. The Starter plan (~$7/month) stays awake. |
-| "We couldn't send the code" / OTP email never arrives; Render logs show `SMTP send … failed` | Render's free plan blocks outgoing SMTP. Set `BREVO_API_KEY` on Render (see *Sending email in production* below). `/health` then shows `"email":"brevo"`. |
+| "We couldn't send the code" / OTP email never arrives; Render logs show `SMTP send … failed` | Render's free plan blocks outgoing SMTP. Set `BREVO_API_KEY` on Render (see *Sending email in production* below). |
 | Uploads fail with "File storage is unavailable" | `SUPABASE_SERVICE_ROLE_KEY` on Render is wrong or missing. It must be the **production** project's key. |
 | 404 when refreshing a page | `vercel.json` is missing from `main`. |
 | A deploy failed on Render | Open the deploy's log. `uv sync --frozen` failing means `uv.lock` is out of date: run `uv lock` locally, commit, and push. |

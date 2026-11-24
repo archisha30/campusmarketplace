@@ -17,6 +17,7 @@ dependencies = [
     "httpx>=0.27",
     "argon2-cffi>=23.1",
     "cryptography>=43",
+    "sentry-sdk[fastapi]>=2.0",
 ]
 
 [dependency-groups]

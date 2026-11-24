@@ -44,7 +44,7 @@ from app.db.session import get_db
 from app.main import app
 from app.models.listing import Listing
 from app.models.notification import Notification
-from app.models.otp import OTPCode
+from app.models.otp import OTPCode, OTPFailure
 from app.models.report import Report
 from app.models.contact_reveal import ContactReveal
 from app.models.draft import Draft
@@ -74,7 +74,7 @@ def db_session():
     Base.metadata.create_all(engine, tables=[User.__table__, Listing.__table__, Resource.__table__, ResourceAccess.__table__, Notification.__table__, OTPCode.__table__, Report.__table__,
         ContactReveal.__table__, ProductRequest.__table__, Draft.__table__,
         BannedEmail.__table__, WishlistItem.__table__, ListingView.__table__,
-        RequestDismissal.__table__, ResourceWishlistItem.__table__])
+        RequestDismissal.__table__, ResourceWishlistItem.__table__, OTPFailure.__table__])
     Session = sessionmaker(bind=engine, autocommit=False, autoflush=False)
     session = Session()
     yield session, Session
@@ -136,6 +136,10 @@ def reset_login_limiter():
     auth_routes._code_ip_limiter.reset()
     auth_routes._code_edge_limiter.reset()
     auth_routes._unknown_email_failures.reset()
+    from app.core import quotas
+
+    quotas.photo_limiter.reset()
+    quotas.avatar_limiter.reset()
     yield
 
 

@@ -9,8 +9,10 @@ services:
     plan: free
     buildCommand: pip install uv && uv sync --frozen --no-dev
     # Migrations run on every deploy, so the live database always matches the live code.
-    # --proxy-headers: Render terminates HTTPS in front of the app; trust its forwarded headers.
-    startCommand: uv run --no-dev alembic upgrade head && uv run --no-dev uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    # No --forwarded-allow-ips="*": that let anyone calling Render directly set the client address
+    # and scheme uvicorn reports. Nothing depends on them: per-IP limits read X-Forwarded-For
+    # themselves, trusting only the entries Render's proxies add (core/ratelimit.py client_ips).
+    startCommand: uv run --no-dev alembic upgrade head && uv run --no-dev uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     autoDeploy: true
     envVars:
@@ -45,6 +47,9 @@ services:
       # Google sign-in Client ID (public, not a secret)
       - key: GOOGLE_CLIENT_ID
         value: 293911511598-kui9096g2p07o7p9016tqoat1hn65fes.apps.googleusercontent.com
+      # Sentry error tracking (Project Settings -> Client Keys -> DSN). Blank = off.
+      - key: SENTRY_DSN
+        sync: false
       # Admin dashboard owner(s), e.g. ["you@college.edu.in"]
       - key: OWNER_EMAILS
         sync: false

@@ -1,0 +1,97 @@
+# Nightly backup of the production database and file storage (Supabase's free plan has no backups,
+# and its backups never include Storage anyway).
+#
+# THIS REPO IS PUBLIC: anyone signed in to GitHub can download a public repo's artifacts, and read
+# its workflow logs. So the backup is encrypted (AES-256, with BACKUP_PASSPHRASE) before upload,
+# and the log only ever shows counts, never data.
+#
+# Repo -> Settings -> Secrets and variables -> Actions -> New repository secret:
+#   DATABASE_URL               the same value as on Render (the :6543 pooler URL is fine; it's
+#                              switched to the :5432 session pooler below, which pg_dump needs)
+#   SUPABASE_URL               https://<project-ref>.supabase.co
+#   SUPABASE_SERVICE_ROLE_KEY  the same value as on Render
+#   BACKUP_PASSPHRASE          a long random passphrase. Keep a copy somewhere safe OUTSIDE GitHub
+#                              (a password manager): without it the backups can't be opened.
+#
+# Restore steps: DEPLOY.md -> "Backups and recovery".
+
+name: Nightly backup
+
+on:
+  schedule:
+    - cron: "30 20 * * *" # 02:00 IST every night
+  workflow_dispatch: # "Run workflow" button, e.g. right before a risky migration
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Check the secrets are set
+        run: |
+          for name in DATABASE_URL SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY BACKUP_PASSPHRASE; do
+            if [ -z "${!name}" ]; then echo "::error::Secret $name is not set"; exit 1; fi
+          done
+          if [ ${#BACKUP_PASSPHRASE} -lt 20 ]; then echo "::error::BACKUP_PASSPHRASE should be at least 20 characters"; exit 1; fi
+
+      - uses: actions/checkout@v4
+
+      - name: Install pg_dump 17 (must match the Supabase server's major version)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Dump the database (app tables only)
+        run: |
+          # The transaction pooler (:6543) can't run pg_dump; the session pooler (:5432) on the same host can.
+          DUMP_URL="${DATABASE_URL/:6543\//:5432/}"
+          echo "::add-mask::$DUMP_URL"
+          mkdir -p backup
+          pg_dump "$DUMP_URL" --schema=public --format=custom --no-owner --no-privileges --file=backup/db.dump
+          # Prove the dump is readable and has the tables, before trusting it.
+          tables=$(pg_restore --list backup/db.dump | grep -c " TABLE DATA public ")
+          echo "Database dump: $tables tables, $(du -h backup/db.dump | cut -f1)"
+          if [ "$tables" -lt 10 ]; then echo "::error::Dump looks incomplete ($tables tables)"; exit 1; fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Copy the storage buckets
+        run: |
+          pip install -q httpx
+          python campusmarket-backend/scripts/backup_storage.py download backup/storage
+
+      - name: Encrypt
+        run: |
+          stamp=$(date -u +%Y-%m-%d)
+          echo "STAMP=$stamp" >> "$GITHUB_ENV"
+          tar -czf "campusmarket-$stamp.tar.gz" -C backup .
+          printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 --output "campusmarket-$stamp.tar.gz.gpg" "campusmarket-$stamp.tar.gz"
+          # Nothing unencrypted may be uploaded.
+          rm -rf backup "campusmarket-$stamp.tar.gz"
+          ls -lh "campusmarket-$stamp.tar.gz.gpg"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: campusmarket-backup-${{ env.STAMP }}
+          path: campusmarket-${{ env.STAMP }}.tar.gz.gpg
+          retention-days: 14
+          compression-level: 0 # already compressed and encrypted
+          if-no-files-found: error

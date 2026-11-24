@@ -16,6 +16,8 @@ from app.api.routes.notifications import notify
 from app.core.request_matching import best_matches, notify_matching_requests
 from app.core.trash import can_see_held, existing, live, restore_cutoff
 from app.core.pagination import paginate
+from app.core.config import settings
+from app.core.quotas import check_post_limit, check_upload_limit, photo_limiter
 from app.core.ranking import affinity, boost, parse_scores, score_expression
 from app.core.pdf_preview import PdfError, open_pdf, read_limited, render_previews
 from app.core.security import get_current_user, require_seller, require_verified
@@ -424,8 +426,10 @@ def create_resource(
         raise HTTPException(status_code=403, detail="Complete your profile before posting a resource")
     if not user.phone:
         raise HTTPException(status_code=403, detail="Add your WhatsApp number in your profile so buyers can contact you")
+    check_post_limit(db, Resource, user, settings.RESOURCES_PER_HOUR, settings.RESOURCES_PER_DAY, "resource")
     pdf = _read_pdf(file)
     _check_file_rules(fields, has_file=pdf is not None)
+    check_upload_limit(photo_limiter, user, 1 if pdf else 0)
 
     r = Resource(**fields.model_dump(), owner_id=user.id, status="available", preview_pages=[])
     written: StoredFiles = []
@@ -461,6 +465,7 @@ def update_resource(
     pdf = _read_pdf(file)
     keeps_file = bool(r.file_name) and not remove_file
     _check_file_rules(fields, has_file=pdf is not None or keeps_file)
+    check_upload_limit(photo_limiter, user, 1 if pdf else 0)
 
     had_partial = any(p["kind"] == "partial" for p in (r.preview_pages or []))
     written: StoredFiles = []
@@ -695,5 +700,8 @@ def download_resource_file(
             "Content-Disposition": f'inline; filename="{slug}.pdf"',
             "Cache-Control": "private, no-store",
             "X-Content-Type-Options": "nosniff",
+            # Uploaded by a student: if it's ever opened directly, any script in it runs sandboxed,
+            # with no access to the site. (The app downloads it as a blob, which this doesn't affect.)
+            "Content-Security-Policy": "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:",
         },
     )

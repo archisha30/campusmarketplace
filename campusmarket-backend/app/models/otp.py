@@ -18,3 +18,16 @@ class OTPCode(Base):
     purpose = Column(String(10), nullable=False, default="login", server_default="login")  # signup | login | reset
     attempts = Column(Integer, nullable=False, default=0, server_default="0")  # wrong guesses so far
     created_at = Column(DateTime, default=utcnow)
+
+
+class OTPFailure(Base):
+    """One row per wrong code, by email, across every code that email is sent. Codes are
+    replaced each time a new one is asked for, so their own attempt counters can't stop
+    someone guessing 5 times per fresh code; this caps wrong guesses per email per day
+    (OTP_DAILY_FAILURE_LIMIT). Rows older than two days are cleared as new ones are added."""
+
+    __tablename__ = "otp_failures"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String, nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=utcnow, index=True)

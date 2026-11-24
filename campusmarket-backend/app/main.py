@@ -22,6 +22,7 @@ from app.api.routes.trash import router as trash_router
 from app.api.routes.wishlist import router as wishlist_router
 from app.core.config import settings
 from app.core.email import EmailError
+from app.core.monitoring import setup_sentry
 from app.core.storage import StorageError
 from app.db.session import engine
 
@@ -35,6 +36,8 @@ if not _log.handlers:
     _log.addHandler(_handler)
     _log.setLevel(logging.INFO)
     _log.propagate = False
+
+setup_sentry()  # before the app is built, so it hooks into FastAPI; does nothing without SENTRY_DSN
 
 _prod = settings.ENVIRONMENT.lower() == "production"
 # The interactive API docs are handy locally but just a map for attackers in production.
@@ -64,14 +67,6 @@ async def csrf_guard(request: Request, call_next):
         return JSONResponse(status_code=403, content={"detail": "Request blocked (missing security header). Refresh the page and try again."})
     return await call_next(request)
 
-
-@app.middleware("http")
-async def security_headers(request: Request, call_next):
-    response = await call_next(request)
-    response.headers.setdefault("X-Content-Type-Options", "nosniff")
-    response.headers.setdefault("X-Frame-Options", "DENY")
-    response.headers.setdefault("Referrer-Policy", "no-referrer")
-    return response
 
 app.include_router(auth_router)
 app.include_router(contact_router)
@@ -132,6 +127,30 @@ async def limit_in_flight(request: Request, call_next):
         return await call_next(request)
     finally:
         _in_flight.release()
+
+
+# The API only ever returns JSON, files and images, never pages to render, so its responses may
+# load nothing and be framed by nothing. The local-only API docs (/docs, /redoc) need their own
+# scripts, so they keep the browser default. Vercel sends the frontend's headers (vercel.json);
+# these cover the API, including when someone calls Render's URL directly.
+API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+DOCS_PATHS = ("/docs", "/redoc", "/openapi.json")
+HSTS = "max-age=63072000; includeSubDomains"
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """Added after the error and load handlers so it wraps them: their 500 and 503 answers get
+    these headers too."""
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    if _prod or not request.url.path.startswith(DOCS_PATHS):
+        response.headers.setdefault("Content-Security-Policy", API_CSP)
+    if _prod:
+        response.headers.setdefault("Strict-Transport-Security", HSTS)
+    return response
 
 
 app.add_middleware(

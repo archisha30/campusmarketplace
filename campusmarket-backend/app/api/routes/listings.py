@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session
 
 from app.core.images import ImageError, clean_image, make_thumbnail, read_upload
 from app.core.pagination import paginate
+from app.core.quotas import check_post_limit, check_upload_limit, photo_limiter
+from app.core.config import settings
 from app.core.ranking import affinity, boost, parse_scores, score_expression
 from app.core.request_matching import VOCABULARY_TITLES, best_matches, notify_matching_requests
 from app.core.search import expand, relevance, search_filter, title_vocabulary
@@ -445,6 +447,7 @@ def create_listing(
         raise HTTPException(status_code=403, detail="Complete your profile before listing an item")
     if not user.phone:
         raise HTTPException(status_code=403, detail="Add your WhatsApp number in your profile so buyers can contact you")
+    check_post_limit(db, Listing, user, settings.LISTINGS_PER_HOUR, settings.LISTINGS_PER_DAY, "listing")
     data, files = body
     payload = _parse(ListingCreate, data)
     if not files:
@@ -452,6 +455,7 @@ def create_listing(
     if len(files) > MAX_IMAGES:
         raise HTTPException(status_code=400, detail=f"A listing can have at most {MAX_IMAGES} photos")
     checked = _check_photos(files)
+    check_upload_limit(photo_limiter, user, len(checked))
 
     listing = Listing(**payload.model_dump(), owner_id=user.id)
     _apply_food_rules(listing, check_expiry=True)
@@ -490,6 +494,7 @@ def update_listing(
     if current and not kept and not files:
         raise HTTPException(status_code=422, detail="Keep at least one photo of the item")
     checked = _check_photos(files)
+    check_upload_limit(photo_limiter, user, len(checked))
     removed = [u for u in current if u not in kept]
 
     for key, value in data.items():
@@ -583,7 +588,9 @@ def upload_images(
     if room <= 0:
         raise HTTPException(status_code=400, detail=f"A listing can have at most {MAX_IMAGES} photos")
 
-    urls, thumbs = _store_photos(_check_photos(files[:room]), request)
+    checked = _check_photos(files[:room])
+    check_upload_limit(photo_limiter, user, len(checked))
+    urls, thumbs = _store_photos(checked, request)
     listing.images = [*(listing.images or []), *urls]
     listing.thumbnails = {**(listing.thumbnails or {}), **thumbs}
     _commit_or_drop_photos(db, [*urls, *thumbs.values()])

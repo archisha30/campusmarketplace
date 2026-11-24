@@ -245,8 +245,14 @@ def reinstate_user(
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
-    """Undo a suspension made by mistake: the account, its content and its email work again."""
+    """Undo a suspension made by mistake: the account, its content and its email work again.
+    A suspension the owner made can only be undone by an owner (as only the owner can suspend
+    an admin, an admin can't undo that either)."""
     target = _target_user(db, user_id)
+    ban = db.query(BannedEmail).filter(BannedEmail.email == target.email.strip().lower()).first()
+    banned_by = db.get(User, ban.banned_by) if ban and ban.banned_by else None
+    if banned_by and banned_by.is_owner and not _admin.is_owner:
+        raise HTTPException(status_code=403, detail="The owner suspended this account; only the owner can reinstate it")
     target.suspended_at = None
     target.suspension_reason = None
     db.query(BannedEmail).filter(BannedEmail.email == target.email.strip().lower()).delete(synchronize_session=False)

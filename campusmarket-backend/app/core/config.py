@@ -1,4 +1,11 @@
+from urllib.parse import urlparse
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
+
+# Secrets shorter than this are refused in production (Render's generateValue makes far longer ones).
+MIN_JWT_SECRET = 32
+MIN_OTP_PEPPER = 16
 
 
 class Settings(BaseSettings):
@@ -31,6 +38,10 @@ class Settings(BaseSettings):
     OTP_EXPIRE_MINUTES: int = 10
     OTP_PEPPER: str  # extra secret mixed into the OTP hash
     OTP_MAX_ATTEMPTS: int = 5  # wrong guesses before a code is thrown away
+    # Wrong codes per email per 24 hours, across ALL its codes. Without this, asking for a fresh
+    # code every minute gave 5 new guesses each time (~7,000 a day at one account's reset code).
+    # Kept in the database (otp_failures), so a restart or deploy doesn't wipe the count.
+    OTP_DAILY_FAILURE_LIMIT: int = 15
 
     # --- Password login ---
     LOGIN_MAX_FAILURES: int = 5  # wrong passwords in a row before the account is locked
@@ -48,6 +59,15 @@ class Settings(BaseSettings):
     # --- Contact details (phone/email) shown one person at a time, per student ---
     CONTACT_REVEALS_PER_HOUR: int = 15
     CONTACT_REVEALS_PER_DAY: int = 40
+
+    # --- Posting limits per account (stop one account filling storage or spamming notifications) ---
+    # Counted from the database, so deleting and re-posting still counts.
+    LISTINGS_PER_HOUR: int = 10
+    LISTINGS_PER_DAY: int = 30
+    RESOURCES_PER_HOUR: int = 10
+    RESOURCES_PER_DAY: int = 30
+    PHOTO_UPLOADS_PER_HOUR: int = 60  # listing photos and resource PDFs, each file counts once
+    AVATAR_UPLOADS_PER_HOUR: int = 10
 
     # --- Code emails (signup / login code / password reset) ---
     CODE_EMAIL_COOLDOWN_SECONDS: int = 60  # one code per address per minute
@@ -83,6 +103,12 @@ class Settings(BaseSettings):
     # OAuth Client ID from Google Cloud (not secret). Blank = the Google button is off.
     GOOGLE_CLIENT_ID: str | None = None
 
+    # --- Error tracking (core/monitoring.py) ---
+    # Sentry project DSN (Sentry -> Project Settings -> Client Keys). Blank = off.
+    SENTRY_DSN: str | None = None
+    # Share of requests timed for Sentry's performance view (0 = errors only, which fits the free plan).
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.0
+
     # --- Admin ---
     # Owners always have admin access and are the only ones who can approve or remove other
     # admins (users whose role is "admin"). JSON list, e.g. ["you@college.edu.in"].
@@ -90,6 +116,33 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT.lower() == "production"
+
+    @model_validator(mode="after")
+    def safe_for_production(self):
+        """Refuse to start in production with settings that would quietly weaken security.
+        (A missing required variable already stops startup with pydantic naming it.)"""
+        if not self.is_production:
+            return self
+        problems = []
+        if len(self.JWT_SECRET_KEY) < MIN_JWT_SECRET:
+            problems.append(f"JWT_SECRET_KEY must be at least {MIN_JWT_SECRET} characters")
+        if len(self.OTP_PEPPER) < MIN_OTP_PEPPER:
+            problems.append(f"OTP_PEPPER must be at least {MIN_OTP_PEPPER} characters")
+        if not self.CORS_ORIGINS:
+            problems.append('CORS_ORIGINS is empty; set it to the frontend URL, e.g. ["https://your-app.vercel.app"]')
+        for origin in self.CORS_ORIGINS:
+            parsed = urlparse(origin)
+            if origin.strip() == "*" or "*" in origin:
+                problems.append("CORS_ORIGINS can't contain '*' (sessions are cookies; any site could use them)")
+            elif parsed.scheme != "https" or not parsed.hostname:
+                problems.append(f"CORS_ORIGINS entry {origin!r} must be a full https:// origin in production")
+        if problems:
+            raise ValueError("Unsafe production settings:\n  - " + "\n  - ".join(problems))
+        return self
 
 
 settings = Settings()

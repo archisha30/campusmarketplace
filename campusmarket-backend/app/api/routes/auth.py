@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.email import EmailError, send_account_exists_email, send_otp_email
 from app.core.google import GoogleTokenError, verify_google_token
 from app.core.images import ImageError, clean_image, read_upload
+from app.core.quotas import avatar_limiter, check_upload_limit
 from app.core.ratelimit import SlidingWindowLimiter, client_ips
 from app.core.security import (
     create_access_token,
@@ -30,7 +31,7 @@ from app.api.routes.listings import _delete_upload_files
 from app.core.storage import storage
 from app.core.timeutil import utcnow
 from app.db.session import get_db  # <-- point this at your existing db session dependency
-from app.models.otp import OTPCode
+from app.models.otp import OTPCode, OTPFailure
 from app.models.listing import Listing
 from app.models.resource import Resource
 from app.models.user import User
@@ -88,7 +89,10 @@ def _issue_otp(db: Session, email: str, purpose: str) -> str:
 
 
 def _consume_otp(db: Session, email: str, otp: str, purpose: str) -> None:
-    """Check a code; it works once, only for its purpose, and dies after too many wrong guesses."""
+    """Check a code; it works once, only for its purpose, and dies after too many wrong guesses.
+    Wrong guesses also count toward a daily cap per email, across every code it's sent."""
+    if _otp_locked(db, email):
+        raise HTTPException(status_code=429, detail=TOO_MANY_WRONG_CODES_TODAY)
     record = (
         db.query(OTPCode)
         .filter(OTPCode.email == email, OTPCode.purpose == purpose)
@@ -102,6 +106,7 @@ def _consume_otp(db: Session, email: str, otp: str, purpose: str) -> None:
     if not _take_attempt(db, record_id):
         raise HTTPException(status_code=400, detail="Too many wrong codes. Request a new one.")
     if not verify_otp(otp.strip(), code_hash):
+        _record_otp_failure(db, email)
         raise HTTPException(status_code=400, detail="Incorrect code")
     # Single use, even when the right code arrives twice at once: only one request deletes the row.
     if not db.query(OTPCode).filter(OTPCode.id == record_id).delete(synchronize_session=False):
@@ -109,6 +114,28 @@ def _consume_otp(db: Session, email: str, otp: str, purpose: str) -> None:
 
 
 CODE_EXPIRED = "Code expired, request a new one"
+TOO_MANY_WRONG_CODES_TODAY = (
+    "Too many wrong codes for this email today. Try again tomorrow, or log in with your password or Google."
+)
+OTP_FAILURE_WINDOW = timedelta(days=1)
+
+
+def _otp_locked(db: Session, email: str) -> bool:
+    """True once this email has had OTP_DAILY_FAILURE_LIMIT wrong codes in the last 24 hours."""
+    since = utcnow() - OTP_FAILURE_WINDOW
+    failures = db.query(OTPFailure).filter(OTPFailure.email == email.lower(), OTPFailure.created_at >= since).count()
+    return failures >= settings.OTP_DAILY_FAILURE_LIMIT
+
+
+def _record_otp_failure(db: Session, email: str) -> None:
+    """Count one wrong code against the email (committed at once, since the request fails next),
+    and clear its rows from before yesterday so the table stays small."""
+    email = email.lower()
+    db.query(OTPFailure).filter(OTPFailure.email == email, OTPFailure.created_at < utcnow() - 2 * OTP_FAILURE_WINDOW).delete(
+        synchronize_session=False
+    )
+    db.add(OTPFailure(email=email))
+    db.commit()
 
 
 def _take_attempt(db: Session, record_id) -> bool:
@@ -189,6 +216,8 @@ def signup(payload: SignupRequest, request: Request, background: BackgroundTasks
     existing = _find_user(db, payload.email)
     if existing and existing.verified:
         background.add_task(_send_quietly, send_account_exists_email, payload.email)
+    elif _otp_locked(db, payload.email):
+        pass  # a code couldn't be used today anyway; verifying explains why
     else:
         otp = _issue_otp(db, payload.email, "signup")
         db.commit()
@@ -332,7 +361,13 @@ def forgot_password(payload: ForgotPasswordRequest, request: Request, background
     so the limit can't be used to find out which emails have accounts)."""
     _check_domain(payload.email)
     user = _find_user(db, payload.email)
-    if user and user.verified and not user.suspended_at and _may_send_code(request, payload.email):
+    if (
+        user
+        and user.verified
+        and not user.suspended_at
+        and not _otp_locked(db, payload.email)  # a code couldn't be used today anyway
+        and _may_send_code(request, payload.email)
+    ):
         otp = _issue_otp(db, payload.email, "reset")
         db.commit()
         # After the response, so answering for a real account takes no longer than for a fake one.
@@ -437,6 +472,7 @@ def upload_avatar(
         data, content_type, ext = clean_image(read_upload(file.file, MAX_AVATAR_BYTES))
     except ImageError as e:
         raise HTTPException(status_code=400, detail=str(e).replace("Images must", "Profile picture must"))
+    check_upload_limit(avatar_limiter, user, 1)
 
     key = f"avatars/{uuid.uuid4().hex}{ext}"
     storage.put_public(key, data, content_type)

@@ -18,7 +18,9 @@ _pool = {} if _in_memory else dict(
     pool_timeout=10,
     pool_recycle=300,
 )
-engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True, **_pool)
+# hide_parameters: database errors otherwise quote the query's values (emails, names, phone
+# numbers) in their message, which would end up in the logs and in Sentry.
+engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True, hide_parameters=True, **_pool)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

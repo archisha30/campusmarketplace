@@ -23,8 +23,9 @@ class SlidingWindowLimiter:
         self._lock = Lock()
         self._calls = 0
 
-    def allow(self, key: str) -> bool:
-        """Record one attempt for `key`; False if it's over the limit."""
+    def allow(self, key: str, n: int = 1) -> bool:
+        """Record n attempts for `key` (e.g. n files in one upload); False, recording nothing,
+        if they'd go over the limit."""
         now = time.monotonic()
         with self._lock:
             self._calls += 1
@@ -33,9 +34,9 @@ class SlidingWindowLimiter:
             hits = self._hits[key]
             while hits and now - hits[0] > self.window:
                 hits.popleft()
-            if len(hits) >= self.limit:
+            if len(hits) + n > self.limit:
                 return False
-            hits.append(now)
+            hits.extend([now] * n)
             return True
 
     def _sweep(self, now: float) -> None:

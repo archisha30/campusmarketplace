@@ -21,7 +21,7 @@ if config.config_file_name is not None:
 from app.db.base import Base
 from app.core.config import settings
 from app.models.user import User
-from app.models.otp import OTPCode
+from app.models.otp import OTPCode, OTPFailure
 from app.models.listing import Listing
 from app.models.product_request import ProductRequest
 from app.models.resource import Resource, ResourceAccess
