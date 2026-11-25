@@ -10,7 +10,7 @@ import Avatar from '../components/Avatar.jsx'
 import Modal from '../components/Modal.jsx'
 import NotificationsPanel from '../components/NotificationsPanel.jsx'
 import { useRequestNotifications } from '../hooks/useRequestNotifications.js'
-import { openContact } from '../lib/contact.js'
+import { replyToRequest } from '../lib/requests.js'
 import { formatPrice, isExpired, titleCase, timeAgo } from '../lib/format.js'
 import Icon from '../components/Icon.jsx'
 import { CategoryArt } from '../components/CategoryTile.jsx'
@@ -391,7 +391,6 @@ function RequestRow({ r, fresh, onDismiss }) {
   const { requester } = r
   const toast = useToast()
   const [busy, setBusy] = useState(false)
-  const channel = requester.has_phone ? 'whatsapp' : 'email'
 
   async function dismiss() {
     try {
@@ -406,13 +405,7 @@ function RequestRow({ r, fresh, onDismiss }) {
   async function reply() {
     setBusy(true)
     try {
-      await openContact({
-        targetType: 'request',
-        targetId: r.id,
-        channel,
-        subject: `CampusMarket — ${r.product}`,
-        message: `Hi ${requester.name}! I saw your request for "${r.product}" on CampusMarket. I might have it.`,
-      })
+      await replyToRequest(r)
     } catch (err) {
       toast(err.message)
     } finally {

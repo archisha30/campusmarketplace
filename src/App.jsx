@@ -25,6 +25,7 @@ import Signup from './pages/Signup.jsx'
 import ForgotPassword from './pages/ForgotPassword.jsx'
 import Privacy from './pages/legal/Privacy.jsx'
 import Terms from './pages/legal/Terms.jsx'
+import PostRequest from './pages/PostRequest.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import Interests from './pages/Interests.jsx'
 import AdminLayout from './pages/admin/AdminLayout.jsx'
@@ -73,6 +74,7 @@ export default function App() {
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/interests" element={<Interests />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/requests/new" element={<PostRequest />} />
             <Route path="/notifications" element={<Notifications />} />
           </Route>
 

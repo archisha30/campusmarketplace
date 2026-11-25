@@ -11,7 +11,6 @@ import { COLLEGES, SEMESTERS } from '../data/sample.js'
 import { shrinkToJpeg } from '../lib/images.js'
 import Modal from '../components/Modal.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
-import PostRequestModal from '../components/PostRequestModal.jsx'
 import { formatPhone, timeAgo } from '../lib/format.js'
 import PasswordInput from '../components/PasswordInput.jsx'
 import { PASSWORD_HINT, newPasswordErrors } from '../lib/password.js'
@@ -178,8 +177,7 @@ function EditProfileModal({ open, onClose }) {
 
 function MyRequests() {
   const toast = useToast()
-  const { data, loading, refetch, setData } = useApi(() => requestsApi.mine(), [])
-  const [posting, setPosting] = useState(false)
+  const { data, loading, setData } = useApi(() => requestsApi.mine(), [])
   const items = data || []
 
   async function toggleFound(r) {
@@ -213,7 +211,7 @@ function MyRequests() {
           <h2 className="text-2xl">My requests</h2>
           <p className="text-sm text-ink-soft">Things you've asked sellers for. Tap “Found it” once you have it, so sellers stop replying.</p>
         </div>
-        <button className="btn-ghost btn-sm" onClick={() => setPosting(true)}>Post a request</button>
+        <Link to="/requests/new" className="btn-ghost btn-sm">Post a request</Link>
       </div>
 
       {loading && <div className="skeleton h-16" />}
@@ -243,8 +241,6 @@ function MyRequests() {
           </div>
         </div>
       ))}
-
-      <PostRequestModal open={posting} onClose={() => setPosting(false)} onPosted={refetch} />
     </section>
   )
 }
