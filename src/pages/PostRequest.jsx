@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import RequestCard from '../components/RequestCard.jsx'
 import RequestMatches from '../components/RequestMatches.jsx'
@@ -24,9 +24,6 @@ export default function PostRequest() {
   const [busy, setBusy] = useState(false)
   const [matches, setMatches] = useState(null)
   const mine = useApi(() => (isSeller ? Promise.resolve([]) : requestsApi.mine()), [isSeller])
-
-  // The button that leads here sits at the bottom of long pages.
-  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }) }, [])
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
   // Tapping the chosen answer again clears it: only "What do you need?" is required.
