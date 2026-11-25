@@ -7,6 +7,7 @@ import { TypeBadge, VerifiedBadge } from '../components/Badge.jsx'
 import Breadcrumb from '../components/Breadcrumb.jsx'
 import { CategoryArt, CategoryLabel } from '../components/CategoryTile.jsx'
 import Icon from '../components/Icon.jsx'
+import WhatsAppIcon from '../components/WhatsAppIcon.jsx'
 import ReportModal from '../components/ReportModal.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import ImageLightbox from '../components/ImageLightbox.jsx'
@@ -197,8 +198,8 @@ export default function ListingDetail() {
             {l.status === 'sold' ? (
               <p className="flex min-h-[52px] flex-[1_1_200px] items-center rounded-control bg-coral/10 px-4 font-semibold text-coral">This item has been sold.</p>
             ) : l.seller?.has_phone ? (
-              <button className="btn-primary flex-[1_1_240px]" disabled={contacting} onClick={() => contact('whatsapp')}>
-                <Icon name="message-circle" />Contact seller on WhatsApp
+              <button className="btn btn-whatsapp flex-[1_1_240px]" disabled={contacting} onClick={() => contact('whatsapp')}>
+                <WhatsAppIcon size={22} />Contact seller on WhatsApp
               </button>
             ) : (
               // Older accounts may not have a number yet; email still reaches them.

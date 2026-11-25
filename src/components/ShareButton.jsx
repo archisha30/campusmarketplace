@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useToast } from '../hooks/useToast.jsx'
 import Modal from './Modal.jsx'
 import Icon from './Icon.jsx'
+import WhatsAppIcon from './WhatsAppIcon.jsx'
 
 // "Share" on a listing or resource: WhatsApp, copy link, or the phone's own share sheet
 // (Instagram, Telegram, Messages…) where the browser has one. Recipients need to log in
@@ -70,7 +71,7 @@ export default function ShareButton({ title, message, path, className = '' }) {
             rel="noopener noreferrer"
             onClick={() => setOpen(false)}
           >
-            <Icon name="message-circle" size={18} /> WhatsApp
+            <WhatsAppIcon size={18} className="text-whatsapp" /> WhatsApp
           </a>
           <button role="menuitem" type="button" className={item} onClick={copy}>
             <Icon name="link" size={18} /> Copy link

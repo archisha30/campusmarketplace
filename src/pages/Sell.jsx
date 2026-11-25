@@ -14,6 +14,7 @@ import { ListingCardView } from '../components/ListingCard.jsx'
 import { categoryStyle } from '../lib/categories.js'
 import PriceTag from '../components/PriceTag.jsx'
 import { revealFirstError } from '../lib/forms.js'
+import WhatsAppIcon from '../components/WhatsAppIcon.jsx'
 
 const BLANK = {
   title: '', category: CATEGORIES[0], listing_type: 'sale',
@@ -421,7 +422,7 @@ export default function Sell() {
           <div>
             <span className="field-label">Contact</span>
             <div className="card flex items-center gap-4 p-4">
-              <Icon name="message-circle" />
+              <WhatsAppIcon size={24} className="text-whatsapp" />
               <div className="min-w-0 flex-1">
                 <p className="text-[15px] font-semibold">WhatsApp +91 ••••• •{String(user.phone).slice(-4)}</p>
                 <p className="mt-1 text-sm text-ink-soft">Buyers tap “Contact seller” to message you. Your number isn't shown on the listing.</p>

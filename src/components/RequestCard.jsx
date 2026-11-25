@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CategoryLabel } from './CategoryTile.jsx'
+import WhatsAppIcon from './WhatsAppIcon.jsx'
 import { useToast } from '../hooks/useToast.jsx'
 import { timeAgo } from '../lib/format.js'
 import { parseDetails, replyToRequest } from '../lib/requests.js'
@@ -36,11 +37,12 @@ export default function RequestCard({ r, canReply = false }) {
         {canReply && (
           <button
             type="button"
-            className="btn-secondary btn-sm"
+            className={`${r.requester?.has_phone ? 'btn btn-whatsapp' : 'btn-secondary'} btn-sm`}
             disabled={busy}
             onClick={reply}
             aria-label={`I have this: message ${r.requester?.name} about ${r.product} on ${r.requester?.has_phone ? 'WhatsApp' : 'email'}`}
           >
+            {r.requester?.has_phone && <WhatsAppIcon size={18} />}
             I have this
           </button>
         )}

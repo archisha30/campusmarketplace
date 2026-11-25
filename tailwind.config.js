@@ -11,6 +11,7 @@ export default {
         line: { DEFAULT: '#E4E2DA', strong: '#D9D6CE', soft: '#ECEAE2' },
         brand: { DEFAULT: '#2F4BFF', deep: '#2440E6', tint: '#EEF1FF' },
         sun: '#FFD447',
+        whatsapp: '#25D366',
         leaf: '#166534',
         coral: '#B42318', // errors, sold, destructive actions
         tile: '#EFEDE6', // behind missing photos and previews

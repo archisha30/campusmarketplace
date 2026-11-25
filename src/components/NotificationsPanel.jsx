@@ -6,6 +6,7 @@ import { useNotifications } from '../hooks/useNotifications.js'
 import { useToast } from '../hooks/useToast.jsx'
 import { timeAgo } from '../lib/format.js'
 import Icon from './Icon.jsx'
+import WhatsAppIcon from './WhatsAppIcon.jsx'
 
 // The notification list, shared by the seller dashboard and /notifications (everyone).
 // `previewCount` rows show first, with "Show N more" for the rest (Infinity = show all).
@@ -150,12 +151,13 @@ function NotificationRow({ n, onDismiss }) {
     text = <>just listed {item}, which matches what you're looking for</>
     action = <Link to={href} className="btn-accent btn-sm">View {n.target_type}</Link>
   } else {
-    icon = n.channel === 'whatsapp' ? 'message-circle' : 'mail'
+    icon = n.channel === 'whatsapp' ? 'whatsapp' : 'mail'
     text = n.target_type === 'request'
       ? <>replied to your request for {item} on {n.channel === 'whatsapp' ? 'WhatsApp' : 'email'}</>
       : <>opened {n.channel === 'whatsapp' ? 'WhatsApp' : 'email'} to message you about {item}</>
     action = (
-      <a className="btn-ghost btn-sm" href={reply} target="_blank" rel="noopener noreferrer">
+      <a className={`${actor.phone ? 'btn btn-whatsapp' : 'btn-ghost'} btn-sm`} href={reply} target="_blank" rel="noopener noreferrer">
+        {actor.phone && <WhatsAppIcon size={18} />}
         {actor.phone ? 'Reply on WhatsApp' : 'Reply by Email'}
       </a>
     )
@@ -187,7 +189,7 @@ function NotificationRow({ n, onDismiss }) {
         ) : (
           <Avatar user={actor} size={44} className="bg-[#FFE4CF] font-display text-ink" />
         )}
-        <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-line bg-paper" aria-hidden><Icon name={icon} size={12} stroke={2} /></span>
+        <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-line bg-paper" aria-hidden>{icon === 'whatsapp' ? <WhatsAppIcon size={13} className="text-whatsapp" /> : <Icon name={icon} size={12} stroke={2} />}</span>
       </div>
       <div className="min-w-0 flex-1">
         <p className="break-words text-[15px] text-ink-soft">

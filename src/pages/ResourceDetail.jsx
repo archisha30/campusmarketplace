@@ -24,6 +24,7 @@ import { NOTE_MAX, deliveryLabel, upiLink, yearLabel } from '../lib/resources.js
 import Icon from '../components/Icon.jsx'
 import Breadcrumb from '../components/Breadcrumb.jsx'
 import { FreeTag } from '../components/PriceTag.jsx'
+import WhatsAppIcon from '../components/WhatsAppIcon.jsx'
 
 export default function ResourceDetail() {
   const { id } = useParams()
@@ -370,7 +371,7 @@ function OwnerCard({ r }) {
       {!isOwn && (
         <div className="mt-4 flex flex-wrap gap-2">
           {o.has_phone && (
-            <button className="btn-ghost btn-sm" disabled={busy} onClick={() => contact('whatsapp')}>WhatsApp</button>
+            <button className="btn btn-whatsapp btn-sm" disabled={busy} onClick={() => contact('whatsapp')}><WhatsAppIcon size={18} />WhatsApp</button>
           )}
           <button className="btn-ghost btn-sm" disabled={busy} onClick={() => contact('email')}>Email</button>
         </div>

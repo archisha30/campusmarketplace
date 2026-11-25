@@ -14,6 +14,7 @@ import { replyToRequest } from '../lib/requests.js'
 import { formatPrice, isExpired, titleCase, timeAgo } from '../lib/format.js'
 import Icon from '../components/Icon.jsx'
 import { CategoryArt } from '../components/CategoryTile.jsx'
+import WhatsAppIcon from '../components/WhatsAppIcon.jsx'
 
 // "Deletes for good in 5h" / "in 40m", counting down to the end of the 24-hour window.
 function timeLeft(iso) {
@@ -426,7 +427,8 @@ function RequestRow({ r, fresh, onDismiss }) {
         {r.description && <p className="mt-1 break-words text-sm text-ink-soft">{r.description}</p>}
       </div>
       <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto sm:flex-none">
-        <button className="btn-ghost btn-sm" disabled={busy} onClick={reply}>
+        <button className={`${requester.has_phone ? 'btn btn-whatsapp' : 'btn-ghost'} btn-sm`} disabled={busy} onClick={reply}>
+          {requester.has_phone && <WhatsAppIcon size={18} />}
           {requester.has_phone ? 'Reply on WhatsApp' : 'Reply by Email'}
         </button>
         <button

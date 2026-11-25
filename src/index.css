@@ -26,6 +26,9 @@
   .btn-primary:not(:disabled):hover, .btn-accent:not(:disabled):hover { @apply border-brand-deep bg-brand-deep; }
   .btn-secondary, .btn-ghost { @apply border-ink bg-paper text-ink; }
   .btn-onblue { @apply border-white bg-white text-brand; }
+  /* WhatsApp's own green. Dark text, because white on it is too faint to read. */
+  .btn-whatsapp { @apply border-whatsapp bg-whatsapp text-ink; }
+  .btn-whatsapp:not(:disabled):hover { border-color: #1FBF5B; background-color: #1FBF5B; }
   .btn-danger { @apply border-coral/30 bg-paper text-coral; }
   .btn-danger:not(:disabled):hover { @apply border-coral; }
   .btn-sm { @apply h-10 px-4 text-sm; }
