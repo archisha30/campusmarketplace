@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import HowItWorksSteps from '../components/HowItWorksSteps.jsx'
+import MarketplacePopup from '../components/MarketplacePopup.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 
-// Public, unlike the landing page (which sends logged-in students to the marketplace): everyone can
-// read this. Students who are logged in get a way into the marketplace, visitors a way to sign up.
+// Public, and where logged-in students land when they open the website (Landing sends them here).
+// They get a popup and a button into the marketplace; visitors get a way to sign up.
 export default function HowItWorks() {
   const { user, loading } = useAuth()
 
@@ -14,7 +15,8 @@ export default function HowItWorks() {
   }, [])
 
   return (
-    <div className="mx-auto max-w-[1180px] px-6 py-12 md:py-16">
+    // Extra room at the bottom when logged in, so the popup never covers the last step on a phone.
+    <div className={`mx-auto max-w-[1180px] px-6 py-12 md:py-16 ${user ? 'pb-40' : ''}`}>
       <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="mb-2 text-[34px] font-bold leading-tight md:text-[44px]">How it works</h1>
@@ -33,6 +35,7 @@ export default function HowItWorks() {
         </div>
       </div>
       <HowItWorksSteps heading="h2" />
+      <MarketplacePopup />
     </div>
   )
 }

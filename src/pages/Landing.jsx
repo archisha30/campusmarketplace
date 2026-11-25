@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useLocation } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import HowItWorksSteps from '../components/HowItWorksSteps.jsx'
 import PostRequestBanner from '../components/PostRequestBanner.jsx'
 import PriceTag from '../components/PriceTag.jsx'
@@ -13,8 +13,8 @@ const TRUST = [
   { icon: '⚡', title: 'Simple & Fast', body: 'Find what you need without digging through hundreds of WhatsApp messages.' },
 ]
 
-// The landing page is only for visitors who aren't logged in (verified students go straight to the
-// marketplace). It shows the listings the most students opened, as teaser cards without seller
+// The landing page is only for visitors who aren't logged in (verified students go to How It Works,
+// which leads to the marketplace). It shows the listings the most students opened, as teaser cards without seller
 // details; these category tiles fill in while the marketplace has fewer than four items.
 const GUEST_TILES = [
   { emoji: '📘', title: 'Textbooks', bg: '#F1EAFF' },
@@ -25,16 +25,14 @@ const GUEST_TILES = [
 
 export default function Landing() {
   const { user, isVerified, loading: authLoading } = useAuth()
-  const { hash } = useLocation()
   const [popular, setPopular] = useState(null) // null while loading
 
   useEffect(() => {
     listingsApi.popular().then(setPopular).catch(() => setPopular([]))
   }, [])
 
-  // Logged-in students only use the Marketplace and Resource Hub; the landing page is for visitors.
-  // (Old links to the how-it-works section still show it to them, on its own page.)
-  if (!authLoading && isVerified) return <Navigate to={hash === '#how-it-works' ? '/how-it-works' : '/marketplace'} replace />
+  // Opening the website while logged in lands on How It Works, whose popup leads to the marketplace.
+  if (!authLoading && isVerified) return <Navigate to="/how-it-works" replace />
 
   return (
     <>
