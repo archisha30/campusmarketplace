@@ -3,7 +3,7 @@ import Reveal from '../Reveal.jsx'
 
 const Line = ({ w, className = 'mt-2 bg-line-soft' }) => <div className={`h-2 rounded ${className}`} style={{ width: w }} />
 
-// The page on the right is a drawing: resources are only shown to logged-in students.
+// The page on the right is a sample note, not a real one: resources are only shown to logged-in students.
 export default function ResourceHubPanel({ link }) {
   return (
     <section id="hub" className="wrap scroll-mt-24 pt-section">
@@ -17,9 +17,9 @@ export default function ResourceHubPanel({ link }) {
         <div aria-hidden className="relative h-[280px] min-w-0 flex-[1_1_240px]" style={{ perspective: 1200 }}>
           <div className="absolute bottom-8 left-12 right-12 top-0 rounded-control bg-[#2C2C38] md:left-16 md:right-16" style={{ transform: 'rotateY(-14deg) translateX(40px) translateZ(-80px)' }} />
           <div className="sheet absolute bottom-2 left-4 right-8 top-6 rounded-control bg-white p-6 md:left-10 md:right-10">
-            <Line w="58%" className="h-4 bg-line-strong" />
-            <Line w="38%" className="mt-3 bg-line-soft" />
-            <Line w="90%" className="mt-7 bg-line-soft" />
+            <p className="hd text-xl leading-tight text-ink">Unit 3 · Trees and Graphs</p>
+            <p className="mt-1 text-sm text-ink-soft">DSA · 2nd yr · 24 pages · ₹50</p>
+            <Line w="90%" className="mt-6 bg-line-soft" />
             <Line w="76%" />
             <Line w="84%" />
             <div style={{ filter: 'blur(4px)' }}>

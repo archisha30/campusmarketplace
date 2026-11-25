@@ -455,6 +455,7 @@ export default function Sell() {
             condition: form.condition,
             food_temp: isFood ? form.food_temp : null,
             expiry_date: isFood ? form.expiry_date : null,
+            status: 'available',
             seller: { campus: user?.college || user?.campus },
           }}
         />

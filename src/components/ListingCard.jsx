@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { TypeBadge, StatusPill } from './Badge.jsx'
+import { StatusPill, TypeBadge, VerifiedBadge } from './Badge.jsx'
 import { CategoryArt, CategoryLabel } from './CategoryTile.jsx'
 import HeartButton from './HeartButton.jsx'
 import PriceTag from './PriceTag.jsx'
@@ -52,12 +52,8 @@ export function ListingCardView({ listing, photo, heart = null, to, state, compa
           iconSize={compact ? 32 : 48}
           className={`rounded-card ${sold ? 'opacity-60' : ''}`}
         />
-        <span className="absolute left-2 top-2 flex flex-wrap gap-1">
-          {listing_type === 'rent' && <TypeBadge type="rent" />}
-        </span>
-        {status && status !== 'available' && (
-          <span className="absolute bottom-2 left-2"><StatusPill status={status} /></span>
-        )}
+        {listing_type && <span className="absolute left-2 top-2"><TypeBadge type={listing_type} /></span>}
+        {sold && <span className="absolute bottom-2 left-2"><StatusPill status={status} /></span>}
         {heart}
       </div>
 
@@ -72,6 +68,13 @@ export function ListingCardView({ listing, photo, heart = null, to, state, compa
         {meta && <p className={`truncate text-ink-soft ${compact ? 'text-[13px]' : 'text-sm'}`}>{meta}</p>}
         {listing.created_at && (
           <p className={`text-ink-soft ${compact ? 'text-[13px]' : 'text-sm'}`}>{listedOn(listing.created_at)}</p>
+        )}
+        {/* Home page teasers come without the seller, so without this row too. */}
+        {!compact && seller && (
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <VerifiedBadge pill />
+            <StatusPill status={status} />
+          </div>
         )}
       </div>
     </Tag>

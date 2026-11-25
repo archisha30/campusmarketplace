@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import EmptyState from '../components/EmptyState.jsx'
+import { HeartProp } from '../components/HeartButton.jsx'
 import { ListingCardView } from '../components/ListingCard.jsx'
 import MarketplacePopup from '../components/MarketplacePopup.jsx'
 import PostRequestBanner from '../components/PostRequestBanner.jsx'
@@ -8,6 +9,8 @@ import Reveal from '../components/Reveal.jsx'
 import { SkeletonListing } from '../components/SkeletonCard.jsx'
 import PhoneHero from '../components/landing/PhoneHero.jsx'
 import ResourceHubPanel from '../components/landing/ResourceHubPanel.jsx'
+import { CATEGORIES } from '../data/sample.js'
+import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { categoryStyle } from '../lib/categories.js'
 import { listingsApi } from '../services/api.js'
@@ -33,11 +36,12 @@ const STEPS = [
   { kicker: 'Meet & Exchange', title: 'Trade on campus', body: 'Meet at a safe campus location, inspect the item, and pay via cash or UPI.' },
 ]
 
+const SHOWN = 4 // listings in the "Just listed!" row
 const LISTING_GRID = 'mt-8 grid gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-4'
 
 // The home page, for everyone. Logged-in students see the same page without the log-in / sign-up
-// options, plus a popup into the marketplace. It shows the listings the most students opened, as
-// teaser cards without seller details.
+// options, plus a popup into the marketplace. Visitors see the listings the most students opened,
+// as teaser cards without seller details; logged-in students see the newest in the marketplace.
 export default function Landing() {
   const { user, isSeller, loading: authLoading, probablyMember } = useAuth()
   const [popular, setPopular] = useState(null) // null while loading
@@ -81,7 +85,7 @@ export default function Landing() {
             )}
           </div>
         </div>
-        <PhoneHero items={listings} />
+        <PhoneHero />
       </section>
 
       <section className="bg-sun">
@@ -123,7 +127,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <JustListed listings={listings} into={into} />
+      <JustListed teasers={listings} into={into} />
       <ResourceHubPanel link={into('/resources')} />
       <PostRequestBanner className="wrap pt-section" />
       <MarketplacePopup />
@@ -131,10 +135,23 @@ export default function Landing() {
   )
 }
 
-function JustListed({ listings, into }) {
+// `teasers` are the public listings (null while loading). Only verified students may load the rest
+// of the marketplace, so for them the chips cover every category; for visitors, the ones shown.
+function JustListed({ teasers, into }) {
+  const { isVerified, needsPassword } = useAuth()
+  const canBrowse = isVerified && !needsPassword
   const [category, setCategory] = useState('All')
-  // Only categories these listings are in, so no chip leads to an empty row.
-  const categories = [...new Set((listings || []).map((l) => l.category))]
+  const market = useApi(
+    () => (canBrowse
+      ? listingsApi.list({ category, status: 'available', sort: 'newest', page: 1, page_size: SHOWN })
+      : Promise.resolve(null)),
+    [canBrowse, category]
+  )
+
+  // If the marketplace didn't load, the public listings still show.
+  const fromMarket = canBrowse && !market.error
+  const listings = fromMarket ? (market.loading || !market.data ? null : market.data.items) : teasers
+  const categories = fromMarket ? CATEGORIES : [...new Set((teasers || []).map((l) => l.category))]
   const shown = (listings || []).filter((l) => category === 'All' || l.category === category)
 
   return (
@@ -164,15 +181,18 @@ function JustListed({ listings, into }) {
 
       {listings === null ? (
         <div className={LISTING_GRID}>{[0, 1, 2, 3].map((i) => <SkeletonListing key={i} />)}</div>
-      ) : listings.length === 0 ? (
+      ) : shown.length === 0 ? (
         <div className="mt-8">
-          <EmptyState title="Nothing listed right now" body="New listings from students on campus show up here." />
+          <EmptyState
+            title={category === 'All' ? 'Nothing listed right now' : `Nothing in ${category} right now`}
+            body="New listings from students on campus show up here."
+          />
         </div>
       ) : (
         <div className={LISTING_GRID}>
           {shown.map((l, i) => (
             <Reveal key={l.id} i={i}>
-              <ListingCardView listing={l} photo={l.image} {...into(`/listing/${l.id}`)} />
+              <ListingCardView listing={l} photo={l.image || l.thumbnail || l.images?.[0]} heart={<HeartProp />} {...into(`/listing/${l.id}`)} />
             </Reveal>
           ))}
         </div>
