@@ -124,7 +124,7 @@ export default function AdminReports() {
             </tr>
           ))}
           {items.length === 0 && (
-            <tr><Td className="text-ink-soft">{status === 'open' ? 'No open reports. 🎉' : 'No reports here.'}</Td></tr>
+            <tr><Td className="text-ink-soft">{status === 'open' ? 'No open reports.' : 'No reports here.'}</Td></tr>
           )}
         </Table>
       )}

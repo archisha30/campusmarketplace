@@ -1,10 +1,11 @@
 import { useParams } from 'react-router-dom'
 import Avatar from '../components/Avatar.jsx'
 import { VerifiedBadge } from '../components/Badge.jsx'
+import Reveal from '../components/Reveal.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import ListingCard from '../components/ListingCard.jsx'
 import ResourceCard from '../components/ResourceCard.jsx'
-import { SkeletonGrid } from '../components/SkeletonCard.jsx'
+import { CARD_GRID, SkeletonGrid } from '../components/SkeletonCard.jsx'
 import { useApi } from '../hooks/useApi.js'
 import { sellersApi } from '../services/api.js'
 
@@ -24,7 +25,7 @@ export default function SellerProfile() {
 
   if (loading) {
     return (
-      <div className="wrap py-9">
+      <div className="wrap py-8 md:py-12">
         <div className="skeleton mb-8 h-[120px]" />
         <SkeletonGrid count={4} />
       </div>
@@ -32,7 +33,7 @@ export default function SellerProfile() {
   }
   if (error || !s) {
     return (
-      <div className="wrap py-9">
+      <div className="wrap py-8 md:py-12">
         <EmptyState icon="search-x" title="Student not found" body="This account doesn't exist or isn't active any more." actionLabel="Browse Marketplace" actionTo="/marketplace" />
       </div>
     )
@@ -40,7 +41,7 @@ export default function SellerProfile() {
 
   const nothingUp = s.listings.length === 0 && s.resources.length === 0
   return (
-    <div className="wrap py-9">
+    <div className="wrap py-8 md:py-12">
       <section className="mb-8 flex flex-wrap items-center gap-5 rounded-slab border border-line bg-paper p-6 md:p-8">
         <Avatar user={s} size={72} className="bg-sun font-display text-[26px] text-ink" />
         <div className="min-w-0 flex-1">
@@ -63,18 +64,18 @@ export default function SellerProfile() {
 
       {s.listings.length > 0 && (
         <section className="mb-10">
-          <h2 className="mb-4 text-[20px] font-semibold">For sale & rent</h2>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {s.listings.map((l) => <ListingCard key={l.id} listing={l} />)}
+          <h2 className="mb-4 text-2xl">For sale & rent</h2>
+          <div className={CARD_GRID}>
+            {s.listings.map((l, i) => <Reveal key={l.id} i={i}><ListingCard listing={l} /></Reveal>)}
           </div>
         </section>
       )}
 
       {s.resources.length > 0 && (
         <section>
-          <h2 className="mb-4 text-[20px] font-semibold">Study resources</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {s.resources.map((r) => <ResourceCard key={r.id} r={r} />)}
+          <h2 className="mb-4 text-2xl">Study resources</h2>
+          <div className="grid gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+            {s.resources.map((r, i) => <Reveal key={r.id} i={i}><ResourceCard r={r} /></Reveal>)}
           </div>
         </section>
       )}

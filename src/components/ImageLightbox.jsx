@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Icon from './Icon.jsx'
 
 const MIN = 1
 const MAX = 4
@@ -64,7 +65,7 @@ export default function ImageLightbox({ images, index, onIndexChange, onClose, a
   }
 
   const btn =
-    'flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-[22px] font-semibold text-ink shadow-lg transition hover:bg-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-40'
+    'flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-[22px] font-semibold text-ink transition hover:bg-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-40'
 
   return (
     <div
@@ -79,9 +80,9 @@ export default function ImageLightbox({ images, index, onIndexChange, onClose, a
         type="button"
         aria-label="Close image viewer"
         onClick={onClose}
-        className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-xl text-ink shadow-lg"
+        className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-xl text-ink"
       >
-        ✕
+        <Icon name="x" />
       </button>
 
       {images.length > 1 && (

@@ -51,7 +51,7 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="mx-auto my-14 w-full max-w-[420px] rounded-slab border border-line bg-paper p-8 md:p-10">
+    <div className="mx-auto my-14 w-full max-w-[min(420px,calc(100%-32px))] rounded-slab border border-line bg-paper p-8 md:p-10">
       {step === 'email' ? (
         <>
           <h2 className="mb-2 text-[26px] font-bold">Forgot your password?</h2>

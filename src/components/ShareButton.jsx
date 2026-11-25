@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useToast } from '../hooks/useToast.jsx'
 import Modal from './Modal.jsx'
+import Icon from './Icon.jsx'
 
 // "Share" on a listing or resource: WhatsApp, copy link, or the phone's own share sheet
 // (Instagram, Telegram, Messages…) where the browser has one. Recipients need to log in
@@ -45,7 +46,7 @@ export default function ShareButton({ title, message, path, className = '' }) {
     }
   }
 
-  const item = 'flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-[13.5px] hover:bg-bg'
+  const item = 'flex w-full items-center no-lift gap-2 px-4 py-3 text-left text-sm hover:bg-bg'
 
   return (
     <div ref={box} className={`relative ${className}`}>
@@ -54,16 +55,13 @@ export default function ShareButton({ title, message, path, className = '' }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-pill border border-line bg-paper px-3 py-1 text-[12.5px] font-semibold text-ink-soft transition hover:border-ink hover:text-ink"
+        className="chip"
       >
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-          <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" />
-        </svg>
+        <Icon name="share-2" size={18} />
         Share
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 z-30 mt-2 w-52 overflow-hidden rounded-card border border-line bg-paper py-1 shadow-lg">
+        <div role="menu" className="absolute right-0 z-30 mt-2 w-52 overflow-hidden rounded-card border border-line bg-paper py-1">
           <a
             role="menuitem"
             className={item}
@@ -72,14 +70,14 @@ export default function ShareButton({ title, message, path, className = '' }) {
             rel="noopener noreferrer"
             onClick={() => setOpen(false)}
           >
-            <span aria-hidden>💬</span> WhatsApp
+            <Icon name="message-circle" size={18} /> WhatsApp
           </a>
           <button role="menuitem" type="button" className={item} onClick={copy}>
-            <span aria-hidden>🔗</span> Copy link
+            <Icon name="link" size={18} /> Copy link
           </button>
           {canNativeShare && (
             <button role="menuitem" type="button" className={item} onClick={more}>
-              <span aria-hidden>📤</span> More apps…
+              <Icon name="share-2" size={18} /> More apps…
             </button>
           )}
         </div>

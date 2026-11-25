@@ -5,6 +5,7 @@ import Modal from './Modal.jsx'
 import { useNotifications } from '../hooks/useNotifications.js'
 import { useToast } from '../hooks/useToast.jsx'
 import { timeAgo } from '../lib/format.js'
+import Icon from './Icon.jsx'
 
 // The notification list, shared by the seller dashboard and /notifications (everyone).
 // `previewCount` rows show first, with "Show N more" for the rest (Infinity = show all).
@@ -48,40 +49,40 @@ export default function NotificationsPanel({ previewCount = 2, blurb, empty }) {
   const hidden = items.length - previewCount
 
   return (
-    <section id="notifications" className="mb-6 scroll-mt-24 rounded-slab border border-line bg-paper p-5 md:p-6">
+    <section id="notifications" className="card mb-8 scroll-mt-24 p-6 md:p-8">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-[19px] font-semibold">
+        <h2 className="flex items-center gap-2 text-2xl">
           Notifications
           {fresh > 0 && (
-            <span className="rounded-pill bg-coral px-2 py-0.5 text-[11.5px] font-bold text-white">{fresh} new</span>
+            <span className="rounded-lg bg-coral px-2 py-1 font-sans text-xs font-bold leading-none tracking-normal text-white">{fresh} new</span>
           )}
         </h2>
         {!loading && items.length > 0 && (
           <button className="btn-ghost btn-sm" onClick={() => setConfirmClear(true)}>Clear all</button>
         )}
       </div>
-      {blurb && <p className="-mt-2 mb-4 text-[13px] text-ink-faint">{blurb}</p>}
+      {blurb && <p className="-mt-2 mb-4 text-sm text-ink-soft">{blurb}</p>}
 
       {loading && <div className="skeleton h-20" />}
 
       {!loading && items.length === 0 && (
-        <p className="rounded-card bg-bg px-4 py-6 text-center text-[14px] text-ink-soft">{empty}</p>
+        <p className="rounded-card bg-bg px-4 py-6 text-center text-[15px] text-ink-soft">{empty}</p>
       )}
 
       {!loading && shown.map((n) => <NotificationRow key={n.id} n={n} onDismiss={() => onDismiss(n.id)} />)}
 
       {!loading && hidden > 0 && (
         <button
-          className="mt-1 text-[13.5px] font-semibold text-brand hover:underline"
+          className="mt-1 text-sm font-semibold text-brand hover:underline"
           aria-expanded={showAll}
           onClick={() => setShowAll((v) => !v)}
         >
-          {showAll ? 'Show less ▲' : `Show ${hidden} more ▼`}
+          {showAll ? 'Show less' : `Show ${hidden} more`}
         </button>
       )}
 
       <Modal open={confirmClear} onClose={() => !clearing && setConfirmClear(false)} title="Clear all notifications?">
-        <p className="text-[14px] text-ink-soft">This removes all {items.length} notifications. It can't be undone.</p>
+        <p className="text-[15px] text-ink-soft">This removes all {items.length} notifications. It can't be undone.</p>
         <div className="mt-5 flex gap-2.5">
           <button className="btn-ghost flex-1" onClick={() => setConfirmClear(false)} disabled={clearing} autoFocus>Cancel</button>
           <button className="btn-danger flex-1" onClick={onClearAll} disabled={clearing}>{clearing ? 'Clearing…' : 'Clear all'}</button>
@@ -116,40 +117,40 @@ function NotificationRow({ n, onDismiss }) {
   let text
   let action = null // the button on the right; contact taps get a reply link below
   if (isReport) {
-    icon = '⚠️'
+    icon = 'triangle-alert'
     text = <>reported your {n.target_type} {item}{n.count > 1 && <span className="font-semibold text-coral"> ({n.count} reports)</span>}</>
     action = <Link to={href} className="btn-ghost btn-sm">View item</Link>
   } else if (n.type === 'removed') {
-    icon = '🛑'
+    icon = 'circle-x'
     // The item is gone, so its title isn't a link any more.
     text = <>removed your {n.target_type} <span className="font-semibold text-ink">{n.target_title}</span></>
   } else if (n.type === 'report_cleared') {
-    icon = '✅'
+    icon = 'circle-check'
     text = <>reviewed the reports on your {n.target_type} {item}. No rules were broken, so it stays up.</>
     action = <Link to={href} className="btn-ghost btn-sm">View item</Link>
   } else if (n.type === 'held') {
-    icon = '⏸️'
+    icon = 'circle-pause'
     text = <>paused your {n.target_type} {item} while we review reports about it. It's hidden from other students until then.</>
   } else if (n.type === 'access_request') {
-    icon = '🔑'
+    icon = 'key'
     text = <>requested access to {item}</>
     action = <Link to={`${href}#manage`} className="btn-accent btn-sm">Review request</Link>
   } else if (n.type === 'access_approved') {
-    icon = '✓'
+    icon = 'check'
     text = <>approved your access to {item}</>
     action = <Link to={href} className="btn-accent btn-sm">Open resource</Link>
   } else if (n.type === 'access_denied') {
-    icon = '✕'
+    icon = 'x'
     text = n.note === 'revoked'
       ? <>removed your access to {item}</>
       : <>declined your access request for {item}. If you've paid, message them, then request again.</>
     action = <Link to={href} className="btn-ghost btn-sm">View resource</Link>
   } else if (n.type === 'request_match') {
-    icon = '📦'
+    icon = 'package'
     text = <>just listed {item}, which matches what you're looking for</>
     action = <Link to={href} className="btn-accent btn-sm">View {n.target_type}</Link>
   } else {
-    icon = n.channel === 'whatsapp' ? '💬' : '✉️'
+    icon = n.channel === 'whatsapp' ? 'message-circle' : 'mail'
     text = n.target_type === 'request'
       ? <>replied to your request for {item} on {n.channel === 'whatsapp' ? 'WhatsApp' : 'email'}</>
       : <>opened {n.channel === 'whatsapp' ? 'WhatsApp' : 'email'} to message you about {item}</>
@@ -177,38 +178,38 @@ function NotificationRow({ n, onDismiss }) {
   }
 
   return (
-    <div className={`mb-2.5 flex flex-wrap items-start gap-3.5 rounded-card border p-3.5 ${fresh ? 'border-brand/30 bg-brand-tint/50' : 'border-line'}`}>
+    <div className={`mb-4 flex flex-wrap items-start gap-4 rounded-card border p-4 ${fresh ? 'border-brand/30 bg-brand-tint' : 'border-line'}`}>
       <div className="relative flex-none">
         {isReport ? (
-          <div className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-coral/15 text-[16px]" aria-hidden>🚩</div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-coral/10 text-coral" aria-hidden><Icon name="flag" /></div>
         ) : fromTeam ? (
-          <div className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-brand text-[13px] font-bold text-white" aria-hidden>CM</div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand text-[13px] font-bold text-white" aria-hidden>CM</div>
         ) : (
-          <Avatar user={actor} size={38} className="bg-sun font-display text-ink" />
+          <Avatar user={actor} size={44} className="bg-[#FFE4CF] font-display text-ink" />
         )}
-        <span className="absolute -bottom-1 -right-1 text-[14px]" aria-hidden>{icon}</span>
+        <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-line bg-paper" aria-hidden><Icon name={icon} size={12} stroke={2} /></span>
       </div>
       <div className="min-w-0 flex-1">
-        <p className="break-words text-[14px] text-ink-soft">
+        <p className="break-words text-[15px] text-ink-soft">
           <span className="font-semibold text-ink">{actor.name}</span> {text}
         </p>
-        {note && <p className="mt-1 break-words text-[13.5px]">{note}</p>}
-        <p className="mt-1 text-[12px] text-ink-faint">
+        {note && <p className="mt-1 break-words text-sm">{note}</p>}
+        <p className="mt-1 text-[13px] text-ink-soft">
           {timeAgo(n.created_at)}
           {fresh && <span className="ml-2 rounded-pill bg-brand px-1.5 py-px text-[10.5px] font-bold text-white">New</span>}
           {n.type === 'contact' && <span className="ml-2">· check your {n.channel === 'whatsapp' ? 'WhatsApp' : 'inbox'}</span>}
         </p>
       </div>
-      <div className="flex flex-none flex-wrap gap-2">
+      <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto sm:flex-none">
         {action}
         <button
           type="button"
           onClick={onDismiss}
           aria-label={`Dismiss notification about ${n.target_title}`}
           title="Dismiss"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-[18px] leading-none text-ink-faint hover:bg-bg hover:text-ink"
+          className="flex h-10 w-10 items-center justify-center rounded-control text-ink-soft hover:bg-bg hover:text-ink"
         >
-          ×
+          <Icon name="x" size={18} />
         </button>
       </div>
     </div>

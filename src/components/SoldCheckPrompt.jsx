@@ -4,6 +4,7 @@ import Modal from './Modal.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useToast } from '../hooks/useToast.jsx'
 import { listingsApi } from '../services/api.js'
+import { CategoryArt } from './CategoryTile.jsx'
 
 // Pages where a pop-up would get in the way.
 const SKIP = ['/onboarding', '/login', '/signup', '/forgot-password']
@@ -57,24 +58,22 @@ export default function SoldCheckPrompt() {
   const thumb = listing.thumbnail || listing.images?.[0]
   return (
     <Modal open onClose={() => !busy && setQueue([])} title="Is this still for sale?">
-      <div className="mb-4 flex items-center gap-3 rounded-card border border-line p-2.5">
+      <div className="mb-4 flex items-center gap-3 rounded-control border border-line p-2">
         <span
-          className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-control text-[24px]"
-          style={{ background: listing.art?.bg || '#EFEFEC' }}
-        >
-          {thumb ? <img src={thumb} alt="" className="h-full w-full object-cover" /> : <span aria-hidden>{listing.art?.emoji || '📦'}</span>}
+          className="block h-14 w-14 flex-none overflow-hidden rounded-control">
+          <CategoryArt category={listing.category} src={thumb} iconSize={24} />
         </span>
         <div className="min-w-0">
-          <p className="truncate text-[14.5px] font-semibold">{listing.title}</p>
-          <p className="text-[13px] text-ink-soft">Listed {daysSince(listing.created_at)} days ago</p>
+          <p className="truncate text-[15px] font-semibold">{listing.title}</p>
+          <p className="text-sm text-ink-soft">Listed {daysSince(listing.created_at)} days ago</p>
         </div>
       </div>
       <p className="mb-5 text-[14px] text-ink-soft">
         Has it been sold? Marking it sold stops students from messaging you about something that's gone.
       </p>
-      <div className="flex gap-2.5">
-        <button className="btn-ghost flex-1" disabled={busy} onClick={() => answer(false)}>No, still available</button>
-        <button className="btn-accent flex-1" disabled={busy} onClick={() => answer(true)}>Yes, it's sold</button>
+      <div className="flex flex-wrap gap-4">
+        <button className="btn-ghost flex-1 whitespace-nowrap" disabled={busy} onClick={() => answer(false)}>No, still available</button>
+        <button className="btn-accent flex-1 whitespace-nowrap" disabled={busy} onClick={() => answer(true)}>Yes, it's sold</button>
       </div>
       {queue.length > 1 && <p className="mt-3 text-center text-[12px] text-ink-faint">{queue.length - 1} more to check after this</p>}
     </Modal>

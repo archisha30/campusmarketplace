@@ -19,19 +19,19 @@ export default function ResourcePicks({ excludeId, title = 'Picked for you', var
   return (
     <section
       aria-label={title}
-      className={panel ? 'mb-8 rounded-card border border-brand/15 bg-brand-tint p-3.5 md:p-4' : 'mt-12'}
+      className={panel ? 'card mb-12 p-4 md:p-6' : 'mt-section-sm'}
     >
-      <h2 className={panel ? 'text-[18px] font-bold' : 'text-[19px] font-bold'}>{title}</h2>
-      <p className="mb-4 mt-1 text-[13px] text-ink-soft">{reason}</p>
+      <h2 className={panel ? 'text-xl' : 'text-[26px] md:text-[32px]'}>{title}</h2>
+      <p className="mb-4 mt-2 text-sm text-ink-soft">{reason}</p>
 
       {loading ? (
         <div className="flex gap-3 overflow-hidden">
-          {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-[280px] w-[220px] flex-none" />)}
+          {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-[260px] w-[260px] flex-none" />)}
         </div>
       ) : (
-        <div className="flex snap-x gap-3 overflow-x-auto pb-1">
+        <div className="-mx-2 flex snap-x scroll-px-2 gap-6 overflow-x-auto px-2 py-2">
           {items.map((r) => (
-            <div key={r.id} className="w-[220px] flex-none snap-start">
+            <div key={r.id} className="w-[260px] flex-none snap-start">
               <ResourceCard r={r} />
             </div>
           ))}

@@ -63,7 +63,11 @@ export function ListingCardView({ listing, photo, heart = null, to, state, compa
 
       <div className="flex min-w-0 flex-col gap-1">
         <CategoryLabel category={category} className={compact ? 'text-[13px]' : ''} />
-        <PriceTag price={price} mrp={listing.mrp} listingType={listing_type} rentDays={listing.rent_days} size={compact ? 'sm' : 'md'} />
+        {price == null ? (
+          <p className="font-display text-2xl font-semibold text-ink-soft">₹ –</p> // still being typed (post preview)
+        ) : (
+          <PriceTag price={price} mrp={listing.mrp} listingType={listing_type} rentDays={listing.rent_days} size={compact ? 'sm' : 'md'} />
+        )}
         <h3 className={`truncate font-sans font-medium tracking-normal ${compact ? 'text-sm' : 'text-base'}`}>{title}</h3>
         {meta && <p className={`truncate text-ink-soft ${compact ? 'text-[13px]' : 'text-sm'}`}>{meta}</p>}
         {listing.created_at && (

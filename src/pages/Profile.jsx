@@ -26,9 +26,9 @@ export default function Profile() {
   const details = [user.college, user.course, user.year].filter(Boolean)
 
   return (
-    <div className="mx-auto max-w-[880px] px-6 py-9">
+    <div className="mx-auto max-w-[880px] px-4 md:px-8 py-9">
       {location.state?.needsSeller && !isSeller && (
-        <p className="mb-5 rounded-xl bg-sun/25 px-4 py-3 text-[13.5px] text-[#946B00]">
+        <p className="mb-5 rounded-xl bg-sun/25 px-4 py-3 text-sm text-[#946B00]">
           Selling is available to seller accounts. Switch below to start listing items.
         </p>
       )}
@@ -44,7 +44,7 @@ export default function Profile() {
             {user.email}
             {user.phone && <> · {formatPhone(user.phone)}</>}
           </p>
-          {details.length > 0 && <p className="mt-0.5 text-[13.5px] text-ink-faint">{details.join(' · ')}</p>}
+          {details.length > 0 && <p className="mt-0.5 text-sm text-ink-faint">{details.join(' · ')}</p>}
           {!user.phone && isSeller && (
             <button onClick={() => setEditing(true)} className="mt-1.5 text-[13px] font-semibold text-brand hover:underline">
               + Add a contact number so buyers can WhatsApp you
@@ -143,7 +143,7 @@ function EditProfileModal({ open, onClose }) {
               placeholder="10-digit mobile number"
             />
           </div>
-          <p className="mb-4 text-[12px] text-ink-faint">Required. "Contact Seller" on your listings opens a WhatsApp chat with this number.</p>
+          <p className="mb-4 text-[13px] text-ink-soft">Required. "Contact Seller" on your listings opens a WhatsApp chat with this number.</p>
 
           <label className="field-label" htmlFor="pf-college">College</label>
           <select id="pf-college" required className="field-input mb-4" value={form.college} onChange={set('college')}>
@@ -207,13 +207,13 @@ function MyRequests() {
   }
 
   return (
-    <section id="requests" className="mt-6 scroll-mt-24 rounded-slab border border-line bg-paper p-6 md:p-8">
+    <section id="requests" className="card mt-6 scroll-mt-24 p-6 md:p-8">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-[19px] font-semibold">My requests</h2>
-          <p className="text-[13px] text-ink-faint">Things you've asked sellers for. Tap “Found it” once you have it, so sellers stop replying.</p>
+          <h2 className="text-2xl">My requests</h2>
+          <p className="text-sm text-ink-soft">Things you've asked sellers for. Tap “Found it” once you have it, so sellers stop replying.</p>
         </div>
-        <button className="btn-ghost btn-sm" onClick={() => setPosting(true)}>+ Post a Request</button>
+        <button className="btn-ghost btn-sm" onClick={() => setPosting(true)}>Post a request</button>
       </div>
 
       {loading && <div className="skeleton h-16" />}
@@ -223,21 +223,21 @@ function MyRequests() {
       )}
 
       {!loading && items.map((r) => (
-        <div key={r.id} className={`mb-2.5 flex flex-wrap items-start gap-3 rounded-card border p-3.5 ${r.found ? 'border-leaf/30 bg-leaf/5' : 'border-line'}`}>
+        <div key={r.id} className={`mb-4 flex flex-wrap items-start gap-4 rounded-card border p-4 md:p-6 ${r.found ? 'border-leaf/30 bg-leaf/5' : 'border-line'}`}>
           <div className="min-w-0 flex-1">
-            <p className="break-words text-[15px] font-semibold">
+            <p className="break-words text-[17px] font-semibold">
               {r.product}
-              {r.found && <span className="badge ml-2 bg-leaf/15 align-middle text-leaf">✓ Found</span>}
+              {r.found && <span className="badge ml-2 bg-leaf/15 align-middle text-leaf"><Icon name="check" size={14} />Found</span>}
             </p>
-            {r.description && <p className="mt-0.5 break-words text-[13.5px] text-ink-soft">{r.description}</p>}
-            <p className="mt-1 text-[12px] text-ink-faint">
+            {r.description && <p className="mt-0.5 break-words text-sm text-ink-soft">{r.description}</p>}
+            <p className="mt-1 text-[13px] text-ink-soft">
               Posted {timeAgo(r.created_at)}
               {r.found && ' · Hidden from sellers'}
             </p>
           </div>
           <div className="flex flex-none gap-2">
             <button className={r.found ? 'btn-ghost btn-sm' : 'btn-accent btn-sm'} onClick={() => toggleFound(r)}>
-              {r.found ? 'Reopen' : '✓ Found it'}
+              {r.found ? 'Reopen' : 'Found it'}
             </button>
             <button className="btn-danger btn-sm" onClick={() => remove(r.id)}>Delete</button>
           </div>
@@ -326,7 +326,7 @@ function SellerSection({ user }) {
   return (
     <section className="rounded-slab border border-line bg-paper p-6 md:p-8">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-[19px] font-semibold">Your shop</h2>
+        <h2 className="text-2xl">Your shop</h2>
         <div className="flex gap-2">
           <Link to="/dashboard" className="btn-ghost btn-sm">Seller Dashboard</Link>
           <Link to="/sell" className="btn-accent btn-sm">Sell an Item</Link>
@@ -368,7 +368,7 @@ function SwitchToBuyer() {
 
   return (
     <>
-      <p className="mt-4 text-[13px] text-ink-faint">
+      <p className="mt-4 text-sm text-ink-soft">
         Changed your mind?{' '}
         <button type="button" className="font-semibold text-brand hover:underline" onClick={() => setOpen(true)}>
           Switch back to a buyer account
@@ -412,7 +412,7 @@ function BuyerSection() {
   return (
     <section className="flex flex-wrap items-center justify-between gap-4 rounded-slab border border-line bg-paper p-6 md:p-8">
       <div>
-        <h2 className="text-[19px] font-semibold">Want to sell something?</h2>
+        <h2 className="text-2xl">Want to sell something?</h2>
         <p className="mt-1 max-w-md text-[14px] text-ink-soft">
           Your account is set up for buying. Switch to a seller account to list items. You'll still be able to buy, and you can switch back until you make your first sale.
         </p>
@@ -442,8 +442,8 @@ function Tile({ to, icon, title, body, cta }) {
     <Link to={to} className="card lift group block p-6">
       <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-control bg-bg"><Icon name={icon} size={22} /></span>
       <h3 className="text-[16px] font-semibold">{title}</h3>
-      <p className="mt-1 line-clamp-2 text-[13.5px] text-ink-soft">{body}</p>
-      <p className="mt-3 text-[13.5px] font-semibold text-brand group-hover:underline">{cta} →</p>
+      <p className="mt-1 line-clamp-2 text-sm text-ink-soft">{body}</p>
+      <p className="mt-3 text-sm font-semibold text-brand group-hover:underline">{cta}</p>
     </Link>
   )
 }

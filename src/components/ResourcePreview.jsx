@@ -1,3 +1,5 @@
+import Icon from './Icon.jsx'
+
 // Shows the server-rendered preview: page 1 sharp (or half-blurred for a one-page sale),
 // then pages 2-4 stacked under an unlock overlay. The blurred images are blurred on the
 // server; nothing here relies on CSS to hide content.
@@ -9,10 +11,10 @@ export default function ResourcePreview({ resource: r, overlayTitle, overlayBody
 
   if (!first) {
     return (
-      <div className="flex h-[340px] flex-col items-center justify-center rounded-slab border border-dashed border-line bg-paper p-8 text-center">
-        <div className="mb-3 text-[44px]" aria-hidden>{r.copy_type === 'hard' ? '📗' : '📄'}</div>
+      <div className="flex h-[340px] flex-col items-center justify-center rounded-slab border border-line bg-paper p-8 text-center">
+        <Icon name={r.copy_type === 'hard' ? 'book-open' : 'file-text'} size={40} stroke={1.5} className="mb-4" />
         <p className="font-semibold">No preview available</p>
-        <p className="mt-1 max-w-xs text-[13.5px] text-ink-soft">
+        <p className="mt-1 max-w-xs text-sm text-ink-soft">
           {r.copy_type === 'hard'
             ? `This is a printed copy${r.pickup_spot ? `, picked up at ${r.pickup_spot}` : ''}.`
             : 'The owner hasn’t added a preview.'}
@@ -27,9 +29,9 @@ export default function ResourcePreview({ resource: r, overlayTitle, overlayBody
 
   return (
     <div>
-      <figure className="relative overflow-hidden rounded-card border border-line bg-white shadow-lift">
+      <figure className="relative overflow-hidden rounded-card border border-line bg-white">
         <img src={first.url} alt={`Page 1 of ${r.title}`} className="block w-full" />
-        <figcaption className="absolute left-3 top-3 rounded-pill bg-ink/75 px-2.5 py-1 text-[11.5px] font-semibold text-white">
+        <figcaption className="absolute left-4 top-4 rounded-control bg-paper px-3 py-2 text-sm font-semibold shadow-[0_0_0_1px_#E4E2DA]">
           Page 1{r.page_count ? ` of ${r.page_count}` : ''}
         </figcaption>
         {first.kind === 'partial' && (
@@ -59,7 +61,7 @@ export default function ResourcePreview({ resource: r, overlayTitle, overlayBody
       {rest.length === 0 && first.kind !== 'partial' && morePages > 0 && (
         <div className="mt-4 rounded-card border border-line bg-paper p-5 text-center">
           <p className="font-display text-[17px] font-bold">{title}</p>
-          {overlayBody && <p className="mt-1 text-[13.5px] text-ink-soft">{overlayBody}</p>}
+          {overlayBody && <p className="mt-1 text-sm text-ink-soft">{overlayBody}</p>}
           {cta && <div className="mt-3 flex flex-wrap justify-center gap-2">{cta}</div>}
         </div>
       )}
@@ -69,10 +71,10 @@ export default function ResourcePreview({ resource: r, overlayTitle, overlayBody
 
 function PreviewOverlay({ title, body, cta, className = '' }) {
   return (
-    <div className={`absolute inset-x-0 bottom-0 flex flex-col items-center justify-center bg-gradient-to-b from-white/30 via-white/80 to-white px-6 text-center ${className}`}>
-      <div className="mb-2 text-[26px]" aria-hidden>🔒</div>
+    <div className={`absolute inset-x-0 bottom-0 flex flex-col items-center justify-center bg-white/80 px-6 text-center ${className}`}>
+      <Icon name="lock" size={24} className="mb-2" />
       <p className="font-display text-[19px] font-bold">{title}</p>
-      {body && <p className="mt-1.5 max-w-sm text-[13.5px] text-ink-soft">{body}</p>}
+      {body && <p className="mt-1.5 max-w-sm text-sm text-ink-soft">{body}</p>}
       {cta && <div className="mt-4 flex flex-wrap justify-center gap-2">{cta}</div>}
     </div>
   )

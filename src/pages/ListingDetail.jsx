@@ -4,6 +4,9 @@ import { listingsApi } from '../services/api.js'
 import { useApi } from '../hooks/useApi.js'
 import { SkeletonDetail } from '../components/SkeletonCard.jsx'
 import { TypeBadge, VerifiedBadge } from '../components/Badge.jsx'
+import Breadcrumb from '../components/Breadcrumb.jsx'
+import { CategoryArt, CategoryLabel } from '../components/CategoryTile.jsx'
+import Icon from '../components/Icon.jsx'
 import ReportModal from '../components/ReportModal.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import ImageLightbox from '../components/ImageLightbox.jsx'
@@ -13,6 +16,7 @@ import PriceTag from '../components/PriceTag.jsx'
 import ShareButton from '../components/ShareButton.jsx'
 import { RENT_PERIODS } from '../data/sample.js'
 import { formatPrice, listedOn, titleCase, foodTempLabel, formatDay, isExpired } from '../lib/format.js'
+import { categoryStyle } from '../lib/categories.js'
 import { openContact } from '../lib/contact.js'
 import Avatar from '../components/Avatar.jsx'
 import LinkifiedText from '../components/LinkifiedText.jsx'
@@ -67,92 +71,90 @@ export default function ListingDetail() {
     }
   }
   const images = l.images && l.images.length > 0 ? l.images : []
+  const own = String(l.seller?.id) === String(user?.id)
+  const tint = categoryStyle(l.category).tint
 
   return (
-    <div className="wrap py-9">
-      <Link to="/marketplace" className="btn-ghost btn-sm mb-5">← Back to Marketplace</Link>
+    <div className="wrap py-8">
+      <Breadcrumb items={[{ label: 'Marketplace', to: '/marketplace' }, { label: l.category }, { label: l.title }]} />
 
-      <div className="grid gap-12 md:grid-cols-[.9fr_1.1fr]">
-        <div>
+      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr] lg:gap-12">
+        <div className="min-w-0">
           {images.length > 0 ? (
             <button
               type="button"
               onClick={() => setViewerOpen(true)}
               aria-label="View full image"
-              className="group relative mb-3 flex h-[340px] w-full cursor-zoom-in items-center justify-center overflow-hidden rounded-slab"
-              style={{ background: l.art.bg }}
+              className="no-lift relative block aspect-[4/3] w-full cursor-zoom-in overflow-hidden rounded-card"
+              style={{ background: tint }}
             >
               <img src={images[activeImage]} alt={l.title} className="h-full w-full object-cover" />
-              <span className="absolute bottom-3 right-3 rounded-pill bg-black/60 px-3 py-1.5 text-[12px] font-semibold text-white opacity-90 transition group-hover:opacity-100">
-                🔍 Click to enlarge
+              <span className="absolute left-4 top-4 rounded-control bg-paper px-3 py-2 text-sm font-semibold">
+                Photo {activeImage + 1} of {images.length}
+              </span>
+              <span className="absolute bottom-4 right-4 inline-flex items-center gap-2 rounded-control bg-paper px-3 py-2 text-sm font-semibold">
+                <Icon name="zoom-in" size={18} /><span className="hidden sm:inline">Click to enlarge</span>
               </span>
             </button>
           ) : (
-            <div className="mb-3 flex h-[340px] items-center justify-center overflow-hidden rounded-slab text-[90px]" style={{ background: l.art.bg }}>
-              {l.art.emoji}
+            <div className="aspect-[4/3]"><CategoryArt category={l.category} iconSize={160} className="rounded-card" /></div>
+          )}
+          {images.length > 1 && (
+            <div className="mt-4 grid grid-cols-4 gap-4">
+              {images.map((src, i) => (
+                <button
+                  key={src}
+                  type="button"
+                  aria-label={`Show photo ${i + 1}`}
+                  aria-pressed={i === activeImage}
+                  onClick={() => setActiveImage(i)}
+                  className={`aspect-[4/3] overflow-hidden rounded-control border-2 ${i === activeImage ? 'border-brand' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                >
+                  <img src={src} alt="" className="h-full w-full object-cover" />
+                </button>
+              ))}
             </div>
           )}
-          <div className="flex gap-2.5">
-            {images.length > 0
-              ? images.map((src, i) => (
-                  <button
-                    key={src}
-                    onClick={() => setActiveImage(i)}
-                    className={`h-[60px] w-[60px] overflow-hidden rounded-control border ${i === activeImage ? 'border-ink' : 'border-line'}`}
-                  >
-                    <img src={src} alt="" className="h-full w-full object-cover" />
-                  </button>
-                ))
-              : [0, 1, 2].map((i) => (
-                  <div key={i} className="flex h-[60px] w-[60px] items-center justify-center rounded-control border border-line text-2xl" style={{ background: l.art.bg }}>
-                    {l.art.emoji}
-                  </div>
-                ))}
-          </div>
         </div>
 
-        <div>
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <TypeBadge type={l.listing_type} />
-            {l.status === 'sold' && <span className="badge bg-coral text-white">Sold</span>}
-            {l.food_temp && (
-              <span className={`badge ${l.food_temp === 'hot' ? 'bg-coral/12 text-coral' : 'bg-brand-tint text-brand'}`}>{foodTempLabel(l)}</span>
-            )}
-            {isExpired(l) && <span className="badge bg-line/60 text-ink-faint">Expired</span>}
-            <VerifiedBadge />
-            <ShareButton
-              className="ml-auto"
-              title={l.title}
-              path={`/listing/${l.id}`}
-              message={`Check out "${l.title}" (${l.listing_type === 'free' ? 'free' : formatPrice(l.price)}${l.listing_type === 'rent' ? ` to rent for ${rentPeriodLabel(l.rent_days) || 'a while'}` : ''}) on CampusMarket`}
-            />
-            {String(l.seller?.id) !== String(user?.id) && (
-              <button
-                type="button"
-                aria-pressed={isSaved(l.id)}
-                onClick={() => toast(toggle(l) ? 'Saved to your wishlist' : 'Removed from your wishlist')}
-                className={`inline-flex items-center gap-1.5 rounded-pill border px-3 py-1 text-[12.5px] font-semibold transition ${
-                  isSaved(l.id) ? 'border-coral bg-coral/10 text-coral' : 'border-line bg-paper text-ink-soft hover:border-ink hover:text-ink'
-                }`}
-              >
-                <span aria-hidden>{isSaved(l.id) ? '♥' : '♡'}</span>
-                {isSaved(l.id) ? 'Saved' : 'Save to wishlist'}
-              </button>
-            )}
+        <div className="flex min-w-0 flex-col gap-6">
+          <div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <CategoryLabel category={l.category} />
+              <StatusLabel status={l.status} />
+              <TypeBadge type={l.listing_type} />
+              {l.food_temp && <span className="badge bg-brand-tint text-brand">{foodTempLabel(l)}</span>}
+              {isExpired(l) && <span className="badge bg-line text-ink-soft">Expired</span>}
+              <ShareButton
+                className="ml-auto"
+                title={l.title}
+                path={`/listing/${l.id}`}
+                message={`Check out "${l.title}" (${l.listing_type === 'free' ? 'free' : formatPrice(l.price)}${l.listing_type === 'rent' ? ` to rent for ${rentPeriodLabel(l.rent_days) || 'a while'}` : ''}) on CampusMarket`}
+              />
+            </div>
+            <h1 className="mt-4 break-words text-[32px] leading-[1.1] lg:text-[40px]">{l.title}</h1>
+            <PriceTag price={l.price} mrp={l.mrp} listingType={l.listing_type} rentDays={l.rent_days} size="lg" className="mt-4" />
+            <p className="mt-2 text-[15px] text-ink-soft">
+              {[l.food_temp ? null : l.condition, l.seller?.campus, l.created_at && listedOn(l.created_at)].filter(Boolean).join(' · ')}
+            </p>
           </div>
-          {l.held && (
-            <p className="mb-4 rounded-control bg-coral/10 px-3 py-2 text-[13px] text-coral">
-            ⏸️ <strong>Held for review.</strong> Several students reported this listing, so it's hidden from everyone else until
-            the CampusMarket team reviews it.
-            {String(l.seller?.id) === String(user?.id)
-              ? " You can still edit it; you'll get a notification with the outcome."
-              : <> Resolve or remove it from <Link to="/admin/reports" className="font-semibold underline">Admin → Reports</Link>.</>}
-          </p>
-          )}
-          <h1 className="text-[28px] font-bold">{l.title}</h1>
-          <PriceTag price={l.price} mrp={l.mrp} listingType={l.listing_type} rentDays={l.rent_days} size="lg" className="my-3" />
 
-          <dl className="my-5 flex flex-wrap gap-5 border-y border-line py-4 text-[13.5px] text-ink-soft">
+          {l.held && (
+            <p className="flex gap-3 rounded-control border border-coral/30 bg-coral/5 p-4 text-sm leading-relaxed text-coral">
+              <Icon name="circle-pause" />
+              <span>
+                <strong>Held for review.</strong> Several students reported this listing, so it's hidden from everyone else until
+                the CampusMarket team reviews it.
+                {own
+                  ? " You can still edit it; you'll get a notification with the outcome."
+                  : <> Resolve or remove it from <Link to="/admin/reports" className="font-semibold underline">Admin → Reports</Link>.</>}
+              </span>
+            </p>
+          )}
+
+          <p className="whitespace-pre-line break-words text-[17px] leading-relaxed text-[#3B3B47]"><LinkifiedText text={l.description} /></p>
+
+          <dl className="flex flex-wrap gap-x-6 gap-y-2 border-y border-line py-4 text-[15px] text-ink-soft">
             {l.food_temp ? (
               <>
                 <div><dt className="inline font-semibold text-ink">Served: </dt><dd className="inline">{foodTempLabel(l)}</dd></div>
@@ -166,7 +168,6 @@ export default function ListingDetail() {
             ) : (
               <div><dt className="inline font-semibold text-ink">Condition: </dt><dd className="inline">{l.condition}</dd></div>
             )}
-            <div><dt className="inline font-semibold text-ink">Category: </dt><dd className="inline">{l.category}</dd></div>
             <div><dt className="inline font-semibold text-ink">Listing type: </dt><dd className="inline">{titleCase(l.listing_type)}</dd></div>
             {l.listing_type === 'rent' && l.rent_days && (
               <div><dt className="inline font-semibold text-ink">Rented for: </dt><dd className="inline">{rentPeriodLabel(l.rent_days)}</dd></div>
@@ -177,46 +178,63 @@ export default function ListingDetail() {
                 <dd className="inline">{l.security_deposit ? `${formatPrice(l.security_deposit)} (refunded when you return it)` : 'None'}</dd>
               </div>
             )}
+            <div><dt className="inline font-semibold text-ink">Pickup spot: </dt><dd className="inline">{l.pickup_spot}</dd></div>
           </dl>
 
-          <p className="my-4 text-[15px] leading-relaxed text-ink-soft whitespace-pre-line"><LinkifiedText text={l.description} /></p>
-
-          <div className="my-5 flex items-center gap-3.5 rounded-card border border-line bg-paper p-4">
-            <Avatar user={l.seller} size={44} className="bg-sun font-display text-ink" />
-            <div>
-              <Link to={`/u/${l.seller.id}`} className="text-[14.5px] font-semibold hover:underline">{l.seller.name || 'Campus student'}</Link>
-              <p className="text-[13px] text-ink-soft">
+          <div className="card flex items-center gap-4 p-6">
+            <Avatar user={l.seller} size={56} className="bg-[#FFE4CF] font-display text-ink" />
+            <div className="min-w-0 flex-1">
+              <Link to={`/u/${l.seller.id}`} className="text-[17px] font-semibold hover:underline">{l.seller.name || 'Campus student'}</Link>
+              <p className="mt-1"><VerifiedBadge /></p>
+              <p className="mt-1 text-sm text-ink-soft">
                 {l.seller.campus ? `${l.seller.campus} · ` : ''}
-                <Link to={`/u/${l.seller.id}`} className="font-semibold text-brand hover:underline">See their items →</Link>
+                <Link to={`/u/${l.seller.id}`} className="font-semibold text-brand hover:underline">See their items</Link>
               </p>
             </div>
-            <span className="ml-auto"><VerifiedBadge /></span>
           </div>
 
-          <p className="mb-5 text-[13.5px] text-ink-soft">
-            <span className="font-semibold text-ink">Pickup spot:</span> {l.pickup_spot} ·{' '}
-            <span className="font-semibold text-ink">Status:</span> {titleCase(l.status)}
-            {l.created_at && <> · <span className="font-semibold text-ink">{listedOn(l.created_at)}</span></>}
-          </p>
-
-          <div className="flex flex-wrap gap-2.5">
+          <div className="flex flex-wrap gap-4">
             {l.status === 'sold' ? (
-              <p className="rounded-pill bg-coral/10 px-4 py-2.5 text-[14px] font-semibold text-coral">This item has been sold.</p>
+              <p className="flex min-h-[52px] flex-[1_1_200px] items-center rounded-control bg-coral/10 px-4 font-semibold text-coral">This item has been sold.</p>
             ) : l.seller?.has_phone ? (
-              <>
-                <button className="btn-accent" disabled={contacting} onClick={() => contact('whatsapp')}>Contact Seller</button>
-                <button className="btn-ghost" disabled={contacting} onClick={() => contact('email')}>Email instead</button>
-              </>
+              <button className="btn-primary flex-[1_1_240px]" disabled={contacting} onClick={() => contact('whatsapp')}>
+                <Icon name="message-circle" />Contact seller on WhatsApp
+              </button>
             ) : (
               // Older accounts may not have a number yet; email still reaches them.
-              <button className="btn-accent" disabled={contacting} onClick={() => contact('email')}>Email Seller</button>
+              <button className="btn-primary flex-[1_1_240px]" disabled={contacting} onClick={() => contact('email')}>
+                <Icon name="mail" />Email seller
+              </button>
             )}
-            {String(l.seller?.id) !== String(user?.id) && (
-              <button className="btn-ghost" onClick={() => setReporting(true)}>Report Listing</button>
+            {!own && (
+              <button
+                type="button"
+                aria-pressed={isSaved(l.id)}
+                aria-label={isSaved(l.id) ? 'Saved to wishlist' : 'Save to wishlist'}
+                onClick={() => toast(toggle(l) ? 'Saved to your wishlist' : 'Removed from your wishlist')}
+                className="btn-secondary flex-[1_0_auto] sm:flex-none"
+              >
+                <Icon name="heart" filled={isSaved(l.id)} className={isSaved(l.id) ? 'text-coral' : ''} />
+                {isSaved(l.id) ? 'Saved' : 'Save'}
+              </button>
             )}
           </div>
 
-          <p className="mt-4 text-[12.5px] text-ink-faint">Meet on campus · Inspect before paying · Cash / UPI</p>
+          {((l.status !== 'sold' && l.seller?.has_phone) || !own) && (
+            <div className="-mt-2 flex flex-wrap gap-4">
+              {l.status !== 'sold' && l.seller?.has_phone && (
+                <button className="btn-ghost btn-sm" disabled={contacting} onClick={() => contact('email')}><Icon name="mail" size={18} />Email instead</button>
+              )}
+              {!own && <button className="btn-ghost btn-sm" onClick={() => setReporting(true)}><Icon name="flag" size={18} />Report listing</button>}
+            </div>
+          )}
+
+          <div className="flex gap-4 rounded-control bg-[#FFF8DC] p-4">
+            <Icon name="map-pin" />
+            <p className="text-sm leading-relaxed">
+              Meet somewhere public on campus, like the library or a hostel lobby. Check the item works before you pay, by cash or UPI.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -232,9 +250,20 @@ export default function ListingDetail() {
 
       <ReportModal open={reporting} onClose={() => setReporting(false)} targetTitle={l.title} listingId={l.id} />
 
-      <div className="mt-10">
+      <div className="mt-section">
         <RecommendedForYou excludeId={l.id} title="More like this" />
       </div>
     </div>
+  )
+}
+
+// "● Available"
+function StatusLabel({ status }) {
+  const tone = { available: ['#16A34A', 'text-leaf'], reserved: ['#CA8A04', 'text-[#854D0E]'], sold: ['#B42318', 'text-coral'] }[status]
+  if (!tone) return null
+  return (
+    <span className={`inline-flex items-center gap-2 text-sm font-semibold ${tone[1]}`}>
+      <span className="dot" style={{ background: tone[0] }} />{titleCase(status)}
+    </span>
   )
 }

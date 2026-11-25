@@ -3,7 +3,8 @@ import { listingsApi } from '../services/api.js'
 import { useApi, useDebounced } from '../hooks/useApi.js'
 import { CATEGORIES, CONDITIONS } from '../data/sample.js'
 import ListingCard from '../components/ListingCard.jsx'
-import { SkeletonGrid } from '../components/SkeletonCard.jsx'
+import Reveal from '../components/Reveal.jsx'
+import { CARD_GRID, SkeletonGrid } from '../components/SkeletonCard.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import PostRequestBanner from '../components/PostRequestBanner.jsx'
 import SearchBar from '../components/SearchBar.jsx'
@@ -64,22 +65,22 @@ export default function Marketplace() {
   const hasFilters = Boolean(debouncedQ) || category !== 'All' || condition !== 'any' || listingType !== 'any' || band !== 'any'
 
   return (
-    <div className="wrap py-9">
+    <div className="wrap py-8 md:py-12">
       <div className="mb-7">
         <h1 className="page-title">Marketplace</h1>
-        <p className="mt-1.5 text-ink-soft">Find useful stuff from students around you.</p>
+        <p className="mt-2 text-[17px] text-ink-soft">Find useful stuff from students around you.</p>
       </div>
 
       <RecommendationBar />
 
       <div ref={listTop} className="mb-5 flex scroll-mt-24 items-baseline justify-between gap-4">
-        <h2 className="text-[22px] font-bold">All listings</h2>
+        <h2 className="text-[26px] md:text-[32px]">All listings</h2>
         {!loading && !error && (
-          <span className="text-[13px] text-ink-faint">{data?.total ?? items.length} {(data?.total ?? items.length) === 1 ? 'item' : 'items'}</span>
+          <span className="text-sm text-ink-soft">{data?.total ?? items.length} {(data?.total ?? items.length) === 1 ? 'item' : 'items'}</span>
         )}
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-2.5">
+      <div className="mb-4 flex flex-wrap gap-4">
         <SearchBar value={q} onChange={setQ} placeholder="Search shoes, calculators, lab kits…" />
         <Select
           label="Sort listings"
@@ -95,9 +96,9 @@ export default function Marketplace() {
         />
       </div>
 
-      <ChipRow options={['All', ...CATEGORIES]} value={category} onChange={setCategory} />
+      <ChipRow label="Category" className="mb-4" options={['All', ...CATEGORIES]} value={category} onChange={setCategory} />
 
-      <div className="mb-7 flex flex-wrap gap-2.5">
+      <div className="mb-8 flex flex-wrap gap-4">
         <Select label="Price" value={band} onChange={setBand} options={PRICE_BANDS.map((b) => ({ value: b.value, label: b.label }))} />
         <Select
           label="Condition"
@@ -151,8 +152,8 @@ export default function Marketplace() {
       )}
 
       {!loading && items.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {items.map((l) => <ListingCard key={l.id} listing={l} />)}
+        <div className={CARD_GRID}>
+          {items.map((l, i) => <Reveal key={l.id} i={i}><ListingCard listing={l} /></Reveal>)}
         </div>
       )}
 
@@ -160,7 +161,7 @@ export default function Marketplace() {
         <Pagination page={data.page} pages={data.pages} total={data.total} pageSize={data.page_size} onChange={goToPage} noun="listings" />
       )}
 
-      <PostRequestBanner className="mt-12" />
+      <PostRequestBanner className="mt-section-sm" />
     </div>
   )
 }

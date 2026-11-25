@@ -12,6 +12,7 @@ import Pagination from '../../components/Pagination.jsx'
 import { usePage } from '../../hooks/usePage.js'
 import RemoveItemModal from '../../components/RemoveItemModal.jsx'
 import { useReportSummary } from '../../hooks/useReportSummary.jsx'
+import { CategoryArt } from '../../components/CategoryTile.jsx'
 
 const VIEWS = ['Listings', 'Resources']
 
@@ -118,8 +119,8 @@ export default function AdminContent() {
             <tr key={l.id}>
               <Td>
                 <div className="flex items-start gap-2.5">
-                  <div className="flex h-11 w-11 flex-none items-center justify-center overflow-hidden rounded-control text-[20px]" style={{ background: l.art?.bg }}>
-                    {l.images?.length ? <img src={l.thumbnail || l.images[0]} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : l.art?.emoji}
+                  <div className="h-11 w-11 flex-none overflow-hidden rounded-control">
+                    <CategoryArt category={l.category} src={l.images?.length ? l.thumbnail || l.images[0] : null} iconSize={20} />
                   </div>
                   <div className="min-w-0">
                     <Link to={`/listing/${l.id}`} className="font-semibold hover:underline">{l.title}</Link>
@@ -130,8 +131,8 @@ export default function AdminContent() {
               <Td><Owner person={l.seller} /></Td>
               <Td className="whitespace-nowrap">{formatPrice(l.price)}</Td>
               <Td><StatusBadge status={l.status} />{l.held && <span className="badge ml-1 bg-coral/12 text-coral">Held for review</span>}</Td>
-              <Td className="whitespace-nowrap tabular-nums"><span title="Different students who opened it">👁 {l.views ?? 0}</span></Td>
-              <Td className="whitespace-nowrap tabular-nums"><span title="Different students who tapped Contact Seller">💬 {l.contacts ?? 0}</span></Td>
+              <Td className="whitespace-nowrap tabular-nums"><span title="Different students who opened it">{l.views ?? 0}</span></Td>
+              <Td className="whitespace-nowrap tabular-nums"><span title="Different students who tapped Contact Seller">{l.contacts ?? 0}</span></Td>
               <Td className="whitespace-nowrap text-ink-soft">{formatDate(l.created_at)}</Td>
               <Td><button className="btn-danger btn-sm" onClick={() => setRemoving({ kind: 'listing', id: l.id, title: l.title })}>Remove</button></Td>
             </tr>

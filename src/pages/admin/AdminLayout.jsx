@@ -87,7 +87,7 @@ function ReviewAlert({ serious, held }) {
   ].filter(Boolean)
   return (
     <div role="alert" className="mb-5 flex flex-wrap items-center gap-3 rounded-card border border-coral/40 bg-coral/10 px-4 py-3 text-[14px] text-coral">
-      <span className="flex-1 font-semibold">⚠ {parts.join(' and ')} need{total === 1 ? 's' : ''} review</span>
+      <span className="flex-1 font-semibold">{parts.join(' and ')} need{total === 1 ? 's' : ''} review</span>
       <Link to="/admin/reports" className="btn-danger btn-sm">Review</Link>
       <button
         type="button"

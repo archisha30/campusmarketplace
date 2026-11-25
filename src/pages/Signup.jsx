@@ -7,10 +7,11 @@ import { PASSWORD_HINT, newPasswordErrors } from '../lib/password.js'
 import PasswordInput from '../components/PasswordInput.jsx'
 import GoogleButton from '../components/GoogleButton.jsx'
 import { revealFirstError } from '../lib/forms.js'
+import Icon from '../components/Icon.jsx'
 
 const ACCOUNT_TYPES = [
-  { value: 'buyer', emoji: '🛍️', title: 'Buyer', body: 'Browse and buy from students on your campus.' },
-  { value: 'seller', emoji: '🏷️', title: 'Seller', body: 'List your own items, and buy too.' },
+  { value: 'buyer', icon: 'shopping-bag', title: 'Buyer', body: 'Browse and buy from students on your campus.' },
+  { value: 'seller', icon: 'tag', title: 'Seller', body: 'List your own items, and buy too.' },
 ]
 
 const CHOOSE_TYPE = 'Choose whether you’re joining as a Buyer or a Seller.'
@@ -82,7 +83,7 @@ export default function Signup() {
   }
 
   return (
-    <div className="mx-auto my-14 w-full max-w-[420px] rounded-slab border border-line bg-paper p-8 md:p-10">
+    <div className="mx-auto my-14 w-full max-w-[min(420px,calc(100%-32px))] rounded-slab border border-line bg-paper p-8 md:p-10">
       {step === 'details' ? (
         <>
           <h2 className="mb-2 text-[26px] font-bold">Join your campus</h2>
@@ -109,7 +110,7 @@ export default function Signup() {
                         onChange={() => chooseType(t.value)}
                         className="sr-only"
                       />
-                      <span className="mb-1 block text-[22px]" aria-hidden>{t.emoji}</span>
+                      <Icon name={t.icon} size={22} className="mb-2" />
                       <span className="block text-[15px] font-semibold">{t.title}</span>
                       <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-soft">{t.body}</span>
                     </label>
@@ -123,7 +124,7 @@ export default function Signup() {
                 aria-live="polite"
                 className="mt-2.5 flex items-start gap-2 rounded-control bg-brand-tint px-3 py-2 text-[12.5px] leading-snug text-brand-deep motion-safe:animate-[fadeIn_.2s_ease-out]"
               >
-                <span aria-hidden>{accountType === 'buyer' ? '💡' : '✨'}</span>
+                <Icon name="lightbulb" size={16} className="mt-px" />
                 {accountType === 'buyer' ? (
                   <span>Want to sell too? Switch to <strong>Seller</strong> anytime from your Profile.</span>
                 ) : (
@@ -202,7 +203,7 @@ export default function Signup() {
       )}
 
       <p className="mt-5 flex gap-2 rounded-xl bg-brand-tint px-3.5 py-3 text-[13px] text-brand-deep">
-        🔒 Only approved institutional domains can sign up.
+        Only approved institutional domains can sign up.
       </p>
 
       <p className="mt-3 text-center text-[12px] text-ink-faint">

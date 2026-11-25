@@ -7,7 +7,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 export default function Notifications() {
   const { isSeller } = useAuth()
   return (
-    <div className="mx-auto max-w-[820px] px-6 py-9">
+    <div className="mx-auto max-w-[820px] px-4 md:px-8 py-9">
       <h1 className="mb-6 page-title">Notifications</h1>
       <NotificationsPanel
         previewCount={Infinity}

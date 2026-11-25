@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Icon from '../components/Icon.jsx'
 import { useNavigate, useParams } from 'react-router-dom'
 import { resourcesApi } from '../services/api.js'
 import { useToast } from '../hooks/useToast.jsx'
@@ -33,18 +34,16 @@ const isBlank = (form) => Object.keys(BLANK).every((k) => String(form[k]).trim()
 
 function Segmented({ legend, value, onChange, options }) {
   return (
-    <fieldset className="mb-4">
+    <fieldset className="mb-6">
       <legend className="field-label">{legend}</legend>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {options.map((o) => (
           <button
             key={o.value}
             type="button"
             aria-pressed={value === o.value}
             onClick={() => onChange(o.value)}
-            className={`flex-1 rounded-control border px-2 py-3 text-[13.5px] font-semibold ${
-              value === o.value ? 'border-brand bg-brand-tint text-brand' : 'border-line bg-paper text-ink-soft'
-            }`}
+            className={`pick ${value === o.value ? 'pick-on' : ''}`}
           >
             {o.label}
           </button>
@@ -55,7 +54,7 @@ function Segmented({ legend, value, onChange, options }) {
 }
 
 function FieldError({ msg }) {
-  return msg ? <p className="mt-1.5 text-[13px] text-coral">{msg}</p> : null
+  return msg ? <p className="field-error">{msg}</p> : null
 }
 
 export default function ResourceForm() {
@@ -233,25 +232,25 @@ export default function ResourceForm() {
   }[fileRole]
 
   return (
-    <div className="wrap py-9">
+    <div className="wrap py-8 md:py-12">
       <h1 className="page-title">{isEdit ? 'Edit your resource' : 'Post to the Resource Hub'}</h1>
-      <p className="mb-7 mt-2.5 text-ink-soft">
+      <p className="mb-8 mt-2 text-[17px] text-ink-soft">
         Sell your notes or give them away. Students see page 1 and a blurred preview of the next few.
       </p>
 
-      <div className="max-w-[640px] rounded-slab border border-line bg-paper p-6 md:p-9">
+      <div className="card max-w-[720px] p-6 md:p-8">
         {draftId && (
-          <p className="mb-5 rounded-control bg-brand-tint px-3 py-2 text-[13px] text-brand-deep">
-            📝 You're working on a draft{savedAt ? `, last saved ${timeAgo(savedAt)}` : ''}. Files aren't kept in drafts, so add the PDF before you post.
+          <p className="mb-6 rounded-control bg-brand-tint p-4 text-sm text-brand-deep">
+            You're working on a draft{savedAt ? `, last saved ${timeAgo(savedAt)}` : ''}. Files aren't kept in drafts, so add the PDF before you post.
           </p>
         )}
-        <div data-field="title" className="mb-4">
+        <div data-field="title" className="mb-6">
           <label className="field-label" htmlFor="title">Title</label>
           <input id="title" aria-invalid={Boolean(errors.title)} className="field-input" maxLength={120} value={form.title} onChange={set('title')} placeholder="e.g. DBMS handwritten notes, units 1–5" />
           <FieldError msg={errors.title} />
         </div>
 
-        <div className="mb-4 grid gap-4 sm:grid-cols-2">
+        <div className="mb-6 grid gap-4 sm:grid-cols-2">
           <div data-field="subject">
             <label className="field-label" htmlFor="subject">Subject</label>
             <select
@@ -294,7 +293,7 @@ export default function ResourceForm() {
           options={[{ value: 'sale', label: 'Sell' }, { value: 'free', label: 'Free / Giveaway' }]} />
 
         {form.offer_type === 'sale' && (
-          <div className="mb-4 grid gap-4 sm:grid-cols-2">
+          <div className="mb-6 grid gap-4 sm:grid-cols-2">
             <div data-field="price">
               <label className="field-label" htmlFor="price">Price (₹)</label>
               <input id="price" type="number" min="1" step="1" inputMode="numeric" aria-invalid={Boolean(errors.price)} className="field-input" value={form.price} onChange={set('price')} placeholder="e.g. 50" />
@@ -316,40 +315,40 @@ export default function ResourceForm() {
             <Segmented legend="Delivered as" value={form.delivery} onChange={choose('delivery')}
               options={[{ value: 'pdf', label: 'PDF upload' }, { value: 'drive', label: 'Drive link' }]} />
             {form.delivery === 'drive' && (
-              <div data-field="drive_url" className="mb-4">
+              <div data-field="drive_url" className="mb-6">
                 <label className="field-label" htmlFor="drive">Drive link</label>
                 <input id="drive" type="url" aria-invalid={Boolean(errors.drive_url)} className="field-input" value={form.drive_url} onChange={set('drive_url')} placeholder="https://drive.google.com/…" />
-                <p className="mt-1.5 text-[12.5px] text-ink-faint">Only shown to students with access. Google Drive/Docs, OneDrive, SharePoint, Dropbox or Mega.</p>
+                <p className="field-help">Only shown to students with access. Google Drive/Docs, OneDrive, SharePoint, Dropbox or Mega.</p>
                 <FieldError msg={errors.drive_url} />
               </div>
             )}
           </>
         ) : (
-          <div data-field="pickup_spot" className="mb-4">
+          <div data-field="pickup_spot" className="mb-6">
             <label className="field-label" htmlFor="pickup">Campus pickup spot</label>
             <input id="pickup" aria-invalid={Boolean(errors.pickup_spot)} className="field-input" maxLength={120} value={form.pickup_spot} onChange={set('pickup_spot')} placeholder="e.g. Library foyer" />
             <FieldError msg={errors.pickup_spot} />
           </div>
         )}
 
-        <div data-field="file" className="mb-4">
+        <div data-field="file" className="mb-6">
           <label className="field-label" htmlFor="pdf">{fileLabel}</label>
           {keepsFile && !file && (
-            <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-control border border-line bg-paper px-3.5 py-2.5 text-[13.5px]">
-              <span>📄 Current file{existing.page_count ? ` · ${existing.page_count} page${existing.page_count === 1 ? '' : 's'}` : ''}</span>
+            <div className="mb-2.5 flex items-center gap-2 rounded-control border border-line bg-paper px-3.5 py-2.5 text-[13.5px]">
+              <Icon name="file-text" /><span>Current file{existing.page_count ? ` · ${existing.page_count} page${existing.page_count === 1 ? '' : 's'}` : ''}</span>
             </div>
           )}
           {file && (
-            <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-control border border-brand/40 bg-brand-tint px-3.5 py-2.5 text-[13.5px]">
-              <span className="truncate">📄 {file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB</span>
+            <div className="mb-2.5 flex items-center gap-2 rounded-control border border-brand bg-brand-tint px-3.5 py-2.5 text-[13.5px]">
+              <Icon name="file-text" /><span className="min-w-0 flex-1 truncate">{file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB</span>
               <button type="button" className="btn-ghost btn-sm ml-auto" onClick={() => setFile(null)}>Clear</button>
             </div>
           )}
-          <div className={`rounded-control border border-dashed p-5 text-center text-[13.5px] text-ink-faint ${errors.file ? 'border-coral bg-coral/5' : 'border-line bg-paper'}`}>
-            <input id="pdf" type="file" accept="application/pdf,.pdf" onChange={pickFile} className="mx-auto mb-2 block" />
+          <div className={`rounded-control border-2 border-dashed p-6 text-center text-sm text-ink-soft ${errors.file ? 'border-coral bg-coral/5' : 'border-line-strong bg-paper'}`}>
+            <input id="pdf" type="file" accept="application/pdf,.pdf" onChange={pickFile} className="mx-auto mb-2 block max-w-full" />
             {hasFile ? 'Choose a file to replace it. ' : ''}PDF only, up to {MAX_PDF_MB} MB, no password.
           </div>
-          <p className="mt-1.5 text-[12.5px] text-ink-faint">{fileHint}</p>
+          <p className="field-help">{fileHint}</p>
           <FieldError msg={errors.file} />
         </div>
 
@@ -365,7 +364,7 @@ export default function ResourceForm() {
           </div>
         </div>
 
-        <div className="flex gap-2.5">
+        <div className="flex flex-wrap gap-4">
           <button className="btn-accent" onClick={save} disabled={saving || savingDraft}>
             {saving ? (isEdit ? 'Saving…' : 'Posting…') : isEdit ? 'Save changes' : 'Post resource'}
           </button>

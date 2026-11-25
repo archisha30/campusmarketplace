@@ -21,6 +21,9 @@ import { recordResourceView } from '../lib/recommendations.js'
 import { trackEvent } from '../lib/analytics.js'
 import ResourcePicks from '../components/ResourcePicks.jsx'
 import { NOTE_MAX, deliveryLabel, upiLink, yearLabel } from '../lib/resources.js'
+import Icon from '../components/Icon.jsx'
+import Breadcrumb from '../components/Breadcrumb.jsx'
+import { FreeTag } from '../components/PriceTag.jsx'
 
 export default function ResourceDetail() {
   const { id } = useParams()
@@ -34,10 +37,10 @@ export default function ResourceDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [r?.id, authLoading])
 
-  if (loading && !r) return <div className="wrap py-9"><div className="skeleton h-96" /></div>
+  if (loading && !r) return <div className="wrap py-8"><div className="skeleton h-96" /></div>
   if (error || !r) {
     return (
-      <div className="wrap py-9">
+      <div className="wrap py-8">
         <EmptyState icon="book-open" title="Resource not found" body="It may have been removed by the owner." actionLabel="Back to Resource Hub" actionTo="/resources" />
       </div>
     )
@@ -47,15 +50,15 @@ export default function ResourceDetail() {
   const isManager = access.reason === 'owner' || access.reason === 'admin'
 
   return (
-    <div className="wrap py-9">
-      <Link to="/resources" className="btn-ghost btn-sm mb-5">← Back to Resource Hub</Link>
+    <div className="wrap py-8">
+      <Breadcrumb items={[{ label: 'Resource Hub', to: '/resources' }, { label: r.subject }, { label: r.title }]} />
 
-      <div className="grid gap-10 md:grid-cols-[1fr_1fr]">
-        <div className="order-2 md:order-1">
+      <div className="grid gap-8 md:grid-cols-2 lg:gap-12">
+        <div className="order-2 min-w-0 md:order-1">
           <ResourcePreview resource={r} {...previewOverlay(r, access)} />
         </div>
 
-        <div className="order-1 md:order-2">
+        <div className="order-1 min-w-0 md:order-2">
           <div className="flex flex-wrap items-start gap-2">
             <ResourceBadges r={r} />
             <ShareButton
@@ -66,10 +69,10 @@ export default function ResourceDetail() {
             />
             {r.access?.reason !== 'owner' && <SaveResourceButton r={r} />}
           </div>
-          <h1 className="mt-3 text-[28px] font-bold">{r.title}</h1>
-          <p className="my-3 font-display text-[32px] font-bold">{r.offer_type === 'free' ? 'Free' : formatPrice(r.price)}</p>
+          <h1 className="mt-4 break-words text-[32px] leading-[1.1] lg:text-[40px]">{r.title}</h1>
+          <p className="hd mt-4 text-[34px] lg:text-[40px]">{r.offer_type === 'free' ? <FreeTag /> : formatPrice(r.price)}</p>
 
-          <dl className="my-5 flex flex-wrap gap-x-5 gap-y-2 border-y border-line py-4 text-[13.5px] text-ink-soft">
+          <dl className="my-5 flex flex-wrap gap-x-5 gap-y-2 border-y border-line py-4 text-[15px] text-ink-soft">
             <div><dt className="inline font-semibold text-ink">Subject: </dt><dd className="inline">{r.subject}</dd></div>
             <div><dt className="inline font-semibold text-ink">Year: </dt><dd className="inline">{yearLabel(r.year)}</dd></div>
             <div><dt className="inline font-semibold text-ink">Format: </dt><dd className="inline">{r.copy_type === 'hard' ? 'Hard copy' : `Soft copy · ${deliveryLabel(r)}`}</dd></div>
@@ -83,7 +86,7 @@ export default function ResourceDetail() {
           </dl>
 
           {r.description && (
-            <p className="my-4 whitespace-pre-line text-[15px] leading-relaxed text-ink-soft"><LinkifiedText text={r.description} /></p>
+            <p className="my-4 whitespace-pre-line break-words text-[17px] leading-relaxed text-[#3B3B47]"><LinkifiedText text={r.description} /></p>
           )}
 
           <AccessPanel r={r} access={access} onChange={setData} />
@@ -108,11 +111,11 @@ export default function ResourceDetail() {
 function ResourceBadges({ r }) {
   return (
     <div className="flex flex-wrap gap-2">
-      <span className={`badge ${r.offer_type === 'free' ? 'bg-coral/12 text-coral' : 'bg-brand-tint text-brand'}`}>
+      <span className={`badge ${r.offer_type === 'free' ? 'bg-sun text-ink' : 'bg-brand-tint text-brand'}`}>
         {r.offer_type === 'free' ? 'Free' : 'For sale'}
       </span>
-      <span className="badge bg-bg text-ink-soft">{r.copy_type === 'hard' ? 'Hard copy' : 'Soft copy'}</span>
-      {r.copy_type === 'soft' && <span className="badge bg-bg text-ink-soft">{deliveryLabel(r)}</span>}
+      <span className="badge border border-line bg-paper text-ink-soft">{r.copy_type === 'hard' ? 'Hard copy' : 'Soft copy'}</span>
+      {r.copy_type === 'soft' && <span className="badge border border-line bg-paper text-ink-soft">{deliveryLabel(r)}</span>}
       {r.status === 'closed' && <span className="badge bg-line/60 text-ink-faint">Closed</span>}
     </div>
   )
@@ -232,9 +235,9 @@ function AccessPanel({ r, access, onChange }) {
     }[access.reason]
     body = (
       <>
-        <p className="mb-3 text-[14.5px] font-semibold text-leaf">✓ {intro}</p>
+        <p className="mb-3 flex items-center gap-2 font-semibold text-leaf"><Icon name="circle-check" />{intro}</p>
         {r.copy_type === 'hard' && (
-          <p className="mb-3 text-[13.5px] text-ink-soft">
+          <p className="mb-3 text-sm text-ink-soft">
             Pick it up at <span className="font-semibold text-ink">{r.pickup_spot}</span>. Message the owner to set a time.
           </p>
         )}
@@ -249,7 +252,7 @@ function AccessPanel({ r, access, onChange }) {
   } else if (access.reason === 'guest') {
     body = (
       <>
-        <p className="mb-3 text-[14.5px] text-ink-soft">
+        <p className="mb-3 text-[15px] text-ink-soft">
           {r.offer_type === 'free'
             ? 'Free for verified students. Log in with your college email to get it.'
             : 'Log in with your college email to request access and see payment details.'}
@@ -260,12 +263,12 @@ function AccessPanel({ r, access, onChange }) {
   } else if (access.reason === 'unverified') {
     body = (
       <>
-        <p className="mb-3 text-[14.5px] text-ink-soft">Verify your college email to get this resource.</p>
+        <p className="mb-3 text-[15px] text-ink-soft">Verify your college email to get this resource.</p>
         <Link to="/login" state={{ from: location.pathname }} className="btn-accent">Verify email</Link>
       </>
     )
   } else if (access.reason === 'closed') {
-    body = <p className="text-[14.5px] text-ink-soft">The owner has closed this resource, so it can’t be requested right now.</p>
+    body = <p className="text-[15px] text-ink-soft">The owner has closed this resource, so it can’t be requested right now.</p>
   } else {
     // locked: paid resource, verified viewer without an approved grant
     const pay = r.upi_id
@@ -273,7 +276,7 @@ function AccessPanel({ r, access, onChange }) {
       : null
     body = (
       <>
-        <ol className="mb-4 list-decimal space-y-1 pl-5 text-[13.5px] text-ink-soft">
+        <ol className="mb-4 list-decimal space-y-1 pl-5 text-sm text-ink-soft">
           <li>
             Pay <span className="font-semibold text-ink">{formatPrice(r.price)}</span> to {r.owner.name}
             {r.upi_id ? <> by UPI (<span className="font-mono text-[12.5px]">{r.upi_id}</span>) or cash.</> : ' by UPI or cash. Message them for details.'}
@@ -287,15 +290,15 @@ function AccessPanel({ r, access, onChange }) {
         )}
 
         {status === 'pending' && (
-          <div className="rounded-control bg-sun/20 p-3.5 text-[13.5px]">
-            <p className="font-semibold text-[#946B00]">Request pending · sent {timeAgo(access.request.updated_at)}</p>
+          <div className="rounded-control bg-[#FFF8DC] p-4 text-sm">
+            <p className="font-semibold text-ink">Request pending · sent {timeAgo(access.request.updated_at)}</p>
             {access.request.note && <p className="mt-1 text-ink-soft">“{access.request.note}”</p>}
             <p className="mt-1 text-ink-soft">The owner will approve it once they confirm your payment.</p>
           </div>
         )}
 
         {status === 'denied' && (
-          <p className="mb-3 rounded-control bg-coral/10 p-3.5 text-[13.5px] text-coral">
+          <p className="mb-3 rounded-control bg-coral/10 p-3.5 text-sm text-coral">
             The owner declined your last request. Check with them, then you can ask again.
           </p>
         )}
@@ -321,7 +324,7 @@ function AccessPanel({ r, access, onChange }) {
   }
 
   return (
-    <section id="access" className="my-5 scroll-mt-24 rounded-card border border-line bg-paper p-5">
+    <section id="access" className="card my-6 scroll-mt-24 p-6">
       {body}
     </section>
   )
@@ -352,20 +355,20 @@ function OwnerCard({ r }) {
   }
 
   return (
-    <div className="my-5 rounded-card border border-line bg-paper p-4">
-      <div className="flex items-center gap-3.5">
-        <Avatar user={o} size={44} className="bg-sun font-display text-ink" />
+    <div className="card my-6 p-6">
+      <div className="flex items-center gap-4">
+        <Avatar user={o} size={56} className="bg-[#FFE4CF] font-display text-ink" />
         <div>
-          <Link to={`/u/${o.id}`} className="text-[14.5px] font-semibold hover:underline">{o.name || 'Campus student'}</Link>
-          <p className="text-[13px] text-ink-soft">
+          <Link to={`/u/${o.id}`} className="text-[15px] font-semibold hover:underline">{o.name || 'Campus student'}</Link>
+          {o.verified && <p className="mt-1"><VerifiedBadge /></p>}
+          <p className="mt-1 text-sm text-ink-soft">
             {o.campus ? `${o.campus} · ` : ''}
-            <Link to={`/u/${o.id}`} className="font-semibold text-brand hover:underline">See their items →</Link>
+            <Link to={`/u/${o.id}`} className="font-semibold text-brand hover:underline">See their items</Link>
           </p>
         </div>
-        {o.verified && <span className="ml-auto"><VerifiedBadge /></span>}
       </div>
       {!isOwn && (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-2">
           {o.has_phone && (
             <button className="btn-ghost btn-sm" disabled={busy} onClick={() => contact('whatsapp')}>WhatsApp</button>
           )}
@@ -435,9 +438,9 @@ function OwnerPanel({ r, onChange, refetch }) {
   const rows = requests.data || []
 
   return (
-    <section id="manage" className="mt-6 scroll-mt-24 rounded-card border border-brand/30 bg-brand-tint/40 p-5">
+    <section id="manage" className="mt-6 scroll-mt-24 rounded-card border border-brand/30 bg-brand-tint p-6">
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <h2 className="mr-auto text-[18px] font-bold">{isOwner ? 'Manage your resource' : 'Admin controls'}</h2>
+        <h2 className="mr-auto text-xl">{isOwner ? 'Manage your resource' : 'Admin controls'}</h2>
         {isOwner && (
           <>
             <button className="btn-ghost btn-sm" onClick={toggleStatus} disabled={busy}>
@@ -449,8 +452,8 @@ function OwnerPanel({ r, onChange, refetch }) {
         <button className="btn-danger btn-sm" onClick={() => setConfirmDelete(true)} disabled={busy}>{isOwner ? 'Delete' : 'Remove'}</button>
       </div>
       {r.held && (
-        <p className="mb-4 rounded-control bg-coral/10 px-3 py-2 text-[13px] text-coral">
-          ⏸️ <strong>Held for review.</strong> Several students reported this resource, so it's hidden from everyone else until
+        <p className="mb-4 rounded-control bg-coral/5 p-4 text-sm text-coral">
+          <strong>Held for review.</strong> Several students reported this resource, so it's hidden from everyone else until
           the CampusMarket team reviews it.
           {isOwner
             ? " You can still edit it; you'll get a notification with the outcome."
@@ -465,12 +468,12 @@ function OwnerPanel({ r, onChange, refetch }) {
       {r.offer_type === 'sale' && (
         <>
           <h3 className="mb-2 text-[15px] font-semibold">
-            Access requests {r.pending_requests ? <span className="badge ml-1 bg-sun/25 text-[#946B00]">{r.pending_requests} pending</span> : null}
+            Access requests {r.pending_requests ? <span className="badge ml-1 bg-sun text-ink">{r.pending_requests} pending</span> : null}
           </h3>
           {requests.loading && !requests.data && <div className="skeleton h-16" />}
           {requests.error && <p className="text-[13px] text-coral">{requests.error.message}</p>}
           {!requests.loading && rows.length === 0 && (
-            <p className="text-[13.5px] text-ink-soft">No requests yet. Buyers pay you by UPI or cash, then request access here.</p>
+            <p className="text-sm text-ink-soft">No requests yet. Buyers pay you by UPI or cash, then request access here.</p>
           )}
           <ul className="space-y-2.5">
             {rows.map((a) => (
@@ -483,7 +486,7 @@ function OwnerPanel({ r, onChange, refetch }) {
                 <p className="mt-0.5 text-[12.5px] text-ink-soft">
                   {a.requester?.email}{a.requester?.phone ? ` · ${formatPhone(a.requester.phone)}` : ''}
                 </p>
-                {a.note && <p className="mt-1.5 text-[13.5px]">“{a.note}”</p>}
+                {a.note && <p className="mt-1.5 text-sm">“{a.note}”</p>}
                 <div className="mt-2.5 flex gap-2">
                   {a.status !== 'approved' && (
                     <button className="btn-accent btn-sm" onClick={() => decide(a.id, 'approved')}>Approve</button>
@@ -512,7 +515,7 @@ function OwnerPanel({ r, onChange, refetch }) {
 
 function RequestStatus({ status }) {
   const tone = {
-    pending: 'bg-sun/25 text-[#946B00]',
+    pending: 'bg-sun text-ink',
     approved: 'bg-leaf/10 text-leaf',
     denied: 'bg-coral/10 text-coral',
   }[status]
@@ -529,11 +532,9 @@ function SaveResourceButton({ r }) {
       type="button"
       aria-pressed={saved}
       onClick={() => toast(toggleResource(r) ? 'Saved to your wishlist' : 'Removed from your wishlist')}
-      className={`inline-flex items-center gap-1.5 rounded-pill border px-3 py-1 text-[12.5px] font-semibold transition ${
-        saved ? 'border-coral bg-coral/10 text-coral' : 'border-line bg-paper text-ink-soft hover:border-ink hover:text-ink'
-      }`}
+      className="chip"
     >
-      <span aria-hidden>{saved ? '♥' : '♡'}</span>
+      <Icon name="heart" size={18} filled={saved} className={saved ? 'text-coral' : ''} />
       {saved ? 'Saved' : 'Save to wishlist'}
     </button>
   )

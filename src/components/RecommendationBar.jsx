@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import Icon from './Icon.jsx'
 import ListingCard from './ListingCard.jsx'
 import { useRecommendations } from '../hooks/useRecommendations.js'
 import { useAuth } from '../hooks/useAuth.jsx'
@@ -41,22 +42,22 @@ export default function RecommendationBar() {
   if (empty && interests.length === 0) return null
 
   return (
-    <section aria-labelledby="picked-for-you" className="mb-8 w-full max-w-[780px] rounded-card border border-brand/15 bg-brand-tint p-3.5 md:p-4">
+    <section aria-labelledby="picked-for-you" className="card mb-12 p-4 md:p-6">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h2 id="picked-for-you" className="text-[18px] font-bold">Picked for you</h2>
+          <h2 id="picked-for-you" className="text-xl">Picked for you</h2>
           {interests.length > 0 ? (
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              <span className="text-[13px] text-ink-soft">Based on your interests</span>
+              <span className="text-sm text-ink-soft">Based on your interests</span>
               {interests.map((c) => (
-                <span key={c} className="rounded-pill bg-paper px-2.5 py-0.5 text-[12px] font-medium text-brand-deep">
+                <span key={c} className="rounded-lg bg-brand-tint px-2 py-0.5 text-sm font-semibold text-brand">
                   {c}
                 </span>
               ))}
-              <Link to="/interests" className="text-[13px] font-semibold text-brand hover:underline">Edit</Link>
+              <Link to="/interests" className="text-sm font-semibold text-brand hover:underline">Edit</Link>
             </div>
           ) : (
-            <p className="mt-1.5 text-[13px] text-ink-soft">
+            <p className="mt-1.5 text-sm text-ink-soft">
               {personalized ? 'Based on what you\'ve been browsing.' : 'Popular on your campus.'}{' '}
               <Link to="/interests" className="font-semibold text-brand hover:underline">Choose your interests</Link>{' '}
               to make this yours.
@@ -70,41 +71,41 @@ export default function RecommendationBar() {
             aria-label="Previous picks"
             onClick={() => page(-1)}
             disabled={edge.atStart}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-paper text-lg transition hover:border-ink disabled:cursor-default disabled:opacity-40 disabled:hover:border-line"
+            className="btn-icon disabled:cursor-default disabled:opacity-40"
           >
-            ‹
+            <Icon name="chevron-left" />
           </button>
           <button
             type="button"
             aria-label="Next picks"
             onClick={() => page(1)}
             disabled={edge.atEnd}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-paper text-lg transition hover:border-ink disabled:cursor-default disabled:opacity-40 disabled:hover:border-line"
+            className="btn-icon disabled:cursor-default disabled:opacity-40"
           >
-            ›
+            <Icon name="chevron-right" />
           </button>
         </div>
       </div>
 
       {empty ? (
-        <p className="rounded-card bg-paper px-4 py-5 text-[13.5px] text-ink-soft">
+        <p className="rounded-control bg-bg px-4 py-5 text-[15px] text-ink-soft">
           Nothing in {interests.join(', ')} right now. New listings in your interests will show up here.
         </p>
       ) : loading ? (
-        <div className="flex gap-3 overflow-hidden">
+        <div className="flex gap-4 overflow-hidden">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="skeleton h-[176px] w-[176px] flex-none" />
+            <div key={i} className="skeleton h-[200px] w-[176px] flex-none" />
           ))}
         </div>
       ) : (
-        <div ref={scroller} onScroll={measure} className="flex snap-x gap-3 overflow-x-auto pb-1">
+        <div ref={scroller} onScroll={measure} className="-mx-2 flex snap-x scroll-px-2 gap-4 overflow-x-auto px-2 py-2">
           {items.map((l) => {
             const matches = interests.length > 1 && interests.includes(l.category)
             return (
               <div key={l.id} className="w-[176px] flex-none snap-start">
                 <ListingCard listing={l} compact />
                 {matches && (
-                  <p className="mt-1.5 truncate px-1 text-[12px] font-medium text-brand-deep">
+                  <p className="mt-1 truncate text-[13px] font-semibold text-brand">
                     Matches {l.category}
                   </p>
                 )}

@@ -2,7 +2,7 @@ import EmptyState from '../components/EmptyState.jsx'
 
 export default function NotFound() {
   return (
-    <div className="mx-auto max-w-[760px] px-6 py-16">
+    <div className="mx-auto max-w-[760px] px-4 md:px-8 py-16">
       <EmptyState
         icon="compass"
         title="That page doesn't exist"

@@ -16,7 +16,7 @@ export function ToastProvider({ children }) {
       {message && (
         <div
           role="status"
-          className="fixed bottom-24 left-1/2 z-[200] -translate-x-1/2 rounded-pill bg-ink px-5 py-3 text-sm font-medium text-white shadow-lg md:bottom-8"
+          className="fixed bottom-24 w-max max-w-[calc(100vw-32px)] left-1/2 z-[200] -translate-x-1/2 rounded-control bg-ink px-6 py-4 text-[15px] font-medium text-white md:bottom-8"
         >
           {message}
         </div>

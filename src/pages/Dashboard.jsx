@@ -12,6 +12,8 @@ import NotificationsPanel from '../components/NotificationsPanel.jsx'
 import { useRequestNotifications } from '../hooks/useRequestNotifications.js'
 import { openContact } from '../lib/contact.js'
 import { formatPrice, isExpired, titleCase, timeAgo } from '../lib/format.js'
+import Icon from '../components/Icon.jsx'
+import { CategoryArt } from '../components/CategoryTile.jsx'
 
 // "Deletes for good in 5h" / "in 40m", counting down to the end of the 24-hour window.
 function timeLeft(iso) {
@@ -31,8 +33,8 @@ const TABS = [
 
 // Where "Continue" takes a draft, and how its row looks.
 const DRAFT_KINDS = {
-  listing: { path: '/sell', emoji: '📦', bg: '#FFF3D6', label: 'listing' },
-  resource: { path: '/resources/new', emoji: '📚', bg: '#EEF0FF', label: 'resource' },
+  listing: { path: '/sell', icon: 'package', label: 'listing' },
+  resource: { path: '/resources/new', icon: 'book-open', label: 'resource' },
 }
 
 function draftPrice(d) {
@@ -132,11 +134,11 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="wrap py-9">
+    <div className="wrap py-8 md:py-12">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="page-title">Seller Dashboard</h1>
-          <p className="mt-1.5 text-[14.5px] text-ink-soft">Your notifications, what students are looking for, and your listings and resources, all in one place.</p>
+          <p className="mt-2 text-[17px] text-ink-soft">Your notifications, what students are looking for, and your listings and resources, all in one place.</p>
         </div>
         <div className="flex gap-2">
           <Link to="/sell" className="btn-accent btn-sm">+ Sell an Item</Link>
@@ -150,7 +152,7 @@ export default function Dashboard() {
       />
       <BuyerRequests />
 
-      <h1 className="mb-6 page-title">My Listings & Resources</h1>
+      <h1 className="mb-4 text-[32px] leading-tight">My Listings & Resources</h1>
 
       <div className="mb-6 flex overflow-x-auto border-b border-line">
         {TABS.map((t) => (
@@ -158,7 +160,7 @@ export default function Dashboard() {
             key={t.label}
             onClick={() => setTab(t)}
             aria-current={tab.label === t.label}
-            className={`-mb-px mr-6 shrink-0 border-b-[2.5px] pb-3 pt-3 text-[14.5px] font-semibold ${
+            className={`-mb-px mr-6 shrink-0 border-b-[2.5px] pb-3 pt-3 text-[15px] font-semibold ${
               tab.label === t.label ? 'border-brand text-ink' : 'border-transparent text-ink-faint'
             }`}
           >
@@ -180,21 +182,21 @@ export default function Dashboard() {
       )}
 
       {showingResources && !loading && myResources.map((r) => (
-        <div key={r.id} className="mb-3 flex flex-wrap items-center gap-4 rounded-card border border-line bg-paper p-3.5">
+        <div key={r.id} className="card mb-4 flex flex-wrap items-center gap-4 p-4">
           <div className="flex h-[60px] w-[60px] flex-none items-center justify-center overflow-hidden rounded-control border border-line bg-bg text-[26px]">
             {r.thumbnail_url
               ? <img src={r.thumbnail_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover object-top" />
-              : <span aria-hidden>{r.copy_type === 'hard' ? '📗' : '📄'}</span>}
+              : <Icon name={r.copy_type === 'hard' ? 'book-open' : 'file-text'} size={24} />}
           </div>
           <div className="min-w-0 flex-1">
-            <Link to={`/resources/${r.id}`} className="text-[14.5px] font-semibold hover:underline">{r.title}</Link>
-            <p className="text-[13px] text-ink-soft">
+            <Link to={`/resources/${r.id}`} className="text-[15px] font-semibold hover:underline">{r.title}</Link>
+            <p className="text-sm text-ink-soft">
               {r.offer_type === 'free' ? 'Free' : formatPrice(r.price)} · {r.subject} · {r.status === 'closed' ? 'Closed' : 'Open'}
               {r.held && <span className="ml-1.5 font-semibold text-coral">· Held for review, hidden until our team checks the reports</span>}
             </p>
             {r.pending_requests > 0 && (
-              <Link to={`/resources/${r.id}#manage`} className="mt-0.5 inline-block text-[12.5px] font-semibold text-brand hover:underline">
-                🔑 {r.pending_requests} access request{r.pending_requests === 1 ? '' : 's'} waiting →
+              <Link to={`/resources/${r.id}#manage`} className="mt-0.5 inline-block text-[13px] font-semibold text-brand hover:underline">
+                {r.pending_requests} access request{r.pending_requests === 1 ? '' : 's'} waiting
               </Link>
             )}
           </div>
@@ -228,16 +230,14 @@ export default function Dashboard() {
         const k = DRAFT_KINDS[d.kind] || DRAFT_KINDS.listing
         const title = String(d.data.title || '').trim()
         return (
-          <div key={d.id} className="mb-3 flex flex-wrap items-center gap-4 rounded-card border border-line bg-paper p-3.5">
-            <div className="flex h-[60px] w-[60px] flex-none items-center justify-center rounded-control text-[26px]" style={{ background: k.bg }}>
-              {k.emoji}
-            </div>
+          <div key={d.id} className="card mb-4 flex flex-wrap items-center gap-4 p-4">
+            <div className="flex h-[60px] w-[60px] flex-none items-center justify-center rounded-control bg-bg"><Icon name={k.icon} size={24} /></div>
             <div className="min-w-0 flex-1">
-              <p className="flex flex-wrap items-center gap-2 text-[14.5px] font-semibold">
+              <p className="flex flex-wrap items-center gap-2 text-[15px] font-semibold">
                 <span className={`break-words ${title ? '' : 'italic text-ink-faint'}`}>{title || 'Untitled draft'}</span>
                 <span className="rounded-pill bg-bg px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">{k.label}</span>
               </p>
-              <p className="text-[13px] text-ink-soft">{draftPrice(d)} · Saved {timeAgo(d.updated_at)}</p>
+              <p className="text-sm text-ink-soft">{draftPrice(d)} · Saved {timeAgo(d.updated_at)}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button className="btn-accent btn-sm" onClick={() => navigate(`${k.path}?draft=${d.id}`)}>Continue</button>
@@ -254,16 +254,16 @@ export default function Dashboard() {
       )}
 
       {showingTrash && !loading && trashed.map((t) => (
-        <div key={`${t.type}-${t.id}`} className="mb-3 flex flex-wrap items-center gap-4 rounded-card border border-dashed border-line bg-paper p-3.5">
-          <div className="flex h-[60px] w-[60px] flex-none items-center justify-center overflow-hidden rounded-control text-[26px] opacity-70" style={{ background: t.bg }}>
-            {t.image ? <img src={t.image} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : t.emoji}
+        <div key={`${t.type}-${t.id}`} className="card mb-4 flex flex-wrap items-center gap-4 border-dashed p-4">
+          <div className="flex h-[60px] w-[60px] flex-none items-center justify-center overflow-hidden rounded-control bg-bg opacity-70">
+            {t.image ? <img src={t.image} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : <Icon name={t.type === 'resource' ? 'book-open' : 'package'} size={24} />}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="flex flex-wrap items-center gap-2 text-[14.5px] font-semibold">
+            <p className="flex flex-wrap items-center gap-2 text-[15px] font-semibold">
               {t.title}
               <span className="rounded-pill bg-bg px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">{t.type}</span>
             </p>
-            <p className="text-[13px] text-ink-soft">
+            <p className="text-sm text-ink-soft">
               Deleted {timeAgo(t.deleted_at)} · <span className="font-semibold text-coral">{timeLeft(t.restore_until)}</span>
             </p>
           </div>
@@ -272,17 +272,13 @@ export default function Dashboard() {
       ))}
 
       {!loading && items.map((l) => (
-        <div key={l.id} className="mb-3 flex flex-wrap items-center gap-4 rounded-card border border-line bg-paper p-3.5">
-          <div className="flex h-[60px] w-[60px] flex-none items-center justify-center overflow-hidden rounded-control text-[26px]" style={{ background: l.art.bg }}>
-            {l.images?.length > 0 ? (
-              <img src={l.thumbnail || l.images[0]} alt={l.title} loading="lazy" decoding="async" className="h-full w-full object-cover" />
-            ) : (
-              l.art.emoji
-            )}
+        <div key={l.id} className="card mb-4 flex flex-wrap items-center gap-4 p-4">
+          <div className="flex h-[60px] w-[60px] flex-none items-center justify-center overflow-hidden rounded-control">
+            <CategoryArt category={l.category} src={l.images?.length > 0 ? l.thumbnail || l.images[0] : null} alt={l.title} iconSize={26} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[14.5px] font-semibold">{l.title}</p>
-            <p className="text-[13px] text-ink-soft">
+            <p className="text-[15px] font-semibold">{l.title}</p>
+            <p className="text-sm text-ink-soft">
               {formatPrice(l.price)} · {titleCase(l.status)}
               {isExpired(l) && <span className="ml-1.5 font-semibold text-coral">· Expired, hidden from the marketplace</span>}
               {l.held && <span className="ml-1.5 font-semibold text-coral">· Held for review, hidden until our team checks the reports</span>}
@@ -314,12 +310,12 @@ export default function Dashboard() {
               Are you sure you want to delete <strong className="text-ink">"{confirmDelete.title}"</strong>? You can restore it from the <strong className="text-ink">Deleted</strong> tab for 24 hours, then it's gone for good.
             </p>
             {confirmDelete.kind === 'listing' && confirmDelete.status !== 'sold' && (
-              <p className="mt-3 rounded-control bg-brand-tint px-3 py-2 text-[12.5px] text-brand-deep">
+              <p className="mt-3 rounded-control bg-brand-tint px-3 py-2 text-[13px] text-brand-deep">
                 Sold it? Use <strong>Mark Sold</strong> instead, so it stays on the marketplace as sold.
               </p>
             )}
             {confirmDelete.kind === 'resource' && confirmDelete.status !== 'closed' && (
-              <p className="mt-3 rounded-control bg-brand-tint px-3 py-2 text-[12.5px] text-brand-deep">
+              <p className="mt-3 rounded-control bg-brand-tint px-3 py-2 text-[13px] text-brand-deep">
                 Just want to stop new requests? Use <strong>Close</strong> instead. Students you've already approved keep their access.
               </p>
             )}
@@ -361,15 +357,15 @@ function BuyerRequests() {
   const shown = showAll ? items : items.slice(0, 5)
 
   return (
-    <section id="requests" className="mb-10 scroll-mt-24 rounded-slab border border-line bg-paper p-5 md:p-6">
+    <section id="requests" className="card mb-12 scroll-mt-24 p-6 md:p-8">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-[19px] font-semibold">
+        <h2 className="flex items-center gap-2 text-2xl">
           Buyer requests
           {unread > 0 && (
-            <span className="rounded-pill bg-coral px-2 py-0.5 text-[11.5px] font-bold text-white">{unread} new</span>
+            <span className="rounded-lg bg-coral px-2 py-1 font-sans text-xs font-bold leading-none tracking-normal text-white">{unread} new</span>
           )}
         </h2>
-        <p className="text-[13px] text-ink-faint">Students looking for something you might have</p>
+        <p className="text-sm text-ink-soft">Got one of these? Message the student and make a quick sale.</p>
       </div>
 
       {loading && <div className="skeleton h-20" />}
@@ -383,7 +379,7 @@ function BuyerRequests() {
       {!loading && shown.map((r) => <RequestRow key={r.id} r={r} fresh={isNew(r)} onDismiss={() => dismiss(r.id)} />)}
 
       {!loading && items.length > 5 && (
-        <button className="mt-2 text-[13.5px] font-semibold text-brand hover:underline" onClick={() => setShowAll((v) => !v)}>
+        <button className="mt-2 text-sm font-semibold text-brand hover:underline" onClick={() => setShowAll((v) => !v)}>
           {showAll ? 'Show fewer' : `Show all ${items.length} requests`}
         </button>
       )}
@@ -425,18 +421,18 @@ function RequestRow({ r, fresh, onDismiss }) {
   }
 
   return (
-    <div className={`mb-2.5 flex items-start gap-3.5 rounded-card border p-3.5 ${fresh ? 'border-brand/30 bg-brand-tint/50' : 'border-line'}`}>
-      <Avatar user={requester} size={38} className="bg-sun font-display text-ink" />
+    <div className={`mb-4 flex flex-wrap items-start gap-4 rounded-card border p-4 sm:flex-nowrap md:p-6 ${fresh ? 'border-brand/30 bg-brand-tint' : 'border-line bg-paper'}`}>
+      <Avatar user={requester} size={44} className="bg-[#FFE4CF] font-display text-ink" />
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] text-ink-soft">
+        <p className="text-sm text-ink-soft">
           <span className="font-semibold text-ink">{requester.name}</span> is looking for
           <span className="ml-2 text-ink-faint">· {timeAgo(r.created_at)}</span>
           {fresh && <span className="ml-2 rounded-pill bg-brand px-1.5 py-px text-[10.5px] font-bold text-white">New</span>}
         </p>
-        <p className="mt-0.5 break-words text-[15px] font-semibold">{r.product}</p>
-        {r.description && <p className="mt-0.5 break-words text-[13.5px] text-ink-soft">{r.description}</p>}
+        <p className="mt-1 break-words text-[17px] font-semibold">{r.product}</p>
+        {r.description && <p className="mt-1 break-words text-sm text-ink-soft">{r.description}</p>}
       </div>
-      <div className="flex flex-none flex-wrap justify-end gap-2">
+      <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto sm:flex-none">
         <button className="btn-ghost btn-sm" disabled={busy} onClick={reply}>
           {requester.has_phone ? 'Reply on WhatsApp' : 'Reply by Email'}
         </button>
@@ -445,9 +441,9 @@ function RequestRow({ r, fresh, onDismiss }) {
           onClick={dismiss}
           aria-label={`Dismiss request for ${r.product}`}
           title="Dismiss"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-[18px] leading-none text-ink-faint hover:bg-bg hover:text-ink"
+          className="flex h-10 w-10 items-center justify-center rounded-control text-ink-soft hover:bg-bg hover:text-ink"
         >
-          ×
+          <Icon name="x" size={18} />
         </button>
       </div>
     </div>
@@ -463,13 +459,13 @@ function ListingStats({ l }) {
   const nudge = l.status === 'available' && l.views >= NUDGE_VIEWS && l.contacts === 0
   return (
     <>
-      <p className="mt-0.5 text-[12.5px] text-ink-faint">
-        <span title="Different students who opened this listing">👁 {l.views} {l.views === 1 ? 'view' : 'views'}</span>
+      <p className="mt-0.5 text-sm text-ink-soft">
+        <span title="Different students who opened this listing">{l.views} {l.views === 1 ? 'view' : 'views'}</span>
         <span className="mx-1.5">·</span>
-        <span title="Different students who tapped Contact Seller">💬 {l.contacts} {l.contacts === 1 ? 'contact' : 'contacts'}</span>
+        <span title="Different students who tapped Contact Seller">{l.contacts} {l.contacts === 1 ? 'contact' : 'contacts'}</span>
       </p>
       {nudge && (
-        <p className="mt-0.5 text-[12.5px] font-medium text-[#946B00]">
+        <p className="mt-0.5 text-[13px] font-medium text-[#854D0E]">
           Lots of views but no contacts yet. A lower price or clearer photos usually help.
         </p>
       )}

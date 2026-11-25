@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { listingsApi } from '../services/api.js'
 import { useToast } from '../hooks/useToast.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
@@ -8,6 +8,9 @@ import { CATEGORIES, CONDITIONS, FOOD_CATEGORY, FOOD_TEMPS, LISTING_TYPES, RENT_
 import { timeAgo, todayISO } from '../lib/format.js'
 import { trackEvent } from '../lib/analytics.js'
 import { shrinkToJpeg } from '../lib/images.js'
+import Icon from '../components/Icon.jsx'
+import { ListingCardView } from '../components/ListingCard.jsx'
+import { categoryStyle } from '../lib/categories.js'
 import PriceTag from '../components/PriceTag.jsx'
 import { revealFirstError } from '../lib/forms.js'
 
@@ -24,7 +27,7 @@ const WHOLE = /^\d+$/ // prices are whole rupees, no paise
 const RUPEES = { type: 'text', inputMode: 'numeric', pattern: '[0-9]*', autoComplete: 'off', maxLength: 7 }
 
 // Error keys in the order the fields appear, for scrolling to the first problem.
-const FIELD_ORDER = ['title', 'price', 'rent_days', 'mrp', 'security_deposit', 'food_temp', 'expiry_date', 'description', 'pickup_spot', 'photos']
+const FIELD_ORDER = ['photos', 'title', 'food_temp', 'expiry_date', 'price', 'rent_days', 'mrp', 'security_deposit', 'description', 'pickup_spot']
 
 // A saved draft back into form state (drafts keep the fields as typed, all strings).
 function fromDraft(data) {
@@ -206,46 +209,150 @@ export default function Sell() {
     return <div className="wrap py-9 text-ink-soft">{loadingDraft ? 'Loading draft…' : 'Loading listing…'}</div>
   }
 
-  return (
-    <div className="wrap py-9">
-      <h1 className="page-title">{isEdit ? 'Edit your listing' : 'List something on CampusMarket'}</h1>
-      <p className="mb-7 mt-2.5 text-ink-soft">
-        {isEdit
-          ? 'Update the details below and save your changes.'
-          : 'Turn your unused college stuff into cash — or pass it on to someone who needs it.'}
-      </p>
+  const pick = (on) => `pick ${on ? 'pick-on' : ''}`
+  const photoCount = existingImages.length + files.length
+  const err = (k) => errors[k] && <p className="field-error">{errors[k]}</p>
 
-      <div className="max-w-[640px] rounded-slab border border-line bg-paper p-6 md:p-9">
+  return (
+    <div className="wrap flex flex-col gap-12 py-8 md:py-12 lg:flex-row lg:items-start lg:gap-16">
+      <div className="flex min-w-0 flex-col gap-8 lg:w-[720px] lg:flex-none lg:shrink">
+        <div>
+          <h1 className="page-title">{isEdit ? 'Edit your listing' : 'Post a listing'}</h1>
+          <p className="mt-2 text-[17px] leading-relaxed text-ink-soft">
+            {isEdit
+              ? 'Update the details below and save your changes.'
+              : 'Takes about a minute. Interested students message you directly.'}
+          </p>
+        </div>
+
         {draftId && (
-          <p className="mb-5 rounded-control bg-brand-tint px-3 py-2 text-[13px] text-brand-deep">
-            📝 You're working on a draft{savedAt ? `, last saved ${timeAgo(savedAt)}` : ''}. Photos aren't kept in drafts, so add them before you publish.
+          <p className="flex gap-3 rounded-control bg-brand-tint p-4 text-sm leading-relaxed text-brand-deep">
+            <Icon name="pencil" />
+            <span>You're working on a draft{savedAt ? `, last saved ${timeAgo(savedAt)}` : ''}. Photos aren't kept in drafts, so add them before you publish.</span>
           </p>
         )}
-        <div className="mb-4" data-field="title">
+
+        <div data-field="photos">
+          <span className="field-label">Photos</span>
+          <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
+            {existingImages.map((src, i) => (
+              <div key={src} className="relative aspect-square">
+                <img src={src} alt={`Current photo ${i + 1}`} className="h-full w-full rounded-control object-cover" />
+                <button
+                  type="button"
+                  aria-label={`Remove photo ${i + 1}`}
+                  onClick={() => setExistingImages((imgs) => imgs.filter((u) => u !== src))}
+                  className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-control border border-line bg-paper text-ink hover:text-coral"
+                >
+                  <Icon name="x" size={18} />
+                </button>
+              </div>
+            ))}
+            {previews.map((src, i) => (
+              <img key={src} src={src} alt={`Upload preview ${i + 1}`} className="aspect-square w-full rounded-control object-cover" />
+            ))}
+            {photoSlots > 0 && (
+              <label
+                htmlFor="photos"
+                className={`lift relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 rounded-control border-2 border-dashed bg-paper p-2 text-center text-sm font-semibold focus-within:border-brand ${errors.photos ? 'border-coral' : 'border-line-strong'}`}
+              >
+                <Icon name="camera" size={24} className="text-brand" />
+                {files.length > 0 ? 'Change photos' : 'Add photo'}
+                <input
+                  id="photos"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => {
+                    setFiles(Array.from(e.target.files).slice(0, photoSlots))
+                    setErrors((x) => ({ ...x, photos: undefined }))
+                  }}
+                  className="sr-only"
+                />
+              </label>
+            )}
+          </div>
+          <p className="field-help">
+            {photoSlots === 0
+              ? 'Maximum of 3 photos reached. Remove one to add a different photo.'
+              : isEdit
+                ? `Add up to ${photoSlots} more image${photoSlots === 1 ? '' : 's'}. Natural light and a plain background work best.`
+                : `At least one photo, up to 3 (PNG or JPG)${photoCount > 1 ? '' : '. Pick them all at once'}.`}
+          </p>
+          {err('photos')}
+        </div>
+
+        <div data-field="title">
           <label className="field-label" htmlFor="title">Title</label>
           <input id="title" className="field-input" aria-invalid={Boolean(errors.title)} value={form.title} onChange={set('title')} placeholder="e.g. Casio fx-991CW" />
-          {errors.title && <p className="mt-1.5 text-[13px] text-coral">{errors.title}</p>}
+          {err('title')}
         </div>
 
-        <div className="mb-4">
-          <label className="field-label" htmlFor="category">Category</label>
-          <select id="category" className="field-input" value={form.category} onChange={setCategory}>
-            {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-          </select>
-        </div>
+        <fieldset>
+          <legend className="field-label">Category</legend>
+          <div className="flex flex-wrap gap-2">
+            {CATEGORIES.map((c) => (
+              <button key={c} type="button" aria-pressed={form.category === c} className={pick(form.category === c)}
+                onClick={() => setCategory({ target: { value: c } })}>
+                <span className="dot" style={{ background: categoryStyle(c).dot }} />{c}
+              </button>
+            ))}
+          </div>
+        </fieldset>
 
-        <fieldset className="mb-4">
-          <legend className="field-label">Listing Type</legend>
-          <div className="flex gap-2">
+        {isFood ? (
+          <>
+            <fieldset data-field="food_temp">
+              <legend className="field-label">Served</legend>
+              <div className="flex flex-wrap gap-2">
+                {FOOD_TEMPS.map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    aria-pressed={form.food_temp === t.value}
+                    onClick={() => { setForm((f) => ({ ...f, food_temp: t.value })); setErrors((x) => ({ ...x, food_temp: undefined })) }}
+                    className={`${pick(form.food_temp === t.value)} ${errors.food_temp ? 'border-coral' : ''}`}
+                  >
+                    <Icon name={t.value === 'hot' ? 'flame' : 'snowflake'} size={18} />{t.label}
+                  </button>
+                ))}
+              </div>
+              {err('food_temp')}
+            </fieldset>
+
+            <div data-field="expiry_date">
+              <label className="field-label" htmlFor="expiry">
+                Expiry date <span className="font-normal text-ink-soft">(optional)</span>
+              </label>
+              <input id="expiry" type="date" min={todayISO()} className="field-input max-w-[280px]" aria-invalid={Boolean(errors.expiry_date)} value={form.expiry_date} onChange={set('expiry_date')} />
+              <p className="field-help">After this date the listing is hidden from the marketplace automatically.</p>
+              {err('expiry_date')}
+            </div>
+          </>
+        ) : (
+          <fieldset>
+            <legend className="field-label">Condition</legend>
+            <div className="flex flex-wrap gap-2">
+              {CONDITIONS.map((c) => (
+                <button key={c} type="button" aria-pressed={form.condition === c} className={pick(form.condition === c)}
+                  onClick={() => set('condition')({ target: { value: c } })}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        )}
+
+        <fieldset>
+          <legend className="field-label">Listing type</legend>
+          <div className="flex flex-wrap gap-2">
             {listingTypes.map((t) => (
               <button
                 key={t.value}
                 type="button"
                 aria-pressed={form.listing_type === t.value}
                 onClick={() => setForm((f) => ({ ...f, listing_type: t.value }))}
-                className={`flex-1 rounded-control border px-2 py-3 text-[13.5px] font-semibold ${
-                  form.listing_type === t.value ? 'border-brand bg-brand-tint text-brand' : 'border-line bg-paper text-ink-soft'
-                }`}
+                className={pick(form.listing_type === t.value)}
               >
                 {t.label}
               </button>
@@ -254,11 +361,11 @@ export default function Sell() {
         </fieldset>
 
         {form.listing_type !== 'free' && (
-          <div className="mb-4 grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
             <div data-field="price">
-              <label className="field-label" htmlFor="price">{isRent ? 'Rent (₹)' : 'Selling price (₹)'}</label>
-              <input id="price" {...RUPEES} className="field-input" aria-invalid={Boolean(errors.price)} value={form.price} onChange={setDigits('price')} placeholder={isRent ? 'e.g. 300' : 'e.g. 900'} />
-              {errors.price && <p className="mt-1.5 text-[13px] text-coral">{errors.price}</p>}
+              <label className="field-label" htmlFor="price">{isRent ? 'Rent' : 'Price'}</label>
+              <Rupees><input id="price" {...RUPEES} className="field-input pl-9" aria-invalid={Boolean(errors.price)} value={form.price} onChange={setDigits('price')} placeholder={isRent ? 'e.g. 300' : 'e.g. 900'} /></Rupees>
+              {err('price')}
             </div>
             {isRent && (
               <div data-field="rent_days">
@@ -267,23 +374,23 @@ export default function Sell() {
                   <option value="" disabled>Select</option>
                   {RENT_PERIODS.map((p) => <option key={p.days} value={p.days}>{p.label}</option>)}
                 </select>
-                {errors.rent_days && <p className="mt-1.5 text-[13px] text-coral">{errors.rent_days}</p>}
+                {err('rent_days')}
               </div>
             )}
             <div data-field="mrp">
-              <label className="field-label" htmlFor="mrp">MRP (₹) <span className="font-normal text-ink-faint">optional</span></label>
-              <input id="mrp" {...RUPEES} className="field-input" aria-invalid={Boolean(errors.mrp)} value={form.mrp} onChange={setDigits('mrp')} placeholder="What you paid" />
-              {errors.mrp && <p className="mt-1.5 text-[13px] text-coral">{errors.mrp}</p>}
+              <label className="field-label" htmlFor="mrp">MRP <span className="font-normal text-ink-soft">(optional)</span></label>
+              <Rupees><input id="mrp" {...RUPEES} className="field-input pl-9" aria-invalid={Boolean(errors.mrp)} value={form.mrp} onChange={setDigits('mrp')} placeholder="What you paid" /></Rupees>
+              {err('mrp')}
             </div>
             {isRent && (
               <div data-field="security_deposit">
-                <label className="field-label" htmlFor="deposit">Security deposit (₹)</label>
-                <input id="deposit" {...RUPEES} className="field-input" aria-invalid={Boolean(errors.security_deposit)} value={form.security_deposit} onChange={setDigits('security_deposit')} placeholder="Optional" />
-                {errors.security_deposit && <p className="mt-1.5 text-[13px] text-coral">{errors.security_deposit}</p>}
+                <label className="field-label" htmlFor="deposit">Security deposit</label>
+                <Rupees><input id="deposit" {...RUPEES} className="field-input pl-9" aria-invalid={Boolean(errors.security_deposit)} value={form.security_deposit} onChange={setDigits('security_deposit')} placeholder="Optional" /></Rupees>
+                {err('security_deposit')}
               </div>
             )}
             {Number(form.price) > 0 && (isRent ? form.rent_days : Number(form.mrp) > Number(form.price)) && (
-              <div className="col-span-2 flex flex-wrap items-baseline gap-x-2 rounded-control bg-brand-tint px-3 py-2 text-[12.5px] text-brand-deep">
+              <div className="flex flex-wrap items-baseline gap-x-2 rounded-control bg-brand-tint px-4 py-3 text-sm text-brand-deep sm:col-span-2">
                 <span>{isRent ? 'Renters will see:' : 'Buyers will see:'}</span>
                 <PriceTag price={Number(form.price)} mrp={Number(form.mrp) || null} listingType={form.listing_type}
                   rentDays={Number(form.rent_days) || null} deposit={Number(form.security_deposit) || null} size="sm" />
@@ -292,121 +399,77 @@ export default function Sell() {
           </div>
         )}
 
-        {isFood ? (
-          <>
-            <fieldset className="mb-4" data-field="food_temp">
-              <legend className="field-label">Served</legend>
-              <div className="flex gap-2">
-                {FOOD_TEMPS.map((t) => (
-                  <button
-                    key={t.value}
-                    type="button"
-                    aria-pressed={form.food_temp === t.value}
-                    onClick={() => { setForm((f) => ({ ...f, food_temp: t.value })); setErrors((x) => ({ ...x, food_temp: undefined })) }}
-                    className={`flex-1 rounded-control border px-2 py-3 text-[13.5px] font-semibold ${
-                      form.food_temp === t.value ? 'border-brand bg-brand-tint text-brand' : errors.food_temp ? 'border-coral bg-coral/5 text-ink-soft' : 'border-line bg-paper text-ink-soft'
-                    }`}
-                  >
-                    {t.emoji} {t.label}
-                  </button>
-                ))}
-              </div>
-              {errors.food_temp && <p className="mt-1.5 text-[13px] text-coral">{errors.food_temp}</p>}
-            </fieldset>
-
-            <div className="mb-4" data-field="expiry_date">
-              <label className="field-label" htmlFor="expiry">
-                Expiry date <span className="font-normal text-ink-faint">(optional)</span>
-              </label>
-              <input id="expiry" type="date" min={todayISO()} className="field-input" aria-invalid={Boolean(errors.expiry_date)} value={form.expiry_date} onChange={set('expiry_date')} />
-              <p className="mt-1.5 text-[12.5px] text-ink-faint">After this date the listing is hidden from the marketplace automatically.</p>
-              {errors.expiry_date && <p className="mt-1.5 text-[13px] text-coral">{errors.expiry_date}</p>}
-            </div>
-          </>
-        ) : (
-          <div className="mb-4">
-            <label className="field-label" htmlFor="condition">Condition</label>
-            <select id="condition" className="field-input" value={form.condition} onChange={set('condition')}>
-              {CONDITIONS.map((c) => <option key={c}>{c}</option>)}
-            </select>
-          </div>
-        )}
-
-        <div className="mb-4" data-field="description">
+        <div data-field="description">
           <label className="field-label" htmlFor="description">Description</label>
           <textarea id="description" rows={4} maxLength={2000} className="field-input resize-y" aria-invalid={Boolean(errors.description)} value={form.description} onChange={set('description')}
             placeholder={isFood ? 'What is it, how many portions, any allergens (nuts, dairy…)?' : "Describe the item, its condition, and why you're passing it on."} />
-          {errors.description && <p className="mt-1.5 text-[13px] text-coral">{errors.description}</p>}
+          {err('description')}
         </div>
 
-        <div className="mb-4" data-field="pickup_spot">
-          <label className="field-label" htmlFor="pickup">Campus Pickup Spot</label>
+        <div data-field="pickup_spot">
+          <label className="field-label" htmlFor="pickup">Pickup spot</label>
           <input id="pickup" className="field-input" aria-invalid={Boolean(errors.pickup_spot)} value={form.pickup_spot} onChange={set('pickup_spot')} placeholder="e.g. Library Foyer" />
-          {errors.pickup_spot && <p className="mt-1.5 text-[13px] text-coral">{errors.pickup_spot}</p>}
+          {err('pickup_spot')}
         </div>
 
-        <div className="mb-6" data-field="photos">
-          <label className="field-label" htmlFor="photos">{isEdit ? 'Photos (1–3)' : 'Upload Photos (1–3)'}</label>
-          {existingImages.length > 0 && (
-            <div className="mb-3 flex flex-wrap gap-2.5">
-              {existingImages.map((src, i) => (
-                <div key={src} className="relative">
-                  <img src={src} alt={`Current photo ${i + 1}`}
-                    className="h-[70px] w-[70px] rounded-control border border-line object-cover" />
-                  <button
-                    type="button"
-                    aria-label={`Remove photo ${i + 1}`}
-                    onClick={() => setExistingImages((imgs) => imgs.filter((u) => u !== src))}
-                    className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-ink text-[12px] font-bold text-white shadow hover:bg-coral"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
+        {user?.phone && (
+          <div>
+            <span className="field-label">Contact</span>
+            <div className="card flex items-center gap-4 p-4">
+              <Icon name="message-circle" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-semibold">WhatsApp +91 ••••• •{String(user.phone).slice(-4)}</p>
+                <p className="mt-1 text-sm text-ink-soft">Buyers tap “Contact seller” to message you. Your number isn't shown on the listing.</p>
+              </div>
+              {/* A new tab, so what's typed here isn't lost. */}
+              <Link to="/profile" target="_blank" className="text-sm font-semibold underline">Change</Link>
             </div>
-          )}
-          {photoSlots === 0 ? (
-            <p className="text-[13.5px] text-ink-faint">Maximum of 3 photos reached. Remove one (✕) to add a different photo.</p>
-          ) : (
-          <div className={`rounded-control border border-dashed p-6 text-center text-[13.5px] text-ink-faint ${errors.photos ? 'border-coral bg-coral/5' : 'border-line bg-paper'}`}>
-            <input
-              id="photos"
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(e) => {
-                setFiles(Array.from(e.target.files).slice(0, photoSlots))
-                setErrors((x) => ({ ...x, photos: undefined }))
-              }}
-              className="mx-auto mb-2 block"
-            />
-            {isEdit ? `Add up to ${photoSlots} more image${photoSlots === 1 ? '' : 's'}` : 'At least one photo, up to 3 (PNG or JPG)'}
           </div>
-          )}
-          {errors.photos && <p className="mt-1.5 text-[13px] text-coral">{errors.photos}</p>}
-          {previews.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2.5">
-              {previews.map((src, i) => (
-                <img key={src} src={src} alt={`Upload preview ${i + 1}`} loading="lazy"
-                  className="h-[70px] w-[70px] rounded-control border border-line object-cover" />
-              ))}
-            </div>
-          )}
-        </div>
+        )}
 
-        <div className="flex gap-2.5">
-          <button className="btn-accent" onClick={publish} disabled={saving || savingDraft}>
-            {saving ? (isEdit ? 'Saving…' : 'Publishing…') : isEdit ? 'Save Changes' : 'Publish Listing'}
+        <div className="flex flex-wrap gap-4">
+          <button className="btn-primary" onClick={publish} disabled={saving || savingDraft}>
+            {saving ? (isEdit ? 'Saving…' : 'Publishing…') : isEdit ? 'Save changes' : 'Post listing'}
           </button>
           {isEdit ? (
-            <button className="btn-ghost" onClick={() => navigate('/dashboard')}>Cancel</button>
+            <button className="btn-secondary" onClick={() => navigate('/dashboard')}>Cancel</button>
           ) : (
-            <button className="btn-ghost" onClick={onSaveDraft} disabled={saving || savingDraft}>
-              {savingDraft ? 'Saving…' : draftId ? 'Update Draft' : 'Save Draft'}
+            <button className="btn-secondary" onClick={onSaveDraft} disabled={saving || savingDraft}>
+              {savingDraft ? 'Saving…' : draftId ? 'Update draft' : 'Save draft'}
             </button>
           )}
         </div>
       </div>
+
+      <aside className="w-full max-w-[320px] lg:sticky lg:top-28">
+        <p className="field-label !mb-4">Preview</p>
+        <ListingCardView
+          photo={existingImages[0] || previews[0]}
+          listing={{
+            title: form.title.trim() || 'Your title',
+            category: form.category,
+            listing_type: form.listing_type,
+            price: form.listing_type === 'free' ? 0 : form.price === '' ? null : Number(form.price),
+            mrp: form.listing_type === 'free' ? null : Number(form.mrp) || null,
+            rent_days: form.rent_days,
+            condition: form.condition,
+            food_temp: isFood ? form.food_temp : null,
+            expiry_date: isFood ? form.expiry_date : null,
+            seller: { campus: user?.college || user?.campus },
+          }}
+        />
+        <p className="mt-4 text-sm text-ink-soft">This is how your listing appears in the marketplace.</p>
+      </aside>
+    </div>
+  )
+}
+
+// A rupee sign inside the left of a price box.
+function Rupees({ children }) {
+  return (
+    <div className="relative">
+      <span aria-hidden className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-soft">₹</span>
+      {children}
     </div>
   )
 }

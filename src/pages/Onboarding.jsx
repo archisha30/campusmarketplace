@@ -34,7 +34,7 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="mx-auto my-14 w-full max-w-[420px] rounded-slab border border-line bg-paper p-8 md:p-10">
+    <div className="mx-auto my-14 w-full max-w-[min(420px,calc(100%-32px))] rounded-slab border border-line bg-paper p-8 md:p-10">
       <h2 className="mb-2 text-[26px] font-bold">Tell us about you</h2>
       <p className="mb-6 text-sm text-ink-soft">A few details so buyers know who they're meeting.</p>
 

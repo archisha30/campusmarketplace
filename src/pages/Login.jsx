@@ -33,7 +33,7 @@ export default function Login() {
   }
 
   return (
-    <div className="mx-auto my-14 w-full max-w-[420px] rounded-slab border border-line bg-paper p-8 md:p-10">
+    <div className="mx-auto my-14 w-full max-w-[min(420px,calc(100%-32px))] rounded-slab border border-line bg-paper p-8 md:p-10">
       <h2 className="mb-2 text-[26px] font-bold">Welcome back</h2>
       <p className="mb-6 text-sm text-ink-soft">Log in with your college email and password.</p>
 
@@ -77,7 +77,7 @@ export default function Login() {
       </form>
 
       <p className="mt-5 flex gap-2 rounded-xl bg-brand-tint px-3.5 py-3 text-[13px] text-brand-deep">
-        🔒 CampusMarket is only available to verified students from approved institutional domains.
+        CampusMarket is only available to verified students from approved institutional domains.
       </p>
 
       <p className="mt-5 text-center text-[13.5px] text-ink-soft">

@@ -4,7 +4,9 @@ import { resourcesApi } from '../services/api.js'
 import { useApi, useDebounced } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import SearchBar from '../components/SearchBar.jsx'
-import { Select } from '../components/FilterBar.jsx'
+import Icon from '../components/Icon.jsx'
+import Reveal from '../components/Reveal.jsx'
+import { ChipRow, Select } from '../components/FilterBar.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import PostRequestBanner from '../components/PostRequestBanner.jsx'
 import { SUBJECTS, YEARS } from '../lib/resources.js'
@@ -54,51 +56,51 @@ export default function Resources() {
   const filtered = Boolean(debouncedQ) || subject !== 'All' || year !== 'any' || copyType !== 'any' || offerType !== 'any'
 
   return (
-    <div className="wrap py-9">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="wrap py-8 md:py-12">
+      <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <h1 className="page-title">Resource Hub</h1>
-          <p className="mt-2.5 max-w-2xl text-[14.5px] text-ink-soft">
+          <p className="mt-2 max-w-[640px] text-[17px] leading-relaxed text-ink-soft">
             Notes, question banks and printed copies from students on your campus. Preview the first page,
             then buy or grab the free ones. Payment is by UPI or cash, straight to the student.
           </p>
         </div>
-        {isSeller && <Link to="/resources/new" className="btn-accent">+ Post a resource</Link>}
+        {isSeller && <Link to="/resources/new" className="btn-primary"><Icon name="upload" />Share your notes</Link>}
       </div>
 
-      <div className="mt-6">{!mine && !filtered && <ResourcePicks />}</div>
+      <div className="mt-8">{!mine && !filtered && <ResourcePicks />}</div>
 
-      <div ref={listTop} className="mb-5 flex scroll-mt-24 flex-wrap gap-2.5">
+      <div ref={listTop} className="mb-4 flex scroll-mt-24 flex-wrap gap-4">
         <SearchBar value={q} onChange={setQ} placeholder="Search titles, subjects, descriptions…" />
       </div>
 
-      <div className="mb-7 flex flex-wrap items-center gap-2.5">
+      <div className="mb-4 flex flex-wrap items-center gap-4">
         <Select label="Subject" value={subject} onChange={setSubject}
           options={[{ value: 'All', label: 'All subjects' }, ...subjects.map((s) => ({ value: s, label: s }))]} />
         <Select label="Year" value={year} onChange={setYear}
           options={[{ value: 'any', label: 'All years' }, ...YEARS.filter((y) => y.value !== 'any')]} />
         <Select label="Copy type" value={copyType} onChange={setCopyType}
           options={[{ value: 'any', label: 'Soft & hard copies' }, { value: 'soft', label: 'Soft copy' }, { value: 'hard', label: 'Hard copy' }]} />
-        <Select label="Offer type" value={offerType} onChange={setOfferType}
-          options={[{ value: 'any', label: 'Paid & free' }, { value: 'sale', label: 'For sale' }, { value: 'free', label: 'Free' }]} />
         <Select label="Sort" value={sort} onChange={setSort} options={SORTS} />
+      </div>
+
+      <ChipRow
+        label="Offer type"
+        className="mb-8"
+        options={[{ value: 'any', label: 'All' }, { value: 'free', label: 'Free only' }, { value: 'sale', label: 'For sale' }]}
+        value={offerType}
+        onChange={setOfferType}
+      >
         {isSeller && (
-          <button
-            type="button"
-            aria-pressed={mine}
-            onClick={() => setMine((m) => !m)}
-            className={`rounded-pill border px-4 py-2 text-[13.5px] font-semibold transition ${
-              mine ? 'border-brand bg-brand text-white' : 'border-line bg-paper text-ink-soft hover:border-ink'
-            }`}
-          >
+          <button type="button" aria-pressed={mine} onClick={() => setMine((m) => !m)} className={`chip ${mine ? 'chip-on' : ''}`}>
             Mine
           </button>
         )}
-      </div>
+      </ChipRow>
 
       {loading && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton h-[300px]" />)}
+        <div className="grid gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton aspect-[4/3]" />)}
         </div>
       )}
 
@@ -115,8 +117,8 @@ export default function Resources() {
       )}
 
       {!loading && !error && items.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((r) => <ResourceCard key={r.id} r={r} />)}
+        <div className="grid gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((r, i) => <Reveal key={r.id} i={i % 3}><ResourceCard r={r} /></Reveal>)}
         </div>
       )}
 
@@ -124,7 +126,7 @@ export default function Resources() {
         <Pagination page={data.page} pages={data.pages} total={data.total} pageSize={data.page_size} onChange={goToPage} noun="resources" />
       )}
 
-      <PostRequestBanner className="mt-12" />
+      <PostRequestBanner className="mt-section-sm" />
     </div>
   )
 }

@@ -19,8 +19,8 @@ export default function Modal({ open, onClose, title, children }) {
       className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/45 p-5"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div role="dialog" aria-modal="true" aria-label={title} className="w-full max-w-sm rounded-slab bg-paper p-7">
-        <h3 className="mb-4 text-[19px] font-semibold">{title}</h3>
+      <div role="dialog" aria-modal="true" aria-label={title} className="max-h-[calc(100dvh-40px)] w-full max-w-md overflow-y-auto rounded-card bg-paper p-6 md:p-8">
+        <h3 className="mb-4 text-2xl leading-tight">{title}</h3>
         {children}
       </div>
     </div>
