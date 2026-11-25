@@ -5,15 +5,32 @@ Off unless SENTRY_DSN is set (so local development and tests send nothing).
 
 Privacy: nothing that identifies a student is sent. No IP addresses, cookies, login tokens,
 user details or request bodies (bodies hold passwords and login codes). Only the method, path,
-query string and the error itself.
+query string and the error itself, with any email address replaced by "[email]" (an email
+provider's error reply, for example, can quote the student's address).
 """
 
 import os
+import re
 
 from app.core.config import settings
 
 # Request headers that could identify someone or carry their session.
 _PRIVATE_HEADERS = {"authorization", "cookie", "x-forwarded-for", "x-real-ip", "cf-connecting-ip", "true-client-ip"}
+
+# Anything like name@domain, also URL-encoded (%40). Deliberately loose (no ".com" needed), so an
+# address cut short is hidden too. Lengths are capped so a huge error message can't make it slow.
+_EMAIL = re.compile(r"[\w.+%-]{1,64}(?:'[\w.+%-]{1,64}){0,3}(?:@|%(?:25)*40)[\w.-]{1,255}")
+
+
+def hide_emails(value):
+    """Copy of an event (nested dicts, lists and text) with every email address hidden."""
+    if isinstance(value, str):
+        return _EMAIL.sub("[email]", value)
+    if isinstance(value, dict):
+        return {hide_emails(k): hide_emails(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [hide_emails(v) for v in value]
+    return value
 
 
 def scrub(event: dict, hint: dict | None = None) -> dict:
@@ -35,7 +52,7 @@ def scrub(event: dict, hint: dict | None = None) -> dict:
         if isinstance(headers, dict):
             for name in [h for h in headers if h.lower() in _PRIVATE_HEADERS]:
                 headers.pop(name)
-    return event
+    return hide_emails(event)
 
 
 def setup_sentry() -> bool:
