@@ -8,12 +8,16 @@ import { useRequestNotifications } from '../hooks/useRequestNotifications.js'
 import { useNotifications } from '../hooks/useNotifications.js'
 import { useReportSummary } from '../hooks/useReportSummary.jsx'
 
-// Logged-out visitors only see "How It Works"; the marketplace and Resource Hub links
-// appear once they've logged in or signed up.
-const GUEST_LINKS = [{ to: '/#how-it-works', label: 'How It Works' }]
+// Everyone sees "How It Works"; the marketplace and Resource Hub links appear once they've
+// logged in or signed up.
+const HOW_LINK = { to: '/how-it-works', label: 'How It Works' }
+const GUEST_LINKS = [HOW_LINK]
 const MEMBER_LINKS = [
   { to: '/marketplace', label: 'Marketplace' },
   { to: '/resources', label: 'Resource Hub' },
+  // Wide screens only in the top bar: there's no room beside the logged-in buttons on a tablet
+  // (the footer links to it at every size).
+  { ...HOW_LINK, wideOnly: true },
 ]
 
 export default function Navbar() {
@@ -35,7 +39,7 @@ export default function Navbar() {
               key={l.to}
               to={l.to}
               className={({ isActive }) =>
-                `rounded-pill px-3.5 py-2 text-[14.5px] font-medium transition ${
+                `rounded-pill px-3.5 py-2 text-[14.5px] font-medium transition ${l.wideOnly ? 'hidden lg:block' : ''} ${
                   isActive ? 'bg-ink text-white' : 'text-ink-soft hover:bg-black/5 hover:text-ink'
                 }`
               }

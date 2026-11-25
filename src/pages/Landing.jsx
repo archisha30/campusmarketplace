@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
+import HowItWorksSteps from '../components/HowItWorksSteps.jsx'
 import PostRequestBanner from '../components/PostRequestBanner.jsx'
 import PriceTag from '../components/PriceTag.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
@@ -10,12 +11,6 @@ const TRUST = [
   { icon: '📦', title: 'Zero Shipping', body: 'Buy directly from someone nearby and pick it up on campus.' },
   { icon: '🧑‍🤝‍🧑', title: 'Real People, Real Campus', body: "See the seller's campus and verified status before you meet." },
   { icon: '⚡', title: 'Simple & Fast', body: 'Find what you need without digging through hundreds of WhatsApp messages.' },
-]
-
-const STEPS = [
-  { kicker: 'Find', title: 'Search what you need', body: 'Textbooks, electronics, dorm essentials, lab equipment, and more.' },
-  { kicker: 'Connect', title: 'Message the seller', body: 'Contact the verified student directly through WhatsApp or email.' },
-  { kicker: 'Meet & Exchange', title: 'Trade on campus', body: 'Meet at a safe campus location, inspect the item, and pay via cash or UPI.' },
 ]
 
 // The landing page is only for visitors who aren't logged in (verified students go straight to the
@@ -30,6 +25,7 @@ const GUEST_TILES = [
 
 export default function Landing() {
   const { user, isVerified, loading: authLoading } = useAuth()
+  const { hash } = useLocation()
   const [popular, setPopular] = useState(null) // null while loading
 
   useEffect(() => {
@@ -37,7 +33,8 @@ export default function Landing() {
   }, [])
 
   // Logged-in students only use the Marketplace and Resource Hub; the landing page is for visitors.
-  if (!authLoading && isVerified) return <Navigate to="/marketplace" replace />
+  // (Old links to the how-it-works section still show it to them, on its own page.)
+  if (!authLoading && isVerified) return <Navigate to={hash === '#how-it-works' ? '/how-it-works' : '/marketplace'} replace />
 
   return (
     <>
@@ -103,18 +100,7 @@ export default function Landing() {
       <section id="how-it-works" className="mx-auto max-w-[1180px] px-6 py-16">
         <h2 className="mb-2 text-[28px] font-bold md:text-[34px]">How it works</h2>
         <p className="mb-10 text-ink-soft">Three steps from browsing to handshake.</p>
-        <div className="grid gap-8 md:grid-cols-3">
-          {STEPS.map((s) => (
-            <div key={s.kicker}>
-              <div className="relative mb-3.5 h-0.5 bg-line">
-                <span className="absolute -top-1 left-0 h-2.5 w-2.5 rounded-full bg-brand" />
-              </div>
-              <p className="mb-3 font-display text-[13px] font-semibold text-brand">{s.kicker}</p>
-              <h3 className="mb-2 text-[19px] font-semibold">{s.title}</h3>
-              <p className="text-[14.5px] text-ink-soft">{s.body}</p>
-            </div>
-          ))}
-        </div>
+        <HowItWorksSteps />
       </section>
 
       <PostRequestBanner className="mx-auto max-w-[1180px] px-6 pb-16" />

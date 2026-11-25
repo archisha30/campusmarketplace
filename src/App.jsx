@@ -12,6 +12,7 @@ import SoldCheckPrompt from './components/SoldCheckPrompt.jsx'
 import SetPasswordModal from './components/SetPasswordModal.jsx'
 
 import Landing from './pages/Landing.jsx'
+import HowItWorks from './pages/HowItWorks.jsx'
 import Marketplace from './pages/Marketplace.jsx'
 import ListingDetail from './pages/ListingDetail.jsx'
 import Sell from './pages/Sell.jsx'
@@ -53,6 +54,7 @@ export default function App() {
         <ErrorBoundary resetKey={location.pathname}>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

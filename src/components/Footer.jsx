@@ -10,6 +10,7 @@ export default function Footer() {
       <div className="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-3 px-6 text-[13.5px] text-ink-faint">
         <span>© 2026 CampusMarket · Built by students, for students</span>
         <span className="flex flex-wrap items-center gap-4">
+          <Link to="/how-it-works" className="hover:text-ink">How it works</Link>
           <Link to="/privacy" className="hover:text-ink">Privacy</Link>
           <Link to="/terms" className="hover:text-ink">Terms</Link>
           {/* Sellers' way into their dashboard; hidden when they're already on it. */}
