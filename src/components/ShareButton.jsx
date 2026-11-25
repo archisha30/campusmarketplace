@@ -54,7 +54,7 @@ export default function ShareButton({ title, message, path, className = '' }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-pill border-[1.5px] border-line bg-paper px-3 py-1 text-[12.5px] font-semibold text-ink-soft transition hover:border-ink hover:text-ink"
+        className="inline-flex items-center gap-1.5 rounded-pill border border-line bg-paper px-3 py-1 text-[12.5px] font-semibold text-ink-soft transition hover:border-ink hover:text-ink"
       >
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />

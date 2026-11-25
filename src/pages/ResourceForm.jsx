@@ -42,8 +42,8 @@ function Segmented({ legend, value, onChange, options }) {
             type="button"
             aria-pressed={value === o.value}
             onClick={() => onChange(o.value)}
-            className={`flex-1 rounded-[11px] border-[1.5px] px-2 py-3 text-[13.5px] font-semibold ${
-              value === o.value ? 'border-brand bg-brand-tint text-brand' : 'border-line bg-[#fbfbf9] text-ink-soft'
+            className={`flex-1 rounded-control border px-2 py-3 text-[13.5px] font-semibold ${
+              value === o.value ? 'border-brand bg-brand-tint text-brand' : 'border-line bg-paper text-ink-soft'
             }`}
           >
             {o.label}
@@ -218,7 +218,7 @@ export default function ResourceForm() {
   }
 
   if (loadingResource || loadingDraft) {
-    return <div className="mx-auto max-w-[1180px] px-6 py-9 text-ink-soft">{loadingDraft ? 'Loading draft…' : 'Loading resource…'}</div>
+    return <div className="wrap py-9 text-ink-soft">{loadingDraft ? 'Loading draft…' : 'Loading resource…'}</div>
   }
 
   const fileLabel = {
@@ -233,15 +233,15 @@ export default function ResourceForm() {
   }[fileRole]
 
   return (
-    <div className="mx-auto max-w-[1180px] px-6 py-9">
-      <h1 className="text-[30px] font-bold">{isEdit ? 'Edit your resource' : 'Post to the Resource Hub'}</h1>
+    <div className="wrap py-9">
+      <h1 className="page-title">{isEdit ? 'Edit your resource' : 'Post to the Resource Hub'}</h1>
       <p className="mb-7 mt-2.5 text-ink-soft">
         Sell your notes or give them away. Students see page 1 and a blurred preview of the next few.
       </p>
 
       <div className="max-w-[640px] rounded-slab border border-line bg-paper p-6 md:p-9">
         {draftId && (
-          <p className="mb-5 rounded-[10px] bg-brand-tint px-3 py-2 text-[13px] text-brand-deep">
+          <p className="mb-5 rounded-control bg-brand-tint px-3 py-2 text-[13px] text-brand-deep">
             📝 You're working on a draft{savedAt ? `, last saved ${timeAgo(savedAt)}` : ''}. Files aren't kept in drafts, so add the PDF before you post.
           </p>
         )}
@@ -335,17 +335,17 @@ export default function ResourceForm() {
         <div data-field="file" className="mb-4">
           <label className="field-label" htmlFor="pdf">{fileLabel}</label>
           {keepsFile && !file && (
-            <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-[11px] border border-line bg-[#fbfbf9] px-3.5 py-2.5 text-[13.5px]">
+            <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-control border border-line bg-paper px-3.5 py-2.5 text-[13.5px]">
               <span>📄 Current file{existing.page_count ? ` · ${existing.page_count} page${existing.page_count === 1 ? '' : 's'}` : ''}</span>
             </div>
           )}
           {file && (
-            <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-[11px] border border-brand/40 bg-brand-tint px-3.5 py-2.5 text-[13.5px]">
+            <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-control border border-brand/40 bg-brand-tint px-3.5 py-2.5 text-[13.5px]">
               <span className="truncate">📄 {file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB</span>
               <button type="button" className="btn-ghost btn-sm ml-auto" onClick={() => setFile(null)}>Clear</button>
             </div>
           )}
-          <div className={`rounded-[14px] border-[1.5px] border-dashed p-5 text-center text-[13.5px] text-ink-faint ${errors.file ? 'border-coral bg-coral/5' : 'border-line bg-[#fbfbf9]'}`}>
+          <div className={`rounded-control border border-dashed p-5 text-center text-[13.5px] text-ink-faint ${errors.file ? 'border-coral bg-coral/5' : 'border-line bg-paper'}`}>
             <input id="pdf" type="file" accept="application/pdf,.pdf" onChange={pickFile} className="mx-auto mb-2 block" />
             {hasFile ? 'Choose a file to replace it. ' : ''}PDF only, up to {MAX_PDF_MB} MB, no password.
           </div>

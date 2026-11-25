@@ -9,7 +9,7 @@ export default function ResourcePreview({ resource: r, overlayTitle, overlayBody
 
   if (!first) {
     return (
-      <div className="flex h-[340px] flex-col items-center justify-center rounded-slab border-[1.5px] border-dashed border-line bg-paper p-8 text-center">
+      <div className="flex h-[340px] flex-col items-center justify-center rounded-slab border border-dashed border-line bg-paper p-8 text-center">
         <div className="mb-3 text-[44px]" aria-hidden>{r.copy_type === 'hard' ? '📗' : '📄'}</div>
         <p className="font-semibold">No preview available</p>
         <p className="mt-1 max-w-xs text-[13.5px] text-ink-soft">

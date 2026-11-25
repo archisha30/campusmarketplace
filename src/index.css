@@ -5,72 +5,55 @@
 @layer base {
   html { scroll-behavior: smooth; }
   body { @apply bg-bg text-ink font-sans antialiased; }
-  h1, h2, h3 { @apply font-display tracking-tight; }
+  h1, h2, h3 { @apply font-display font-bold; letter-spacing: -0.03em; }
   :focus-visible { @apply outline-none ring-2 ring-brand ring-offset-2 ring-offset-bg; }
 }
 
 @layer components {
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-pill px-5 py-2.5 text-sm font-semibold transition active:scale-[.97]; }
-  .btn-primary { @apply btn bg-ink text-white hover:shadow-lg; }
-  .btn-accent  { @apply btn bg-brand text-white hover:shadow-lg; }
-  .btn-ghost   { @apply btn border-[1.5px] border-line bg-transparent text-ink hover:border-ink; }
-  .btn-danger  { @apply btn bg-coral/10 text-coral; }
-  .btn-sm      { @apply px-3.5 py-1.5 text-[13px]; }
+  /* Page column: 1216px wide including its side padding, the same left edge everywhere. */
+  .wrap { @apply mx-auto w-full max-w-wrap px-4 md:px-8; }
 
-  .field-label { @apply mb-1.5 block text-[13.5px] font-semibold; }
-  .field-input { @apply w-full rounded-[11px] border-[1.5px] border-line bg-[#fbfbf9] px-3.5 py-3 text-[14.5px] focus:border-brand focus:bg-white focus:outline-none; }
-  /* A field the last submit flagged (see lib/forms.js). */
-  .field-input[aria-invalid='true'] { @apply border-coral bg-coral/5; }
+  .hd { @apply font-display font-bold; letter-spacing: -0.03em; }
+  .page-title { @apply text-[34px] leading-[1.1] md:text-[44px]; }
+  .section-title { @apply text-[32px] leading-[1.1] md:text-[44px]; }
+  .eyebrow { @apply text-sm font-bold uppercase text-brand; letter-spacing: 0.1em; }
 
-  .badge { @apply inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-[11px] font-semibold; }
-
-  .skeleton {
-    @apply animate-shimmer rounded-card;
-    background: linear-gradient(90deg,#ECECE7 25%,#F5F5F1 37%,#ECECE7 63%);
-    background-size: 400% 100%;
+  /* Buttons. .btn-accent and .btn-ghost are the older names of primary and secondary. */
+  .btn, .btn-primary, .btn-accent, .btn-secondary, .btn-ghost, .btn-danger, .btn-onblue {
+    @apply inline-flex h-[52px] cursor-pointer items-center justify-center gap-2 rounded-control border border-transparent px-6 text-base font-semibold disabled:cursor-not-allowed disabled:opacity-50;
   }
-}
+  .btn-primary, .btn-accent { @apply border-brand bg-brand text-white; }
+  .btn-primary:not(:disabled):hover, .btn-accent:not(:disabled):hover { @apply border-brand-deep bg-brand-deep; }
+  .btn-secondary, .btn-ghost { @apply border-ink bg-paper text-ink; }
+  .btn-onblue { @apply border-white bg-white text-brand; }
+  .btn-danger { @apply border-coral/30 bg-paper text-coral; }
+  .btn-danger:not(:disabled):hover { @apply border-coral; }
+  .btn-sm { @apply h-10 px-4 text-sm; }
+  .btn-icon { @apply inline-flex h-11 w-11 flex-none cursor-pointer items-center justify-center rounded-control border border-line bg-paper text-ink; }
 
-/* The landing page's box of listing cards: a streak of brand blue flowing round a faint blue
-   border, with a soft glow behind it. The box's contents sit on their own panel inset 2px, so
-   the border shows around it. */
-@property --glow-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
+  /* Filter chips (one row, dark when on) and form pickers (blue when on). */
+  .chip { @apply inline-flex h-10 cursor-pointer items-center gap-2 rounded-control border border-line bg-paper px-4 text-sm font-semibold text-ink hover:border-ink; }
+  .chip-on { @apply border-ink bg-ink text-white; }
+  .pick { @apply inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-control border border-line-strong bg-paper px-4 text-[15px] font-semibold text-ink hover:border-ink; }
+  .pick-on { @apply border-brand bg-brand-tint text-brand hover:border-brand; }
+  .dot { @apply inline-block h-2 w-2 flex-none rounded-full; }
 
-@keyframes glow-spin {
-  to { --glow-angle: 360deg; }
-}
+  .panel { @apply rounded-card; }
+  .card { @apply rounded-card border border-line bg-paper; }
 
-.glow-box {
-  border-radius: 26px;
-  isolation: isolate;
-}
+  .field-label { @apply mb-2 block text-[15px] font-semibold; }
+  .field-help { @apply mt-2 text-sm text-ink-soft; }
+  .field-error { @apply mt-2 text-sm text-coral; }
+  .field-input { @apply min-h-[52px] w-full rounded-control border border-line-strong bg-paper px-4 py-3 text-base text-ink focus:border-brand focus:outline-none; }
+  textarea.field-input { min-height: 120px; }
+  /* A field the last submit flagged (see lib/forms.js). */
+  .field-input[aria-invalid='true'] { @apply border-coral; }
 
-.glow-box::before,
-.glow-box::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background: conic-gradient(
-    from var(--glow-angle),
-    rgba(47, 76, 255, .18) 0deg 230deg,
-    #2F4CFF 320deg,
-    #8C9BFF 345deg,
-    rgba(47, 76, 255, .18) 360deg
-  );
-  animation: glow-spin 4s linear infinite;
-}
+  .badge { @apply inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-semibold; }
 
-.glow-box::after {
-  filter: blur(22px);
-  opacity: .55;
+  .skeleton { @apply animate-skeleton rounded-card bg-skeleton; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

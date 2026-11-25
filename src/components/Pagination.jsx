@@ -14,7 +14,7 @@ export default function Pagination({ page, pages, total, pageSize, onChange, nou
   if (!pages || pages <= 1) return null
   const from = (page - 1) * pageSize + 1
   const to = Math.min(page * pageSize, total)
-  const btn = 'flex h-9 min-w-[36px] items-center justify-center rounded-[10px] border-[1.5px] px-2.5 text-[13.5px] font-semibold transition'
+  const btn = 'flex h-9 min-w-[36px] items-center justify-center rounded-control border px-2.5 text-[13.5px] font-semibold transition'
 
   return (
     <nav aria-label="Pages" className="mt-8 flex flex-col items-center gap-3">

@@ -40,10 +40,10 @@ export default function ListingDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [l?.id, authLoading])
 
-  if (loading) return <div className="mx-auto max-w-[1180px] px-6 py-9"><SkeletonDetail /></div>
+  if (loading) return <div className="wrap py-9"><SkeletonDetail /></div>
   if (error || !l) {
     return (
-      <div className="mx-auto max-w-[1180px] px-6 py-9">
+      <div className="wrap py-9">
         <EmptyState emoji="🤷" title="Listing not found" body="It may have been sold or removed." actionLabel="Back to Marketplace" actionTo="/marketplace" />
       </div>
     )
@@ -69,7 +69,7 @@ export default function ListingDetail() {
   const images = l.images && l.images.length > 0 ? l.images : []
 
   return (
-    <div className="mx-auto max-w-[1180px] px-6 py-9">
+    <div className="wrap py-9">
       <Link to="/marketplace" className="btn-ghost btn-sm mb-5">← Back to Marketplace</Link>
 
       <div className="grid gap-12 md:grid-cols-[.9fr_1.1fr]">
@@ -98,13 +98,13 @@ export default function ListingDetail() {
                   <button
                     key={src}
                     onClick={() => setActiveImage(i)}
-                    className={`h-[60px] w-[60px] overflow-hidden rounded-[10px] border-[1.5px] ${i === activeImage ? 'border-ink' : 'border-line'}`}
+                    className={`h-[60px] w-[60px] overflow-hidden rounded-control border ${i === activeImage ? 'border-ink' : 'border-line'}`}
                   >
                     <img src={src} alt="" className="h-full w-full object-cover" />
                   </button>
                 ))
               : [0, 1, 2].map((i) => (
-                  <div key={i} className="flex h-[60px] w-[60px] items-center justify-center rounded-[10px] border-[1.5px] border-line text-2xl" style={{ background: l.art.bg }}>
+                  <div key={i} className="flex h-[60px] w-[60px] items-center justify-center rounded-control border border-line text-2xl" style={{ background: l.art.bg }}>
                     {l.art.emoji}
                   </div>
                 ))}
@@ -131,7 +131,7 @@ export default function ListingDetail() {
                 type="button"
                 aria-pressed={isSaved(l.id)}
                 onClick={() => toast(toggle(l) ? 'Saved to your wishlist' : 'Removed from your wishlist')}
-                className={`inline-flex items-center gap-1.5 rounded-pill border-[1.5px] px-3 py-1 text-[12.5px] font-semibold transition ${
+                className={`inline-flex items-center gap-1.5 rounded-pill border px-3 py-1 text-[12.5px] font-semibold transition ${
                   isSaved(l.id) ? 'border-coral bg-coral/10 text-coral' : 'border-line bg-paper text-ink-soft hover:border-ink hover:text-ink'
                 }`}
               >
@@ -141,7 +141,7 @@ export default function ListingDetail() {
             )}
           </div>
           {l.held && (
-            <p className="mb-4 rounded-[10px] bg-coral/10 px-3 py-2 text-[13px] text-coral">
+            <p className="mb-4 rounded-control bg-coral/10 px-3 py-2 text-[13px] text-coral">
             ⏸️ <strong>Held for review.</strong> Several students reported this listing, so it's hidden from everyone else until
             the CampusMarket team reviews it.
             {String(l.seller?.id) === String(user?.id)

@@ -24,7 +24,7 @@ export default function SellerProfile() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-[1180px] px-6 py-9">
+      <div className="wrap py-9">
         <div className="skeleton mb-8 h-[120px]" />
         <SkeletonGrid count={4} />
       </div>
@@ -32,7 +32,7 @@ export default function SellerProfile() {
   }
   if (error || !s) {
     return (
-      <div className="mx-auto max-w-[1180px] px-6 py-9">
+      <div className="wrap py-9">
         <EmptyState emoji="🔍" title="Student not found" body="This account doesn't exist or isn't active any more." actionLabel="Browse Marketplace" actionTo="/marketplace" />
       </div>
     )
@@ -40,7 +40,7 @@ export default function SellerProfile() {
 
   const nothingUp = s.listings.length === 0 && s.resources.length === 0
   return (
-    <div className="mx-auto max-w-[1180px] px-6 py-9">
+    <div className="wrap py-9">
       <section className="mb-8 flex flex-wrap items-center gap-5 rounded-slab border border-line bg-paper p-6 md:p-8">
         <Avatar user={s} size={72} className="bg-sun font-display text-[26px] text-ink" />
         <div className="min-w-0 flex-1">

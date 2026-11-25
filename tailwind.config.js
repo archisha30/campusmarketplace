@@ -3,29 +3,37 @@ export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
+      // Campus Market tokens (design handoff, "Mix 2"). Blue leads, yellow highlights.
       colors: {
-        bg: '#F6F6F2',
+        bg: '#F7F6F2',
         paper: '#FFFFFF',
-        ink: { DEFAULT: '#15181F', soft: '#565B68', faint: '#8A8F9B' },
-        line: '#E4E3DC',
-        brand: { DEFAULT: '#2F4CFF', deep: '#1E33CC', tint: '#EEF0FF' },
-        sun: '#FFD23F',
-        leaf: '#1F8B4C',
-        coral: '#FF5A44',
+        ink: { DEFAULT: '#16161D', soft: '#5B5B6B', faint: '#6B6B7A' },
+        line: { DEFAULT: '#E4E2DA', strong: '#D9D6CE', soft: '#ECEAE2' },
+        brand: { DEFAULT: '#2F4BFF', deep: '#2440E6', tint: '#EEF1FF' },
+        sun: '#FFD447',
+        leaf: '#166534',
+        coral: '#B42318', // errors, sold, destructive actions
+        tile: '#EFEDE6', // behind missing photos and previews
+        skeleton: '#ECE9E2',
       },
       fontFamily: {
         display: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Figtree', 'system-ui', 'sans-serif'],
       },
-      borderRadius: { card: '16px', pill: '999px', slab: '26px' },
+      // control: buttons, chips, inputs, small tiles. card / slab: cards and panels.
+      borderRadius: { control: '12px', pill: '12px', card: '20px', slab: '20px' },
+      // Section rhythm: multiples of 32 on top of Tailwind's 4/8/16/24/32.
+      spacing: { section: '96px', 'section-sm': '64px' },
+      maxWidth: { wrap: '1216px' },
       boxShadow: {
-        lift: '0 1px 2px rgba(21,24,31,.04), 0 8px 24px rgba(21,24,31,.06)',
+        btn: '0 12px 24px -12px rgba(22,22,29,.45)', // hover only
+        lift: '0 18px 36px -20px rgba(22,22,29,.35)', // hover only
       },
       keyframes: {
-        shimmer: { '0%': { backgroundPosition: '100% 0' }, '100%': { backgroundPosition: '0 0' } },
         fadeIn: { '0%': { opacity: '0', transform: 'translateY(-2px)' }, '100%': { opacity: '1', transform: 'none' } },
+        pulseSoft: { '0%, 100%': { opacity: '1' }, '50%': { opacity: '.55' } },
       },
-      animation: { shimmer: 'shimmer 1.3s ease infinite' },
+      animation: { skeleton: 'pulseSoft 1.6s ease-in-out infinite' },
     },
   },
   plugins: [],

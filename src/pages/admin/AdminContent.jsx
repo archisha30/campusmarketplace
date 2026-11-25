@@ -84,7 +84,7 @@ export default function AdminContent() {
       )}
 
       <div className="mb-4 flex flex-wrap items-center gap-2.5">
-        <div className="flex rounded-pill border-[1.5px] border-line bg-paper p-1">
+        <div className="flex rounded-pill border border-line bg-paper p-1">
           {VIEWS.map((v) => (
             <button
               key={v}
@@ -118,7 +118,7 @@ export default function AdminContent() {
             <tr key={l.id}>
               <Td>
                 <div className="flex items-start gap-2.5">
-                  <div className="flex h-11 w-11 flex-none items-center justify-center overflow-hidden rounded-[9px] text-[20px]" style={{ background: l.art?.bg }}>
+                  <div className="flex h-11 w-11 flex-none items-center justify-center overflow-hidden rounded-control text-[20px]" style={{ background: l.art?.bg }}>
                     {l.images?.length ? <img src={l.thumbnail || l.images[0]} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : l.art?.emoji}
                   </div>
                   <div className="min-w-0">
@@ -146,7 +146,7 @@ export default function AdminContent() {
             <tr key={r.id}>
               <Td>
                 <div className="flex items-start gap-2.5">
-                  <div className="h-11 w-11 flex-none overflow-hidden rounded-[9px] border border-line bg-bg">
+                  <div className="h-11 w-11 flex-none overflow-hidden rounded-control border border-line bg-bg">
                     {r.thumbnail_url && <img src={r.thumbnail_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover object-top" />}
                   </div>
                   <div className="min-w-0">

@@ -9,9 +9,9 @@ export default function Wishlist() {
   const { items: listings, resources, count, loading } = useWishlist()
 
   return (
-    <div className="mx-auto max-w-[1180px] px-6 py-9">
+    <div className="wrap py-9">
       <div className="mb-6 flex items-baseline gap-3">
-        <h1 className="text-[30px] font-bold">My Wishlist</h1>
+        <h1 className="page-title">My Wishlist</h1>
         {count > 0 && (
           <span className="text-[14.5px] text-ink-faint">
             {count} saved item{count === 1 ? '' : 's'}

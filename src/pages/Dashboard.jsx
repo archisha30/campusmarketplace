@@ -132,10 +132,10 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="mx-auto max-w-[1180px] px-6 py-9">
+    <div className="wrap py-9">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[30px] font-bold">Seller Dashboard</h1>
+          <h1 className="page-title">Seller Dashboard</h1>
           <p className="mt-1.5 text-[14.5px] text-ink-soft">Your notifications, what students are looking for, and your listings and resources, all in one place.</p>
         </div>
         <div className="flex gap-2">
@@ -150,7 +150,7 @@ export default function Dashboard() {
       />
       <BuyerRequests />
 
-      <h1 className="mb-6 text-[30px] font-bold">My Listings & Resources</h1>
+      <h1 className="mb-6 page-title">My Listings & Resources</h1>
 
       <div className="mb-6 flex overflow-x-auto border-b border-line">
         {TABS.map((t) => (
@@ -181,7 +181,7 @@ export default function Dashboard() {
 
       {showingResources && !loading && myResources.map((r) => (
         <div key={r.id} className="mb-3 flex flex-wrap items-center gap-4 rounded-card border border-line bg-paper p-3.5">
-          <div className="flex h-[60px] w-[60px] flex-none items-center justify-center overflow-hidden rounded-[10px] border border-line bg-bg text-[26px]">
+          <div className="flex h-[60px] w-[60px] flex-none items-center justify-center overflow-hidden rounded-control border border-line bg-bg text-[26px]">
             {r.thumbnail_url
               ? <img src={r.thumbnail_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover object-top" />
               : <span aria-hidden>{r.copy_type === 'hard' ? '📗' : '📄'}</span>}
@@ -229,7 +229,7 @@ export default function Dashboard() {
         const title = String(d.data.title || '').trim()
         return (
           <div key={d.id} className="mb-3 flex flex-wrap items-center gap-4 rounded-card border border-line bg-paper p-3.5">
-            <div className="flex h-[60px] w-[60px] flex-none items-center justify-center rounded-[10px] text-[26px]" style={{ background: k.bg }}>
+            <div className="flex h-[60px] w-[60px] flex-none items-center justify-center rounded-control text-[26px]" style={{ background: k.bg }}>
               {k.emoji}
             </div>
             <div className="min-w-0 flex-1">
@@ -255,7 +255,7 @@ export default function Dashboard() {
 
       {showingTrash && !loading && trashed.map((t) => (
         <div key={`${t.type}-${t.id}`} className="mb-3 flex flex-wrap items-center gap-4 rounded-card border border-dashed border-line bg-paper p-3.5">
-          <div className="flex h-[60px] w-[60px] flex-none items-center justify-center overflow-hidden rounded-[10px] text-[26px] opacity-70" style={{ background: t.bg }}>
+          <div className="flex h-[60px] w-[60px] flex-none items-center justify-center overflow-hidden rounded-control text-[26px] opacity-70" style={{ background: t.bg }}>
             {t.image ? <img src={t.image} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : t.emoji}
           </div>
           <div className="min-w-0 flex-1">
@@ -273,7 +273,7 @@ export default function Dashboard() {
 
       {!loading && items.map((l) => (
         <div key={l.id} className="mb-3 flex flex-wrap items-center gap-4 rounded-card border border-line bg-paper p-3.5">
-          <div className="flex h-[60px] w-[60px] flex-none items-center justify-center overflow-hidden rounded-[10px] text-[26px]" style={{ background: l.art.bg }}>
+          <div className="flex h-[60px] w-[60px] flex-none items-center justify-center overflow-hidden rounded-control text-[26px]" style={{ background: l.art.bg }}>
             {l.images?.length > 0 ? (
               <img src={l.thumbnail || l.images[0]} alt={l.title} loading="lazy" decoding="async" className="h-full w-full object-cover" />
             ) : (
@@ -314,12 +314,12 @@ export default function Dashboard() {
               Are you sure you want to delete <strong className="text-ink">"{confirmDelete.title}"</strong>? You can restore it from the <strong className="text-ink">Deleted</strong> tab for 24 hours, then it's gone for good.
             </p>
             {confirmDelete.kind === 'listing' && confirmDelete.status !== 'sold' && (
-              <p className="mt-3 rounded-[10px] bg-brand-tint px-3 py-2 text-[12.5px] text-brand-deep">
+              <p className="mt-3 rounded-control bg-brand-tint px-3 py-2 text-[12.5px] text-brand-deep">
                 Sold it? Use <strong>Mark Sold</strong> instead, so it stays on the marketplace as sold.
               </p>
             )}
             {confirmDelete.kind === 'resource' && confirmDelete.status !== 'closed' && (
-              <p className="mt-3 rounded-[10px] bg-brand-tint px-3 py-2 text-[12.5px] text-brand-deep">
+              <p className="mt-3 rounded-control bg-brand-tint px-3 py-2 text-[12.5px] text-brand-deep">
                 Just want to stop new requests? Use <strong>Close</strong> instead. Students you've already approved keep their access.
               </p>
             )}

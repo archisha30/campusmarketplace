@@ -13,7 +13,7 @@ export default function SearchBar({ value, onChange, placeholder }) {
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="w-full rounded-pill border-[1.5px] border-line bg-paper py-3 pl-11 pr-4 text-[14.5px] focus:border-brand focus:outline-none"
+        className="w-full rounded-pill border border-line bg-paper py-3 pl-11 pr-4 text-[14.5px] focus:border-brand focus:outline-none"
       />
     </div>
   )

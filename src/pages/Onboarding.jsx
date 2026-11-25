@@ -44,7 +44,7 @@ export default function Onboarding() {
 
         <label className="field-label" htmlFor="phone">WhatsApp number</label>
         <div className="flex">
-          <span className="flex items-center rounded-l-[11px] border-[1.5px] border-r-0 border-line bg-bg px-3 text-[14px] text-ink-soft">+91</span>
+          <span className="flex items-center rounded-l-[11px] border border-r-0 border-line bg-bg px-3 text-[14px] text-ink-soft">+91</span>
           <input
             id="phone"
             type="tel"

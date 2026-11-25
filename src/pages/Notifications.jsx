@@ -8,7 +8,7 @@ export default function Notifications() {
   const { isSeller } = useAuth()
   return (
     <div className="mx-auto max-w-[820px] px-6 py-9">
-      <h1 className="mb-6 text-[30px] font-bold">Notifications</h1>
+      <h1 className="mb-6 page-title">Notifications</h1>
       <NotificationsPanel
         previewCount={Infinity}
         blurb={isSeller

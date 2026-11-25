@@ -63,9 +63,9 @@ export default function Marketplace() {
   const hasFilters = Boolean(debouncedQ) || category !== 'All' || condition !== 'any' || listingType !== 'any' || band !== 'any'
 
   return (
-    <div className="mx-auto max-w-[1180px] px-6 py-9">
+    <div className="wrap py-9">
       <div className="mb-7">
-        <h1 className="text-[30px] font-bold">Marketplace</h1>
+        <h1 className="page-title">Marketplace</h1>
         <p className="mt-1.5 text-ink-soft">Find useful stuff from students around you.</p>
       </div>
 

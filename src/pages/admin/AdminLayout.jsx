@@ -20,7 +20,7 @@ export default function AdminLayout() {
     refresh()
   }, [refresh])
   return (
-    <div className="mx-auto max-w-[1180px] px-6 py-9">
+    <div className="wrap py-9">
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <h1 className="text-[28px] font-bold">Admin</h1>
         <span className="badge bg-ink text-white">{isOwner ? 'Owner' : 'Admin'}</span>
@@ -32,7 +32,7 @@ export default function AdminLayout() {
             key={t.to}
             to={t.to}
             className={({ isActive }) =>
-              `rounded-pill border-[1.5px] px-4 py-2.5 text-[13.5px] font-semibold ${
+              `rounded-pill border px-4 py-2.5 text-[13.5px] font-semibold ${
                 isActive ? 'border-ink bg-ink text-white' : 'border-line bg-paper text-ink-soft hover:border-ink'
               }`
             }

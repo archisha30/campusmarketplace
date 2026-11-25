@@ -130,7 +130,7 @@ function MatchRow({ to, onOpen, title, thumb, fallback, bg, children }) {
     <li>
       <Link to={to} onClick={onOpen} className="flex items-center gap-3 rounded-card border border-line p-2 transition hover:shadow-lift">
         <span
-          className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] text-[22px]"
+          className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-control text-[22px]"
           style={{ background: bg || '#EFEFEC' }}
         >
           {thumb ? <img src={thumb} alt="" className="h-full w-full object-cover object-top" /> : <span aria-hidden>{fallback}</span>}

@@ -40,7 +40,7 @@ export default function Landing() {
 
   return (
     <>
-      <section className="mx-auto max-w-[1180px] px-6 pb-10 pt-9 md:pt-16">
+      <section className="wrap pb-10 pt-9 md:pt-16">
         <div className="grid items-center gap-12 md:grid-cols-[1.05fr_.95fr]">
           <div>
             <span className="mb-5 inline-flex items-center gap-2 rounded-pill border border-line bg-paper py-1.5 pl-2 pr-3.5 text-[13px] font-medium text-ink-soft">
@@ -88,14 +88,14 @@ export default function Landing() {
       </section>
 
       <section className="border-y border-line bg-paper py-16">
-        <div className="mx-auto max-w-[1180px] px-6">
+        <div className="wrap">
           <h2 className="mb-10 max-w-xl text-[28px] font-bold md:text-[34px]">
             Built for your campus, not the entire internet.
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {TRUST.map((t) => (
               <div key={t.title} className="rounded-card border border-line bg-bg/40 p-6">
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] bg-bg text-[19px]" aria-hidden>{t.icon}</div>
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-control bg-bg text-[19px]" aria-hidden>{t.icon}</div>
                 <h3 className="mb-2 text-[16.5px] font-semibold">{t.title}</h3>
                 <p className="text-sm text-ink-soft">{t.body}</p>
               </div>
@@ -104,7 +104,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section id="how-it-works" className="mx-auto max-w-[1180px] px-6 py-16">
+      <section id="how-it-works" className="wrap py-16">
         <h2 className="mb-2 text-[28px] font-bold md:text-[34px]">How it works</h2>
         <p className="mb-10 text-ink-soft">Three steps from browsing to handshake.</p>
         <div className="grid gap-8 md:grid-cols-3">
@@ -121,7 +121,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <PostRequestBanner className="mx-auto max-w-[1180px] px-6 pb-16" />
+      <PostRequestBanner className="wrap pb-16" />
       <MarketplacePopup />
     </>
   )
@@ -135,7 +135,7 @@ function PopularCard({ listing: l, member }) {
   const path = `/listing/${l.id}`
   return (
     <Link to={member ? path : '/signup'} state={member ? undefined : { from: path }} className={CARD}>
-      <div className="mb-2.5 flex h-24 items-center justify-center overflow-hidden rounded-[10px] text-[34px] md:h-28" style={{ background: l.art?.bg || '#EFEFEC' }}>
+      <div className="mb-2.5 flex h-24 items-center justify-center overflow-hidden rounded-control text-[34px] md:h-28" style={{ background: l.art?.bg || '#EFEFEC' }}>
         {l.image ? <img src={l.image} alt="" className="h-full w-full object-cover" /> : <span aria-hidden>{l.art?.emoji || '📦'}</span>}
       </div>
       <p className="truncate text-[13.5px] font-semibold">{l.title}</p>
@@ -148,7 +148,7 @@ function PopularCard({ listing: l, member }) {
 function CategoryTile({ tile: t, member }) {
   return (
     <Link to={member ? '/marketplace' : '/signup'} className={CARD}>
-      <div className="mb-2.5 flex h-24 items-center justify-center rounded-[10px] text-[34px] md:h-28" style={{ background: t.bg }}>
+      <div className="mb-2.5 flex h-24 items-center justify-center rounded-control text-[34px] md:h-28" style={{ background: t.bg }}>
         {t.emoji}
       </div>
       <p className="truncate text-[13.5px] font-semibold">{t.title}</p>

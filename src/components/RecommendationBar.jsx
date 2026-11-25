@@ -40,7 +40,7 @@ export default function RecommendationBar() {
   if (empty && interests.length === 0) return null
 
   return (
-    <section aria-labelledby="picked-for-you" className="mb-8 w-full max-w-[780px] rounded-[18px] border border-brand/15 bg-brand-tint p-3.5 md:p-4">
+    <section aria-labelledby="picked-for-you" className="mb-8 w-full max-w-[780px] rounded-card border border-brand/15 bg-brand-tint p-3.5 md:p-4">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <h2 id="picked-for-you" className="text-[18px] font-bold">Picked for you</h2>
@@ -69,7 +69,7 @@ export default function RecommendationBar() {
             aria-label="Previous picks"
             onClick={() => page(-1)}
             disabled={edge.atStart}
-            className="flex h-8 w-8 items-center justify-center rounded-full border-[1.5px] border-line bg-paper text-lg transition hover:border-ink disabled:cursor-default disabled:opacity-40 disabled:hover:border-line"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-paper text-lg transition hover:border-ink disabled:cursor-default disabled:opacity-40 disabled:hover:border-line"
           >
             ‹
           </button>
@@ -78,7 +78,7 @@ export default function RecommendationBar() {
             aria-label="Next picks"
             onClick={() => page(1)}
             disabled={edge.atEnd}
-            className="flex h-8 w-8 items-center justify-center rounded-full border-[1.5px] border-line bg-paper text-lg transition hover:border-ink disabled:cursor-default disabled:opacity-40 disabled:hover:border-line"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-paper text-lg transition hover:border-ink disabled:cursor-default disabled:opacity-40 disabled:hover:border-line"
           >
             ›
           </button>

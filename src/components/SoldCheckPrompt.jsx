@@ -59,7 +59,7 @@ export default function SoldCheckPrompt() {
     <Modal open onClose={() => !busy && setQueue([])} title="Is this still for sale?">
       <div className="mb-4 flex items-center gap-3 rounded-card border border-line p-2.5">
         <span
-          className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[10px] text-[24px]"
+          className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-control text-[24px]"
           style={{ background: listing.art?.bg || '#EFEFEC' }}
         >
           {thumb ? <img src={thumb} alt="" className="h-full w-full object-cover" /> : <span aria-hidden>{listing.art?.emoji || '📦'}</span>}

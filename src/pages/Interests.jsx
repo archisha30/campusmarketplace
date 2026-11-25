@@ -56,7 +56,7 @@ export default function Interests() {
                 key={c}
                 onClick={() => toggle(c)}
                 aria-pressed={on}
-                className={`rounded-pill border-[1.5px] px-4 py-2.5 text-[14px] font-medium transition ${
+                className={`rounded-pill border px-4 py-2.5 text-[14px] font-medium transition ${
                   on ? 'border-brand bg-brand text-white' : 'border-line bg-paper text-ink-soft hover:border-ink'
                 }`}
               >

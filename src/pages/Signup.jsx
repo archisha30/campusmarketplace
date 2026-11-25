@@ -97,7 +97,7 @@ export default function Signup() {
                   return (
                     <label
                       key={t.value}
-                      className={`cursor-pointer rounded-card border-[1.5px] p-3.5 transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand ${
+                      className={`cursor-pointer rounded-card border p-3.5 transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand ${
                         active ? 'border-brand bg-brand-tint' : fieldErrors.account_type ? 'border-coral bg-coral/5' : 'border-line hover:border-ink-faint'
                       }`}
                     >
@@ -121,7 +121,7 @@ export default function Signup() {
               {accountType && <p
                 key={accountType}
                 aria-live="polite"
-                className="mt-2.5 flex items-start gap-2 rounded-[10px] bg-brand-tint px-3 py-2 text-[12.5px] leading-snug text-brand-deep motion-safe:animate-[fadeIn_.2s_ease-out]"
+                className="mt-2.5 flex items-start gap-2 rounded-control bg-brand-tint px-3 py-2 text-[12.5px] leading-snug text-brand-deep motion-safe:animate-[fadeIn_.2s_ease-out]"
               >
                 <span aria-hidden>{accountType === 'buyer' ? '💡' : '✨'}</span>
                 {accountType === 'buyer' ? (

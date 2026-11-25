@@ -72,7 +72,7 @@ export default function Navbar() {
               <Link
                 to="/profile"
                 aria-label="My profile"
-                className="flex items-center gap-2 rounded-pill border-[1.5px] border-line py-1 pl-1 pr-1 transition hover:border-ink lg:pr-3"
+                className="flex items-center gap-2 rounded-pill border border-line py-1 pl-1 pr-1 transition hover:border-ink lg:pr-3"
               >
                 <Avatar user={user} size={28} />
                 <span className="hidden text-left leading-tight lg:block">

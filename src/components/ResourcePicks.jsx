@@ -19,7 +19,7 @@ export default function ResourcePicks({ excludeId, title = 'Picked for you', var
   return (
     <section
       aria-label={title}
-      className={panel ? 'mb-8 rounded-[18px] border border-brand/15 bg-brand-tint p-3.5 md:p-4' : 'mt-12'}
+      className={panel ? 'mb-8 rounded-card border border-brand/15 bg-brand-tint p-3.5 md:p-4' : 'mt-12'}
     >
       <h2 className={panel ? 'text-[18px] font-bold' : 'text-[19px] font-bold'}>{title}</h2>
       <p className="mb-4 mt-1 text-[13px] text-ink-soft">{reason}</p>

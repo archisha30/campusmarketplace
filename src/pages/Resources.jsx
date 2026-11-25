@@ -53,10 +53,10 @@ export default function Resources() {
   const filtered = Boolean(debouncedQ) || subject !== 'All' || year !== 'any' || copyType !== 'any' || offerType !== 'any'
 
   return (
-    <div className="mx-auto max-w-[1180px] px-6 py-9">
+    <div className="wrap py-9">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-[30px] font-bold">Resource Hub</h1>
+          <h1 className="page-title">Resource Hub</h1>
           <p className="mt-2.5 max-w-2xl text-[14.5px] text-ink-soft">
             Notes, question banks and printed copies from students on your campus. Preview the first page,
             then buy or grab the free ones. Payment is by UPI or cash, straight to the student.
@@ -86,7 +86,7 @@ export default function Resources() {
             type="button"
             aria-pressed={mine}
             onClick={() => setMine((m) => !m)}
-            className={`rounded-pill border-[1.5px] px-4 py-2 text-[13.5px] font-semibold transition ${
+            className={`rounded-pill border px-4 py-2 text-[13.5px] font-semibold transition ${
               mine ? 'border-brand bg-brand text-white' : 'border-line bg-paper text-ink-soft hover:border-ink'
             }`}
           >

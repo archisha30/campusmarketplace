@@ -9,14 +9,14 @@ export default function RequireAuth({ role, seller = false }) {
   const location = useLocation()
 
   if (loading) {
-    return <div className="mx-auto max-w-[1180px] px-6 py-16"><div className="skeleton h-64" /></div>
+    return <div className="wrap py-16"><div className="skeleton h-64" /></div>
   }
   if (!user || !isVerified) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />
   }
   // Accounts without a password see only the "Create a password" modal; nothing behind it renders.
   if (needsPassword) {
-    return <div className="mx-auto max-w-[1180px] px-6 py-16"><div className="skeleton h-64" /></div>
+    return <div className="wrap py-16"><div className="skeleton h-64" /></div>
   }
   if (role === 'admin' ? !isAdmin : role && user.role !== role) {
     return <Navigate to="/marketplace" replace />

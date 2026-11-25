@@ -62,7 +62,7 @@ export default function AdminReports() {
         </div>
       )}
 
-      <div className="mb-4 flex rounded-pill border-[1.5px] border-line bg-paper p-1 w-fit">
+      <div className="mb-4 flex rounded-pill border border-line bg-paper p-1 w-fit">
         {FILTERS.map((f) => (
           <button
             key={f.label}

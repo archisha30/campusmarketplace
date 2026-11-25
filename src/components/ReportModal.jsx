@@ -50,7 +50,7 @@ export default function ReportModal({ open, onClose, targetTitle, listingId, res
             aria-checked={reason === r}
             disabled={submitting}
             onClick={() => setReason(r)}
-            className={`w-full rounded-[10px] border-[1.5px] px-3.5 py-3 text-left text-sm disabled:opacity-50 ${
+            className={`w-full rounded-control border px-3.5 py-3 text-left text-sm disabled:opacity-50 ${
               reason === r ? 'border-coral bg-coral/10 font-semibold text-coral' : 'border-line hover:border-coral'
             }`}
           >

@@ -34,10 +34,10 @@ export default function ResourceDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [r?.id, authLoading])
 
-  if (loading && !r) return <div className="mx-auto max-w-[1180px] px-6 py-9"><div className="skeleton h-96" /></div>
+  if (loading && !r) return <div className="wrap py-9"><div className="skeleton h-96" /></div>
   if (error || !r) {
     return (
-      <div className="mx-auto max-w-[1180px] px-6 py-9">
+      <div className="wrap py-9">
         <EmptyState emoji="📚" title="Resource not found" body="It may have been removed by the owner." actionLabel="Back to Resource Hub" actionTo="/resources" />
       </div>
     )
@@ -47,7 +47,7 @@ export default function ResourceDetail() {
   const isManager = access.reason === 'owner' || access.reason === 'admin'
 
   return (
-    <div className="mx-auto max-w-[1180px] px-6 py-9">
+    <div className="wrap py-9">
       <Link to="/resources" className="btn-ghost btn-sm mb-5">← Back to Resource Hub</Link>
 
       <div className="grid gap-10 md:grid-cols-[1fr_1fr]">
@@ -287,7 +287,7 @@ function AccessPanel({ r, access, onChange }) {
         )}
 
         {status === 'pending' && (
-          <div className="rounded-[11px] bg-sun/20 p-3.5 text-[13.5px]">
+          <div className="rounded-control bg-sun/20 p-3.5 text-[13.5px]">
             <p className="font-semibold text-[#946B00]">Request pending · sent {timeAgo(access.request.updated_at)}</p>
             {access.request.note && <p className="mt-1 text-ink-soft">“{access.request.note}”</p>}
             <p className="mt-1 text-ink-soft">The owner will approve it once they confirm your payment.</p>
@@ -295,7 +295,7 @@ function AccessPanel({ r, access, onChange }) {
         )}
 
         {status === 'denied' && (
-          <p className="mb-3 rounded-[11px] bg-coral/10 p-3.5 text-[13.5px] text-coral">
+          <p className="mb-3 rounded-control bg-coral/10 p-3.5 text-[13.5px] text-coral">
             The owner declined your last request. Check with them, then you can ask again.
           </p>
         )}
@@ -435,7 +435,7 @@ function OwnerPanel({ r, onChange, refetch }) {
   const rows = requests.data || []
 
   return (
-    <section id="manage" className="mt-6 scroll-mt-24 rounded-card border-[1.5px] border-brand/30 bg-brand-tint/40 p-5">
+    <section id="manage" className="mt-6 scroll-mt-24 rounded-card border border-brand/30 bg-brand-tint/40 p-5">
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <h2 className="mr-auto text-[18px] font-bold">{isOwner ? 'Manage your resource' : 'Admin controls'}</h2>
         {isOwner && (
@@ -449,7 +449,7 @@ function OwnerPanel({ r, onChange, refetch }) {
         <button className="btn-danger btn-sm" onClick={() => setConfirmDelete(true)} disabled={busy}>{isOwner ? 'Delete' : 'Remove'}</button>
       </div>
       {r.held && (
-        <p className="mb-4 rounded-[10px] bg-coral/10 px-3 py-2 text-[13px] text-coral">
+        <p className="mb-4 rounded-control bg-coral/10 px-3 py-2 text-[13px] text-coral">
           ⏸️ <strong>Held for review.</strong> Several students reported this resource, so it's hidden from everyone else until
           the CampusMarket team reviews it.
           {isOwner
@@ -474,7 +474,7 @@ function OwnerPanel({ r, onChange, refetch }) {
           )}
           <ul className="space-y-2.5">
             {rows.map((a) => (
-              <li key={a.id} className="rounded-[12px] border border-line bg-paper p-3.5">
+              <li key={a.id} className="rounded-control border border-line bg-paper p-3.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[14px] font-semibold">{a.requester?.name}</span>
                   <RequestStatus status={a.status} />
@@ -529,7 +529,7 @@ function SaveResourceButton({ r }) {
       type="button"
       aria-pressed={saved}
       onClick={() => toast(toggleResource(r) ? 'Saved to your wishlist' : 'Removed from your wishlist')}
-      className={`inline-flex items-center gap-1.5 rounded-pill border-[1.5px] px-3 py-1 text-[12.5px] font-semibold transition ${
+      className={`inline-flex items-center gap-1.5 rounded-pill border px-3 py-1 text-[12.5px] font-semibold transition ${
         saved ? 'border-coral bg-coral/10 text-coral' : 'border-line bg-paper text-ink-soft hover:border-ink hover:text-ink'
       }`}
     >

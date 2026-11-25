@@ -203,12 +203,12 @@ export default function Sell() {
   const photoSlots = Math.max(0, 3 - existingImages.length)
 
   if (loadingListing || loadingDraft) {
-    return <div className="mx-auto max-w-[1180px] px-6 py-9 text-ink-soft">{loadingDraft ? 'Loading draft…' : 'Loading listing…'}</div>
+    return <div className="wrap py-9 text-ink-soft">{loadingDraft ? 'Loading draft…' : 'Loading listing…'}</div>
   }
 
   return (
-    <div className="mx-auto max-w-[1180px] px-6 py-9">
-      <h1 className="text-[30px] font-bold">{isEdit ? 'Edit your listing' : 'List something on CampusMarket'}</h1>
+    <div className="wrap py-9">
+      <h1 className="page-title">{isEdit ? 'Edit your listing' : 'List something on CampusMarket'}</h1>
       <p className="mb-7 mt-2.5 text-ink-soft">
         {isEdit
           ? 'Update the details below and save your changes.'
@@ -217,7 +217,7 @@ export default function Sell() {
 
       <div className="max-w-[640px] rounded-slab border border-line bg-paper p-6 md:p-9">
         {draftId && (
-          <p className="mb-5 rounded-[10px] bg-brand-tint px-3 py-2 text-[13px] text-brand-deep">
+          <p className="mb-5 rounded-control bg-brand-tint px-3 py-2 text-[13px] text-brand-deep">
             📝 You're working on a draft{savedAt ? `, last saved ${timeAgo(savedAt)}` : ''}. Photos aren't kept in drafts, so add them before you publish.
           </p>
         )}
@@ -243,8 +243,8 @@ export default function Sell() {
                 type="button"
                 aria-pressed={form.listing_type === t.value}
                 onClick={() => setForm((f) => ({ ...f, listing_type: t.value }))}
-                className={`flex-1 rounded-[11px] border-[1.5px] px-2 py-3 text-[13.5px] font-semibold ${
-                  form.listing_type === t.value ? 'border-brand bg-brand-tint text-brand' : 'border-line bg-[#fbfbf9] text-ink-soft'
+                className={`flex-1 rounded-control border px-2 py-3 text-[13.5px] font-semibold ${
+                  form.listing_type === t.value ? 'border-brand bg-brand-tint text-brand' : 'border-line bg-paper text-ink-soft'
                 }`}
               >
                 {t.label}
@@ -283,7 +283,7 @@ export default function Sell() {
               </div>
             )}
             {Number(form.price) > 0 && (isRent ? form.rent_days : Number(form.mrp) > Number(form.price)) && (
-              <div className="col-span-2 flex flex-wrap items-baseline gap-x-2 rounded-[10px] bg-brand-tint px-3 py-2 text-[12.5px] text-brand-deep">
+              <div className="col-span-2 flex flex-wrap items-baseline gap-x-2 rounded-control bg-brand-tint px-3 py-2 text-[12.5px] text-brand-deep">
                 <span>{isRent ? 'Renters will see:' : 'Buyers will see:'}</span>
                 <PriceTag price={Number(form.price)} mrp={Number(form.mrp) || null} listingType={form.listing_type}
                   rentDays={Number(form.rent_days) || null} deposit={Number(form.security_deposit) || null} size="sm" />
@@ -303,8 +303,8 @@ export default function Sell() {
                     type="button"
                     aria-pressed={form.food_temp === t.value}
                     onClick={() => { setForm((f) => ({ ...f, food_temp: t.value })); setErrors((x) => ({ ...x, food_temp: undefined })) }}
-                    className={`flex-1 rounded-[11px] border-[1.5px] px-2 py-3 text-[13.5px] font-semibold ${
-                      form.food_temp === t.value ? 'border-brand bg-brand-tint text-brand' : errors.food_temp ? 'border-coral bg-coral/5 text-ink-soft' : 'border-line bg-[#fbfbf9] text-ink-soft'
+                    className={`flex-1 rounded-control border px-2 py-3 text-[13.5px] font-semibold ${
+                      form.food_temp === t.value ? 'border-brand bg-brand-tint text-brand' : errors.food_temp ? 'border-coral bg-coral/5 text-ink-soft' : 'border-line bg-paper text-ink-soft'
                     }`}
                   >
                     {t.emoji} {t.label}
@@ -352,7 +352,7 @@ export default function Sell() {
               {existingImages.map((src, i) => (
                 <div key={src} className="relative">
                   <img src={src} alt={`Current photo ${i + 1}`}
-                    className="h-[70px] w-[70px] rounded-[10px] border border-line object-cover" />
+                    className="h-[70px] w-[70px] rounded-control border border-line object-cover" />
                   <button
                     type="button"
                     aria-label={`Remove photo ${i + 1}`}
@@ -368,7 +368,7 @@ export default function Sell() {
           {photoSlots === 0 ? (
             <p className="text-[13.5px] text-ink-faint">Maximum of 3 photos reached. Remove one (✕) to add a different photo.</p>
           ) : (
-          <div className={`rounded-[14px] border-[1.5px] border-dashed p-6 text-center text-[13.5px] text-ink-faint ${errors.photos ? 'border-coral bg-coral/5' : 'border-line bg-[#fbfbf9]'}`}>
+          <div className={`rounded-control border border-dashed p-6 text-center text-[13.5px] text-ink-faint ${errors.photos ? 'border-coral bg-coral/5' : 'border-line bg-paper'}`}>
             <input
               id="photos"
               type="file"
@@ -388,7 +388,7 @@ export default function Sell() {
             <div className="mt-3 flex flex-wrap gap-2.5">
               {previews.map((src, i) => (
                 <img key={src} src={src} alt={`Upload preview ${i + 1}`} loading="lazy"
-                  className="h-[70px] w-[70px] rounded-[10px] border border-line object-cover" />
+                  className="h-[70px] w-[70px] rounded-control border border-line object-cover" />
               ))}
             </div>
           )}
