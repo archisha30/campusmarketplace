@@ -8,6 +8,7 @@ import { CATEGORIES, CONDITIONS, FOOD_CATEGORY, FOOD_TEMPS, LISTING_TYPES, RENT_
 import { timeAgo, todayISO } from '../lib/format.js'
 import { trackEvent } from '../lib/analytics.js'
 import { shrinkToJpeg } from '../lib/images.js'
+import { HeartProp } from '../components/HeartButton.jsx'
 import Icon from '../components/Icon.jsx'
 import { ListingCardView } from '../components/ListingCard.jsx'
 import { categoryStyle } from '../lib/categories.js'
@@ -237,34 +238,38 @@ export default function Sell() {
           <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
             {existingImages.map((src, i) => (
               <div key={src} className="relative aspect-square">
-                <img src={src} alt={`Current photo ${i + 1}`} className="h-full w-full rounded-control object-cover" />
-                <button
-                  type="button"
-                  aria-label={`Remove photo ${i + 1}`}
+                <img src={src} alt={`Current photo ${i + 1}`} className="absolute inset-0 h-full w-full rounded-control object-cover" />
+                <RemovePhoto
+                  label={`Remove photo ${i + 1}`}
                   onClick={() => setExistingImages((imgs) => imgs.filter((u) => u !== src))}
-                  className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-control border border-line bg-paper text-ink hover:text-coral"
-                >
-                  <Icon name="x" size={18} />
-                </button>
+                />
               </div>
             ))}
             {previews.map((src, i) => (
-              <img key={src} src={src} alt={`Upload preview ${i + 1}`} className="aspect-square w-full rounded-control object-cover" />
+              <div key={src} className="relative aspect-square">
+                <img src={src} alt={`Upload preview ${i + 1}`} className="absolute inset-0 h-full w-full rounded-control object-cover" />
+                <RemovePhoto
+                  label={`Remove new photo ${i + 1}`}
+                  onClick={() => setFiles((list) => list.filter((_, n) => n !== i))}
+                />
+              </div>
             ))}
-            {photoSlots > 0 && (
+            {photoCount < 3 && (
               <label
                 htmlFor="photos"
                 className={`lift relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 rounded-control border-2 border-dashed bg-paper p-2 text-center text-sm font-semibold focus-within:border-brand ${errors.photos ? 'border-coral' : 'border-line-strong'}`}
               >
                 <Icon name="camera" size={24} className="text-brand" />
-                {files.length > 0 ? 'Change photos' : 'Add photo'}
+                Add photo
                 <input
                   id="photos"
                   type="file"
                   accept="image/*"
                   multiple
                   onChange={(e) => {
-                    setFiles(Array.from(e.target.files).slice(0, photoSlots))
+                    const picked = Array.from(e.target.files)
+                    e.target.value = '' // so a removed photo can be picked again
+                    setFiles((list) => [...list, ...picked].slice(0, photoSlots))
                     setErrors((x) => ({ ...x, photos: undefined }))
                   }}
                   className="sr-only"
@@ -273,11 +278,11 @@ export default function Sell() {
             )}
           </div>
           <p className="field-help">
-            {photoSlots === 0
+            {photoCount >= 3
               ? 'Maximum of 3 photos reached. Remove one to add a different photo.'
-              : isEdit
-                ? `Add up to ${photoSlots} more image${photoSlots === 1 ? '' : 's'}. Natural light and a plain background work best.`
-                : `At least one photo, up to 3 (PNG or JPG)${photoCount > 1 ? '' : '. Pick them all at once'}.`}
+              : photoCount > 0
+                ? `Add up to ${3 - photoCount} more. The first photo is the one on the card.`
+                : 'At least one photo, up to 3 (PNG or JPG).'}
           </p>
           {err('photos')}
         </div>
@@ -441,10 +446,11 @@ export default function Sell() {
         </div>
       </div>
 
-      <aside className="w-full max-w-[320px] lg:sticky lg:top-28">
+      <aside className="w-full max-w-[270px] lg:sticky lg:top-28">
         <p className="field-label !mb-4">Preview</p>
         <ListingCardView
           photo={existingImages[0] || previews[0]}
+          heart={<HeartProp />}
           listing={{
             title: form.title.trim() || 'Your title',
             category: form.category,
@@ -456,12 +462,27 @@ export default function Sell() {
             food_temp: isFood ? form.food_temp : null,
             expiry_date: isFood ? form.expiry_date : null,
             status: 'available',
+            created_at: isEdit ? null : todayISO(),
             seller: { campus: user?.college || user?.campus },
           }}
         />
         <p className="mt-4 text-sm text-ink-soft">This is how your listing appears in the marketplace.</p>
       </aside>
     </div>
+  )
+}
+
+function RemovePhoto({ label, onClick }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title="Remove"
+      onClick={onClick}
+      className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-control border border-line bg-paper text-ink hover:text-coral"
+    >
+      <Icon name="x" size={18} />
+    </button>
   )
 }
 

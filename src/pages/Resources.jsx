@@ -126,7 +126,7 @@ export default function Resources() {
         <Pagination page={data.page} pages={data.pages} total={data.total} pageSize={data.page_size} onChange={goToPage} noun="resources" />
       )}
 
-      <PostRequestBanner className="mt-section-sm" />
+      <PostRequestBanner compact className="mt-section-sm" />
     </div>
   )
 }

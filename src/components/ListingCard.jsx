@@ -50,7 +50,8 @@ export function ListingCardView({ listing, photo, heart = null, to, state, compa
           src={photo}
           alt={title}
           iconSize={compact ? 32 : 48}
-          className={`rounded-card ${sold ? 'opacity-60' : ''}`}
+          // Out of the flow, so a tall photo is cropped to the tile instead of stretching it.
+          className={`absolute inset-0 rounded-card ${sold ? 'opacity-60' : ''}`}
         />
         {listing_type && <span className="absolute left-2 top-2"><TypeBadge type={listing_type} /></span>}
         {sold && <span className="absolute bottom-2 left-2"><StatusPill status={status} /></span>}

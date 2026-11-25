@@ -161,7 +161,7 @@ export default function Marketplace() {
         <Pagination page={data.page} pages={data.pages} total={data.total} pageSize={data.page_size} onChange={goToPage} noun="listings" />
       )}
 
-      <PostRequestBanner className="mt-section-sm" />
+      <PostRequestBanner compact className="mt-section-sm" />
     </div>
   )
 }
