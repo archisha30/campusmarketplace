@@ -4,9 +4,21 @@ import { syncHistory } from '../lib/recommendations.js'
 
 const AuthContext = createContext(null)
 
+// Was someone logged in here last time? Only a yes/no, used to show the right buttons while the session
+// is being checked (which can take a while when the server is waking up). It grants nothing.
+const HINT_KEY = 'cm_was_logged_in'
+function readHint() {
+  try {
+    return localStorage.getItem(HINT_KEY) === '1'
+  } catch {
+    return false // storage blocked
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [wasLoggedIn] = useState(readHint)
   // Why the user was logged out, shown on the login page (e.g. their account was suspended).
   const [notice, setNotice] = useState('')
   const userRef = useRef(null) // the latest user, for the cross-tab check below
@@ -43,6 +55,17 @@ export function AuthProvider({ children }) {
       .catch(() => setUser(null))
       .finally(() => setLoading(false))
   }, [])
+
+  // Remember for the next visit (see readHint).
+  useEffect(() => {
+    if (loading) return
+    try {
+      if (user) localStorage.setItem(HINT_KEY, '1')
+      else localStorage.removeItem(HINT_KEY)
+    } catch {
+      // storage blocked: the log-in buttons just show briefly on the next visit
+    }
+  }, [user, loading])
 
   // All tabs share one session cookie, so logging into another account (or out) in one tab
   // changes it for every tab. When a tab comes back into view, check who's really logged in:
@@ -94,6 +117,8 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     loading,
+    // Still checking, but they were logged in last time: don't show log-in / sign-up buttons yet.
+    probablyMember: loading && !user && wasLoggedIn,
     notice,
     isVerified: Boolean(user?.verified),
     // Owners (OWNER_EMAILS on the backend) and the admins they approved.

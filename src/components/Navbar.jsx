@@ -22,24 +22,24 @@ const MEMBER_LINKS = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
-  const { user, isSeller, isAdmin } = useAuth()
+  const { user, isSeller, isAdmin, probablyMember } = useAuth()
   const { count } = useWishlist()
   const { summary } = useReportSummary() // admins only; zeros for everyone else
   const badge = (l) => (l.to === '/admin' && summary.open > 0 ? <CountBadge n={summary.open} label="open reports" /> : null)
-  const links = user ? [...MEMBER_LINKS, ...(isAdmin ? [{ to: '/admin', label: 'Admin' }] : [])] : GUEST_LINKS
+  const links = user || probablyMember ? [...MEMBER_LINKS, ...(isAdmin ? [{ to: '/admin', label: 'Admin' }] : [])] : GUEST_LINKS
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-bg/90 backdrop-blur">
-      <div className="mx-auto flex h-[68px] max-w-[1180px] items-center justify-between px-6">
+      <div className="mx-auto flex h-[68px] max-w-[1180px] items-center justify-between gap-2 px-4 md:px-6">
         <Logo />
 
-        <nav className="hidden gap-1.5 md:flex">
+        <nav className="hidden gap-0.5 md:flex lg:gap-1.5">
           {links.map((l) => (
             <NavLink
               key={l.to}
               to={l.to}
               className={({ isActive }) =>
-                `rounded-pill px-3.5 py-2 text-[14.5px] font-medium transition ${l.wideOnly ? 'hidden lg:block' : ''} ${
+                `whitespace-nowrap rounded-pill px-2.5 py-2 text-[14.5px] lg:px-3.5 font-medium transition ${l.wideOnly ? 'hidden lg:block' : ''} ${
                   isActive ? 'bg-ink text-white' : 'text-ink-soft hover:bg-black/5 hover:text-ink'
                 }`
               }
@@ -50,7 +50,7 @@ export default function Navbar() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex shrink-0 items-center gap-1 md:gap-2.5">
           {user && (
             <Link
               to="/wishlist"
@@ -72,19 +72,21 @@ export default function Navbar() {
               <Link
                 to="/profile"
                 aria-label="My profile"
-                className="flex items-center gap-2 rounded-pill border-[1.5px] border-line py-1 pl-1 pr-1 transition hover:border-ink md:pr-3"
+                className="flex items-center gap-2 rounded-pill border-[1.5px] border-line py-1 pl-1 pr-1 transition hover:border-ink lg:pr-3"
               >
                 <Avatar user={user} size={28} />
-                <span className="hidden text-left leading-tight md:block">
-                  <span className="block max-w-[120px] truncate text-[13px] font-semibold">{user.name || 'Account'}</span>
+                <span className="hidden text-left leading-tight lg:block">
+                  <span className="block max-w-[84px] truncate xl:max-w-[120px] text-[13px] font-semibold">{user.name || 'Account'}</span>
                   <span className="block text-[11px] text-ink-faint">{isAdmin ? 'Admin' : isSeller ? 'Seller' : 'Buyer'}</span>
                 </span>
               </Link>
             </>
+          ) : probablyMember ? (
+            <span className="skeleton h-9 w-9 !rounded-full" aria-hidden />
           ) : (
             <>
-              <Link to="/login" className="btn-ghost btn-sm hidden md:inline-flex">Log In</Link>
-              <Link to="/signup" className="btn-primary btn-sm">Get Started</Link>
+              <Link to="/login" className="btn-ghost btn-sm hidden whitespace-nowrap md:inline-flex">Log In</Link>
+              <Link to="/signup" className="btn-primary btn-sm mr-1 whitespace-nowrap md:mr-0">Get Started</Link>
             </>
           )}
           <button
@@ -122,7 +124,7 @@ export default function Navbar() {
               My Wishlist{count > 0 ? ` (${count})` : ''}
             </Link>
           )}
-          {!user && (
+          {!user && !probablyMember && (
             <Link to="/login" onClick={() => setOpen(false)} className="btn-ghost mt-2 w-full">Log In</Link>
           )}
         </div>

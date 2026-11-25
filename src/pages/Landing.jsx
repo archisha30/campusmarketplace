@@ -31,7 +31,7 @@ const GUEST_TILES = [
 ]
 
 export default function Landing() {
-  const { user, isSeller, loading: authLoading } = useAuth()
+  const { user, isSeller, loading: authLoading, probablyMember } = useAuth()
   const [popular, setPopular] = useState(null) // null while loading
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export default function Landing() {
             </p>
             {/* Keeps its height while the session is checked, so students never see sign-up buttons flash by. */}
             <div className="flex min-h-[43px] flex-wrap gap-3">
-              {authLoading ? null : user ? (
+              {probablyMember ? null : user ? (
                 <>
                   <Link to="/marketplace" className="btn-accent">Explore Marketplace</Link>
                   {isSeller && (
