@@ -10,7 +10,7 @@ import { useReportSummary } from '../hooks/useReportSummary.jsx'
 
 // Everyone sees "How It Works"; the marketplace and Resource Hub links appear once they've
 // logged in or signed up.
-const HOW_LINK = { to: '/how-it-works', label: 'How It Works' }
+const HOW_LINK = { to: '/#how-it-works', label: 'How It Works' }
 const GUEST_LINKS = [HOW_LINK]
 const MEMBER_LINKS = [
   { to: '/marketplace', label: 'Marketplace' },
