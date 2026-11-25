@@ -11,6 +11,7 @@ import { ChipRow, Select } from '../components/FilterBar.jsx'
 import RecommendationBar from '../components/RecommendationBar.jsx'
 import Pagination from '../components/Pagination.jsx'
 import { usePage } from '../hooks/usePage.js'
+import { scrollMotion } from '../lib/motion.js'
 
 const PAGE_SIZE = 24 // 6 rows of 4
 
@@ -40,7 +41,7 @@ export default function Marketplace() {
 
   function goToPage(p) {
     setPage(p)
-    listTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    listTop.current?.scrollIntoView({ behavior: scrollMotion(), block: 'start' })
   }
 
   const { data, loading, error } = useApi(

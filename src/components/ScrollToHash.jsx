@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
+import { scrollMotion } from '../lib/motion.js'
 
 // React Router doesn't scroll to #anchors. Sections like /dashboard#notifications
 // render after their data loads, so keep looking for the target briefly.
@@ -14,7 +15,7 @@ export default function ScrollToHash() {
       const el = document.getElementById(id)
       if (el || ++tries > 30) {
         clearInterval(t)
-        el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        el?.scrollIntoView({ behavior: scrollMotion(), block: 'start' })
       }
     }, 100)
     return () => clearInterval(t)

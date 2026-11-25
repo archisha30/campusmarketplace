@@ -29,6 +29,12 @@ export default {
         btn: '0 12px 24px -12px rgba(22,22,29,.45)', // hover only
         lift: '0 18px 36px -20px rgba(22,22,29,.35)', // hover only
       },
+      // `transition` also covers the hover lift (translate / scale, see index.css).
+      transitionProperty: {
+        DEFAULT: 'color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, translate, scale',
+      },
+      transitionDuration: { DEFAULT: '250ms' },
+      transitionTimingFunction: { DEFAULT: 'cubic-bezier(.2,.8,.2,1)' },
       keyframes: {
         fadeIn: { '0%': { opacity: '0', transform: 'translateY(-2px)' }, '100%': { opacity: '1', transform: 'none' } },
         pulseSoft: { '0%, 100%': { opacity: '1' }, '50%': { opacity: '.55' } },

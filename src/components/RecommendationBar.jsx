@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import ListingCard from './ListingCard.jsx'
 import { useRecommendations } from '../hooks/useRecommendations.js'
 import { useAuth } from '../hooks/useAuth.jsx'
+import { scrollMotion } from '../lib/motion.js'
 
 // The marketplace's top section. It sits in its own tinted panel so it reads as
 // "picked for you", separate from the full browse-and-filter list underneath.
@@ -33,7 +34,7 @@ export default function RecommendationBar() {
   function page(direction) {
     const el = scroller.current
     if (!el) return
-    el.scrollBy({ left: direction * el.clientWidth * 0.8, behavior: 'smooth' })
+    el.scrollBy({ left: direction * el.clientWidth * 0.8, behavior: scrollMotion() })
   }
 
   const empty = !loading && items.length === 0

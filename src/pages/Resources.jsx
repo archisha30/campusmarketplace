@@ -12,6 +12,7 @@ import ResourceCard from '../components/ResourceCard.jsx'
 import ResourcePicks from '../components/ResourcePicks.jsx'
 import Pagination from '../components/Pagination.jsx'
 import { usePage } from '../hooks/usePage.js'
+import { scrollMotion } from '../lib/motion.js'
 
 const PAGE_SIZE = 18 // 6 rows of 3
 
@@ -46,7 +47,7 @@ export default function Resources() {
 
   function goToPage(p) {
     setPage(p)
-    listTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    listTop.current?.scrollIntoView({ behavior: scrollMotion(), block: 'start' })
   }
   const items = data?.items || []
   const subjects = facets?.subjects || SUBJECTS
