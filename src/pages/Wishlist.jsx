@@ -23,7 +23,7 @@ export default function Wishlist() {
         <SkeletonGrid count={4} />
       ) : count === 0 ? (
         <EmptyState
-          emoji="♡"
+          icon="heart"
           title="Your wishlist is empty"
           body="Tap the heart on any listing or study resource to save it here for later."
           actionLabel="Browse Marketplace"

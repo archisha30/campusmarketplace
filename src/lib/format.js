@@ -68,10 +68,10 @@ export function isExpired(listing) {
   return Boolean(listing?.expiry_date && String(listing.expiry_date).slice(0, 10) < todayISO())
 }
 
-// "🔥 Hot" / "❄️ Cold" for F&B listings, else ''.
+// "Hot" / "Cold" for F&B listings, else ''.
 export function foodTempLabel(listing) {
-  if (listing?.food_temp === 'hot') return '🔥 Hot'
-  if (listing?.food_temp === 'cold') return '❄️ Cold'
+  if (listing?.food_temp === 'hot') return 'Hot'
+  if (listing?.food_temp === 'cold') return 'Cold'
   return ''
 }
 

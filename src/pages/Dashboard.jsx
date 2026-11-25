@@ -171,7 +171,7 @@ export default function Dashboard() {
 
       {showingResources && !loading && myResources.length === 0 && (
         <EmptyState
-          emoji="📚"
+          icon="book-open"
           title="No resources yet"
           body="Share notes, papers or books with students on your campus, free or for a price."
           actionLabel="Post a Resource"
@@ -210,7 +210,7 @@ export default function Dashboard() {
 
       {showingListings && !loading && items.length === 0 && (
         <EmptyState
-          emoji="📭"
+          icon="inbox"
           title="Nothing here yet"
           body="Be the first person to list something on your campus."
           actionLabel="Sell an Item"

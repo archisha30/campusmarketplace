@@ -33,7 +33,7 @@ export default function SellerProfile() {
   if (error || !s) {
     return (
       <div className="wrap py-9">
-        <EmptyState emoji="🔍" title="Student not found" body="This account doesn't exist or isn't active any more." actionLabel="Browse Marketplace" actionTo="/marketplace" />
+        <EmptyState icon="search-x" title="Student not found" body="This account doesn't exist or isn't active any more." actionLabel="Browse Marketplace" actionTo="/marketplace" />
       </div>
     )
   }
@@ -58,7 +58,7 @@ export default function SellerProfile() {
       </section>
 
       {nothingUp && (
-        <EmptyState emoji="📦" title="Nothing up right now" body={`${s.name} doesn't have anything for sale or to share at the moment.`} actionLabel="Browse Marketplace" actionTo="/marketplace" />
+        <EmptyState icon="package" title="Nothing up right now" body={`${s.name} doesn't have anything for sale or to share at the moment.`} actionLabel="Browse Marketplace" actionTo="/marketplace" />
       )}
 
       {s.listings.length > 0 && (

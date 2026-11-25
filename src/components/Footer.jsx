@@ -6,19 +6,20 @@ export default function Footer() {
   const { pathname } = useLocation()
   const onDashboard = pathname.startsWith('/dashboard')
   return (
-    <footer className="mt-10 border-t border-line py-9">
-      <div className="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-3 px-6 text-[13.5px] text-ink-faint">
-        <span>© 2026 CampusMarket · Built by students, for students</span>
-        <span className="flex flex-wrap items-center gap-4">
-          <Link to="/#how-it-works" className="hover:text-ink">How it works</Link>
-          <Link to="/privacy" className="hover:text-ink">Privacy</Link>
-          <Link to="/terms" className="hover:text-ink">Terms</Link>
+    <footer className="mt-section-sm border-t border-line">
+      <div className="wrap flex flex-wrap items-center justify-between gap-x-8 gap-y-4 py-8">
+        <div>
+          <p className="hd text-[22px]">Campus Market</p>
+          <p className="mt-1 text-sm text-ink-soft">© 2026 CampusMarket · Built by students, for students</p>
+        </div>
+        <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-6 gap-y-3 text-[15px] font-medium">
+          <Link to="/#how-it-works">How it works</Link>
+          <Link to="/privacy">Privacy</Link>
+          <Link to="/terms">Terms</Link>
           {/* Sellers' way into their dashboard; hidden when they're already on it. */}
-          {isSeller && !onDashboard && (
-            <Link to="/dashboard" className="font-bold text-ink hover:text-brand">Seller dashboard →</Link>
-          )}
-          {isAdmin && <Link to="/admin" className="hover:text-ink">Admin</Link>}
-        </span>
+          {isSeller && !onDashboard && <Link to="/dashboard">Seller dashboard</Link>}
+          {isAdmin && <Link to="/admin">Admin</Link>}
+        </nav>
       </div>
     </footer>
   )

@@ -38,7 +38,7 @@ export default function ResourceDetail() {
   if (error || !r) {
     return (
       <div className="wrap py-9">
-        <EmptyState emoji="📚" title="Resource not found" body="It may have been removed by the owner." actionLabel="Back to Resource Hub" actionTo="/resources" />
+        <EmptyState icon="book-open" title="Resource not found" body="It may have been removed by the owner." actionLabel="Back to Resource Hub" actionTo="/resources" />
       </div>
     )
   }

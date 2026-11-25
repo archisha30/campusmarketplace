@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import PostRequestModal from './PostRequestModal.jsx'
+import Reveal from './Reveal.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 
 // "Looking for something? Post a request" strip. Shown on the landing page and at the
@@ -13,19 +14,20 @@ export default function PostRequestBanner({ className = '' }) {
 
   return (
     <section className={className}>
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-slab bg-[#141721] p-9">
-        <div>
-          <h3 className="mb-1.5 text-[20px] font-semibold text-white">Looking for something?</h3>
-          <p className="text-sm text-[#B7BAC4]">"Need a Casio fx-991CW for tomorrow." Post a request and sellers will reach out.</p>
+      <Reveal className="panel flex flex-wrap items-center justify-between gap-6 bg-sun p-8 md:p-12">
+        <div className="min-w-0 flex-[1_1_260px]">
+          <h2 className="text-[32px] leading-[1.1] md:text-[40px]">Looking for something?</h2>
+          <p className="mt-2 text-lg text-[#3A3A12]">Tell students on campus what you need, and whoever has it can message you.</p>
         </div>
         <button
-          className="btn bg-white text-ink hover:shadow-lg"
+          className="btn-primary"
           onClick={() => (user ? setRequesting(true) : navigate('/login', { state: { from: pathname } }))}
         >
-          Post a Request
+          Post a request
         </button>
-        <PostRequestModal open={requesting} onClose={() => setRequesting(false)} />
-      </div>
+      </Reveal>
+      {/* Outside the panel: a moving parent would pin the modal to itself instead of the screen. */}
+      <PostRequestModal open={requesting} onClose={() => setRequesting(false)} />
     </section>
   )
 }

@@ -44,7 +44,7 @@ export default function ListingDetail() {
   if (error || !l) {
     return (
       <div className="wrap py-9">
-        <EmptyState emoji="🤷" title="Listing not found" body="It may have been sold or removed." actionLabel="Back to Marketplace" actionTo="/marketplace" />
+        <EmptyState icon="search-x" title="Listing not found" body="It may have been sold or removed." actionLabel="Back to Marketplace" actionTo="/marketplace" />
       </div>
     )
   }

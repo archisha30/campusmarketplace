@@ -121,7 +121,7 @@ export default function Marketplace() {
 
       {error && !loading && (
         <EmptyState
-          emoji="⚠️"
+          icon="triangle-alert"
           title="Listings didn't load"
           body={error.message}
           actionLabel="Reload"
@@ -132,7 +132,7 @@ export default function Marketplace() {
       {!loading && !error && items.length === 0 && (
         hasFilters ? (
           <EmptyState
-            emoji="🔍"
+            icon="search-x"
             title="No items found"
             body="Try another keyword, or clear some filters to see more listings."
             actionLabel="Sell an Item"
@@ -140,7 +140,7 @@ export default function Marketplace() {
           />
         ) : (
           <EmptyState
-            emoji="📭"
+            icon="inbox"
             title="Nothing here yet"
             body="Be the first person to list something on your campus."
             actionLabel="Sell an Item"

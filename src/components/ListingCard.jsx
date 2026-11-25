@@ -1,82 +1,75 @@
 import { Link } from 'react-router-dom'
-import { TypeBadge, VerifiedBadge, StatusPill } from './Badge.jsx'
-import { foodTempLabel, formatDay, isExpired, listedOn } from '../lib/format.js'
+import { TypeBadge, StatusPill } from './Badge.jsx'
+import { CategoryArt, CategoryLabel } from './CategoryTile.jsx'
+import HeartButton from './HeartButton.jsx'
 import PriceTag from './PriceTag.jsx'
+import { foodTempLabel, formatDay, isExpired, listedOn } from '../lib/format.js'
 import { useWishlist } from '../hooks/useWishlist.jsx'
 import { useToast } from '../hooks/useToast.jsx'
 
+// A listing in any grid, with its wishlist heart.
 export default function ListingCard({ listing, compact = false }) {
-  const { id, title, price, condition, listing_type, status, art, seller, images } = listing
   const { isSaved, toggle } = useWishlist()
   const toast = useToast()
-  const saved = isSaved(id)
-  // The small copy made at upload when there is one (much lighter than the full photo).
-  const thumbnail = listing.thumbnail || (images && images.length > 0 ? images[0] : null)
+  const { id, images } = listing
+  return (
+    <ListingCardView
+      to={`/listing/${id}`}
+      listing={listing}
+      compact={compact}
+      // The small copy made at upload when there is one (much lighter than the full photo).
+      photo={listing.thumbnail || (images && images.length > 0 ? images[0] : null)}
+      heart={
+        <HeartButton
+          saved={isSaved(id)}
+          compact={compact}
+          onToggle={() => toast(toggle(listing) ? 'Saved to your wishlist' : 'Removed from your wishlist')}
+        />
+      }
+    />
+  )
+}
+
+// How a listing card looks, without the wishlist: also used on the home page (teasers) and for
+// the preview while posting. Without `to` it isn't a link.
+export function ListingCardView({ listing, photo, heart = null, to, state, compact = false }) {
+  const { title, price, condition, listing_type, status, seller, category } = listing
   const sold = status === 'sold'
+  const meta = (listing.food_temp
+    ? [foodTempLabel(listing), listing.expiry_date && (isExpired(listing) ? 'Expired' : `Best before ${formatDay(listing.expiry_date)}`)]
+    : [condition, seller?.campus]
+  ).filter(Boolean).join(' · ')
+  const Tag = to ? Link : 'div'
 
   return (
-    <Link
-      to={`/listing/${id}`}
-      // Sold items stay in the marketplace, outlined in red so they're obviously gone.
-      className={`group block overflow-hidden rounded-card border bg-paper transition hover:-translate-y-[3px] hover:shadow-lift ${
-        sold ? 'border-2 border-coral' : 'border-line'
-      }`}
-    >
-      <div
-        className={`relative flex items-center justify-center overflow-hidden ${compact ? 'h-[96px] text-[34px]' : 'h-[130px] text-[44px]'}`}
-        style={{ background: art?.bg || '#EFEFEC' }}
-      >
-        <span className="absolute left-2.5 top-2.5"><TypeBadge type={listing_type} /></span>
-        <button
-          type="button"
-          aria-label={saved ? 'Remove from wishlist' : 'Save to wishlist'}
-          aria-pressed={saved}
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            toast(toggle(listing) ? 'Saved to your wishlist' : 'Removed from your wishlist')
-          }}
-          className={`absolute right-2.5 top-2.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm shadow transition hover:scale-110 ${saved ? 'text-coral' : 'text-ink'}`}
-        >
-          {saved ? '♥' : '♡'}
-        </button>
-        {thumbnail ? (
-          <img
-            src={thumbnail}
-            alt={title}
-            loading="lazy" // only when it's about to scroll into view
-            decoding="async"
-            className={`h-full w-full object-cover ${sold ? 'opacity-60' : ''}`}
-          />
-        ) : (
-          <span aria-hidden className={sold ? 'opacity-60' : ''}>{art?.emoji || '📦'}</span>
+    <Tag {...(to ? { to, state } : {})} className={`flex min-w-0 flex-col ${compact ? 'gap-2' : 'gap-4'}`}>
+      {/* Sold items stay in the marketplace, outlined in red so they're obviously gone. */}
+      <div className={`relative aspect-[4/3] rounded-card ${sold ? 'ring-2 ring-coral' : ''}`}>
+        <CategoryArt
+          category={category}
+          src={photo}
+          alt={title}
+          iconSize={compact ? 32 : 48}
+          className={`rounded-card ${sold ? 'opacity-60' : ''}`}
+        />
+        <span className="absolute left-2 top-2 flex flex-wrap gap-1">
+          {listing_type === 'rent' && <TypeBadge type="rent" />}
+        </span>
+        {status && status !== 'available' && (
+          <span className="absolute bottom-2 left-2"><StatusPill status={status} /></span>
         )}
-        {sold && (
-          <span className="absolute bottom-2.5 left-2.5 rounded-pill bg-coral px-2.5 py-0.5 text-[11.5px] font-bold uppercase tracking-wide text-white">
-            Sold
-          </span>
-        )}
+        {heart}
       </div>
 
-      <div className={compact ? 'p-3' : 'p-3.5'}>
-        <h3 className={`font-semibold leading-snug ${compact ? 'truncate text-[13.5px]' : 'text-[14.5px]'}`}>{title}</h3>
-        <PriceTag price={price} mrp={listing.mrp} listingType={listing_type} rentDays={listing.rent_days} size={compact ? 'sm' : 'md'} className="mt-1" />
-        <p className={`mt-1 text-ink-faint ${compact ? 'truncate text-[12px]' : 'text-[12.5px]'}`}>
-          {(listing.food_temp
-            ? [foodTempLabel(listing), listing.expiry_date && (isExpired(listing) ? 'Expired' : `Best before ${formatDay(listing.expiry_date)}`)]
-            : [condition, seller?.campus]
-          ).filter(Boolean).join(' · ')}
-        </p>
+      <div className="flex min-w-0 flex-col gap-1">
+        <CategoryLabel category={category} className={compact ? 'text-[13px]' : ''} />
+        <PriceTag price={price} mrp={listing.mrp} listingType={listing_type} rentDays={listing.rent_days} size={compact ? 'sm' : 'md'} />
+        <h3 className={`truncate font-sans font-medium tracking-normal ${compact ? 'text-sm' : 'text-base'}`}>{title}</h3>
+        {meta && <p className={`truncate text-ink-soft ${compact ? 'text-[13px]' : 'text-sm'}`}>{meta}</p>}
         {listing.created_at && (
-          <p className={`mt-0.5 text-ink-faint ${compact ? 'text-[11.5px]' : 'text-[12px]'}`}>🗓️ {listedOn(listing.created_at)}</p>
-        )}
-        {!compact && (
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <VerifiedBadge />
-            <StatusPill status={status} />
-          </div>
+          <p className={`text-ink-soft ${compact ? 'text-[13px]' : 'text-sm'}`}>{listedOn(listing.created_at)}</p>
         )}
       </div>
-    </Link>
+    </Tag>
   )
 }

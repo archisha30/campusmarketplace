@@ -102,14 +102,14 @@ export default function Resources() {
       )}
 
       {!loading && error && (
-        <EmptyState emoji="⚠️" title="Couldn't load resources" body={error.message} />
+        <EmptyState icon="triangle-alert" title="Couldn't load resources" body={error.message} />
       )}
 
       {!loading && !error && items.length === 0 && (
         mine ? (
-          <EmptyState emoji="📝" title="You haven't posted anything yet" body="Share notes, question banks or a printed copy." actionLabel="Post a resource" actionTo="/resources/new" />
+          <EmptyState icon="pencil" title="You haven't posted anything yet" body="Share notes, question banks or a printed copy." actionLabel="Post a resource" actionTo="/resources/new" />
         ) : (
-          <EmptyState emoji="📚" title="No resources found" body={filtered ? 'Try another subject or clear a filter.' : 'Be the first to share study material.'} />
+          <EmptyState icon="book-open" title="No resources found" body={filtered ? 'Try another subject or clear a filter.' : 'Be the first to share study material.'} />
         )
       )}
 

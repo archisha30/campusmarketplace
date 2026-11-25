@@ -5,6 +5,7 @@ import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useWishlist } from '../hooks/useWishlist.jsx'
 import { useToast } from '../hooks/useToast.jsx'
+import Icon from '../components/Icon.jsx'
 import Avatar from '../components/Avatar.jsx'
 import { COLLEGES, SEMESTERS } from '../data/sample.js'
 import { shrinkToJpeg } from '../lib/images.js'
@@ -69,7 +70,7 @@ export default function Profile() {
         <WishlistTile />
         <Tile
           to="/interests"
-          emoji="✨"
+          icon="sparkles"
           title="Your interests"
           body={user.interests?.length ? user.interests.join(', ') : 'Pick categories to get better recommendations.'}
           cta="Edit interests"
@@ -428,13 +429,7 @@ function WishlistTile() {
   return (
     <Tile
       to="/wishlist"
-      emoji={
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-coral/10">
-          <svg width="20" height="20" viewBox="0 0 24 24" className="fill-coral">
-            <path d="M12 21s-7.5-4.6-9.6-9.4C.9 8.1 3 4 6.9 4c2.1 0 3.7 1.1 5.1 3 1.4-1.9 3-3 5.1-3C21 4 23.1 8.1 21.6 11.6 19.5 16.4 12 21 12 21Z" />
-          </svg>
-        </span>
-      }
+      icon="heart"
       title="My Wishlist"
       body={count ? `${count} saved item${count === 1 ? '' : 's'}` : 'Nothing saved yet.'}
       cta="View wishlist"
@@ -442,10 +437,10 @@ function WishlistTile() {
   )
 }
 
-function Tile({ to, emoji, title, body, cta }) {
+function Tile({ to, icon, title, body, cta }) {
   return (
-    <Link to={to} className="group block rounded-card border border-line bg-paper p-5 transition hover:-translate-y-[2px] hover:shadow-lift">
-      <span className="mb-2 block text-[22px]" aria-hidden>{emoji}</span>
+    <Link to={to} className="card lift group block p-6">
+      <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-control bg-bg"><Icon name={icon} size={22} /></span>
       <h3 className="text-[16px] font-semibold">{title}</h3>
       <p className="mt-1 line-clamp-2 text-[13.5px] text-ink-soft">{body}</p>
       <p className="mt-3 text-[13.5px] font-semibold text-brand group-hover:underline">{cta} →</p>
