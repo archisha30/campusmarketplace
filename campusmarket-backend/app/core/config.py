@@ -7,6 +7,10 @@ from pydantic_settings import BaseSettings
 MIN_JWT_SECRET = 32
 MIN_OTP_PEPPER = 16
 
+# The live site's Supabase project (not secret: it's in every public photo URL). Only a server with
+# ENVIRONMENT=production may use it. Go by this ID, not the name shown in Supabase.
+PRODUCTION_PROJECT_REF = "kqtetojwpbbbiznlvpck"
+
 
 class Settings(BaseSettings):
     APP_NAME: str = "CampusMarket API"
@@ -14,6 +18,9 @@ class Settings(BaseSettings):
 
     # Full Postgres connection string from Supabase (see .env.example for where to get it)
     DATABASE_URL: str
+    # Lets a non-production machine use the live project on purpose. Set it for one command only,
+    # never in .env:  ALLOW_PRODUCTION_DB=true uv run ...
+    ALLOW_PRODUCTION_DB: bool = False
 
     # Database connections kept open per server process (see db/session.py for why 20 + 20).
     DB_POOL_SIZE: int = 20
@@ -116,6 +123,8 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        # A failed check would otherwise print the settings themselves (passwords, keys) to the log.
+        hide_input_in_errors = True
 
     @property
     def is_production(self) -> bool:
@@ -142,6 +151,21 @@ class Settings(BaseSettings):
                 problems.append(f"CORS_ORIGINS entry {origin!r} must be a full https:// origin in production")
         if problems:
             raise ValueError("Unsafe production settings:\n  - " + "\n  - ".join(problems))
+        return self
+
+    @model_validator(mode="after")
+    def not_the_live_project(self):
+        """Refuse to start outside production when .env points at the live database or file storage,
+        so local test posts, deletions and migrations can't reach real students' data."""
+        if self.is_production or self.ALLOW_PRODUCTION_DB:
+            return self
+        live = [name for name in ("DATABASE_URL", "SUPABASE_URL")
+                if PRODUCTION_PROJECT_REF in (getattr(self, name) or "").lower()]
+        if live:
+            raise ValueError(
+                f"{' and '.join(live)} in .env points at the PRODUCTION Supabase project, the one the live site "
+                "uses. Put the dev project's values in campusmarket-backend/.env (DEPLOY.md, Step 1)."
+            )
         return self
 
 

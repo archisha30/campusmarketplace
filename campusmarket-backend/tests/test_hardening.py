@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from app.api.routes import auth as auth_routes
 from app.core import quotas
-from app.core.config import Settings, settings
+from app.core.config import PRODUCTION_PROJECT_REF, Settings, settings
 from app.core.ratelimit import SlidingWindowLimiter
 from app.core.timeutil import utcnow
 from app.models.listing import Listing
@@ -248,6 +248,45 @@ def test_unsafe_production_settings_refuse_to_start(overrides, problem):
 
 def test_development_is_not_checked():
     assert not prod_settings(ENVIRONMENT="development", JWT_SECRET_KEY="dev", CORS_ORIGINS=["http://localhost:5173"]).is_production
+
+
+# ---------- The live database can't be used from a development machine by accident ----------
+
+LIVE_DB = f"postgresql://postgres.{PRODUCTION_PROJECT_REF}:db-password@aws-0-ap-south-1.pooler.supabase.com:6543/postgres"
+DIRECT_LIVE_DB = f"postgresql://postgres:db-password@db.{PRODUCTION_PROJECT_REF}.supabase.co:5432/postgres"
+DEV_DB = LIVE_DB.replace(PRODUCTION_PROJECT_REF, "a" * 20)
+LIVE_STORAGE = f"https://{PRODUCTION_PROJECT_REF}.supabase.co"
+
+
+@pytest.mark.parametrize("environment", ["development", "test", ""])
+@pytest.mark.parametrize("overrides, setting", [
+    ({"DATABASE_URL": LIVE_DB}, "DATABASE_URL"),
+    ({"DATABASE_URL": DIRECT_LIVE_DB}, "DATABASE_URL"),
+    ({"DATABASE_URL": DEV_DB, "SUPABASE_URL": LIVE_STORAGE}, "SUPABASE_URL"),
+])
+def test_live_project_is_refused_outside_production(environment, overrides, setting):
+    with pytest.raises(ValidationError) as e:
+        prod_settings(ENVIRONMENT=environment, **overrides)
+    assert f"{setting} in .env points at the PRODUCTION" in str(e.value)
+
+
+def test_dev_project_starts():
+    assert prod_settings(ENVIRONMENT="development", DATABASE_URL=DEV_DB).DATABASE_URL == DEV_DB
+
+
+def test_production_may_use_the_live_project():
+    assert prod_settings(DATABASE_URL=LIVE_DB, SUPABASE_URL=LIVE_STORAGE).is_production
+
+
+def test_live_project_can_be_allowed_on_purpose():
+    assert prod_settings(ENVIRONMENT="development", DATABASE_URL=LIVE_DB, ALLOW_PRODUCTION_DB=True).ALLOW_PRODUCTION_DB
+
+
+def test_failed_checks_dont_print_secrets():
+    for overrides in ({"ENVIRONMENT": "development", "DATABASE_URL": LIVE_DB}, {"CORS_ORIGINS": ["*"]}):
+        with pytest.raises(ValidationError) as e:
+            prod_settings(**{"DATABASE_URL": LIVE_DB, **overrides})
+        assert "db-password" not in str(e.value) and "x" * 64 not in str(e.value)
 
 
 # ---------- G: only the owner can undo the owner's suspension ----------

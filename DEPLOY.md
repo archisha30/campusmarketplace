@@ -59,6 +59,12 @@ would change the live database before the code that needs it is deployed.
    ```
 7. Make the same `.env` change on the **Windows** PC.
 
+The backend and `alembic` refuse to start on your computer if `.env` points at the production
+project (`PRODUCTION_PROJECT_REF` in `app/core/config.py`; update it if production ever moves to
+another project). Go by the project ID in the Supabase address bar, not the project's name.
+To use production on purpose, for one command: `ALLOW_PRODUCTION_DB=true uv run …`. Never put
+that in `.env`.
+
 The dev database starts empty, so sign up again locally. Storage buckets are created
 automatically on your first upload.
 
