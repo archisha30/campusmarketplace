@@ -1,0 +1,43 @@
+# Deploys the API to the Vultr server on every push to main that touches the backend.
+# Does nothing until the server is set up: it runs only when the repository variable
+# VULTR_DEPLOY is "on". Setup and secrets: deploy/vultr/README.md.
+#
+# THIS REPO IS PUBLIC, so this log is too. The server's deploy script prints only the commit,
+# install/migration progress and a health result, never settings.
+
+name: Deploy API to Vultr
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "campusmarket-backend/**"
+      - "deploy/vultr/**"
+      - ".github/workflows/deploy-vultr.yml"
+  workflow_dispatch: # "Run workflow" button, e.g. to redeploy without a code change
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-vultr
+  cancel-in-progress: false # never stop a deploy halfway through a migration
+
+jobs:
+  deploy:
+    if: vars.VULTR_DEPLOY == 'on'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Deploy over SSH
+        env:
+          VULTR_HOST: ${{ secrets.VULTR_HOST }}
+          VULTR_HOST_KEY: ${{ secrets.VULTR_HOST_KEY }}
+          VULTR_SSH_KEY: ${{ secrets.VULTR_SSH_KEY }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$VULTR_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$VULTR_HOST_KEY" > ~/.ssh/known_hosts
+          # The key can only run campusmarket-deploy on the server (see setup.sh), so no command is sent.
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o ConnectTimeout=20 "campusmarket@$VULTR_HOST"

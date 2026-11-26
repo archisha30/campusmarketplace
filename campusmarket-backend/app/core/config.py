@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     LOGIN_EDGE_LIMIT: int = 200
     # How many X-Forwarded-For entries Render's own proxies append (only those can be trusted):
     # the connecting address, Cloudflare, and Render's load balancer.
+    # On Vultr only Caddy appends one, so its .env sets 1 (deploy/vultr/README.md).
     PROXY_HOPS: int = 3
 
     # --- Contact details (phone/email) shown one person at a time, per student ---

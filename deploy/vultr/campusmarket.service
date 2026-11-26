@@ -1,0 +1,27 @@
+# The CampusMarket API, kept running by systemd (restarted if it crashes, started on boot).
+# setup.sh installs it to /etc/systemd/system/. Logs: journalctl -u campusmarket -f
+[Unit]
+Description=CampusMarket API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=campusmarket
+Group=campusmarket
+WorkingDirectory=/srv/campusmarket/campusmarket-backend
+# Settings come from .env in the working directory (pydantic reads it), as in local development.
+# One process: the rate limiters live in memory (core/ratelimit.py), so they need a single instance.
+# Only Caddy on this machine can reach port 8000, so only its forwarded headers are trusted.
+ExecStart=/srv/campusmarket/campusmarket-backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips=127.0.0.1 --timeout-graceful-shutdown 20
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=3
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+# Read-only, not hidden: uv's Python lives in the app user's home.
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target
